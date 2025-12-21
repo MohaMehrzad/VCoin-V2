@@ -1,0 +1,35 @@
+[package]
+name = "staking-protocol"
+version = "0.1.0"
+description = "VCoin Staking Protocol with Tier System and veVCoin Minting"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "staking_protocol"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+anchor-lang = { version = "0.32.0", features = ["init-if-needed"] }
+anchor-spl = { version = "0.32.0", features = ["token_2022"] }
+spl-token-2022 = "6.0"
+vcoin-token = { path = "../vcoin-token", features = ["cpi"] }
+vevcoin-token = { path = "../vevcoin-token", features = ["cpi"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
+
+
+
+

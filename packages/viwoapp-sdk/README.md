@@ -1,0 +1,310 @@
+# @viwoapp/sdk
+
+TypeScript SDK for VCoin Protocol Integration on Solana.
+
+## Installation
+
+```bash
+npm install @viwoapp/sdk
+# or
+yarn add @viwoapp/sdk
+```
+
+## Quick Start
+
+```typescript
+import { ViWoClient, parseVCoin, formatVCoin, LOCK_DURATIONS } from "@viwoapp/sdk";
+
+// Initialize client
+const client = new ViWoClient({
+  connection: { endpoint: "https://api.devnet.solana.com" },
+  wallet: walletAdapter, // Your wallet adapter
+});
+
+// Get VCoin balance
+const balance = await client.getVCoinBalance();
+console.log("Balance:", formatVCoin(balance));
+
+// Stake VCoin
+const stakeTx = await client.staking.buildStakeTransaction({
+  amount: parseVCoin("1000"),
+  lockDuration: LOCK_DURATIONS.threeMonths,
+});
+await client.sendTransaction(stakeTx);
+```
+
+## Modules
+
+### Core (`@viwoapp/sdk`)
+
+Connection management, utilities, and PDA derivation.
+
+```typescript
+import { ViWoClient, PDAs, formatVCoin, parseVCoin } from "@viwoapp/sdk";
+
+const client = new ViWoClient({ connection, wallet });
+
+// Check connection health
+const health = await client.healthCheck();
+
+// Get PDAs
+const stakingPool = client.pdas.getStakingPool();
+const userStake = client.pdas.getUserStake(walletPubkey);
+```
+
+### Staking (`client.staking`)
+
+VCoin staking operations for veVCoin.
+
+```typescript
+// Get staking pool info
+const pool = await client.staking.getPool();
+
+// Get user stake
+const stake = await client.staking.getUserStake();
+console.log("Staked:", formatVCoin(stake.stakedAmount));
+console.log("Tier:", client.staking.getTierName(stake.tier));
+
+// Calculate veVCoin for stake
+const vevcoin = client.staking.calculateVeVCoin(amount, lockDuration);
+
+// Build transactions
+const stakeTx = await client.staking.buildStakeTransaction({ amount, lockDuration });
+const unstakeTx = await client.staking.buildUnstakeTransaction();
+```
+
+### Governance (`client.governance`)
+
+Proposal creation and voting.
+
+```typescript
+// Get active proposals
+const proposals = await client.governance.getActiveProposals();
+
+// Get proposal details
+const proposal = await client.governance.getProposal(proposalId);
+const progress = await client.governance.getProposalProgress(proposalId);
+
+// Check voting power
+const votingPower = await client.governance.getVotingPower();
+
+// Build transactions
+const voteTx = await client.governance.buildVoteTransaction(proposalId, true);
+```
+
+### Rewards (`client.rewards`)
+
+SSCRE rewards claiming.
+
+```typescript
+// Get pool stats
+const stats = await client.rewards.getStats();
+
+// Get user claim history
+const claims = await client.rewards.getUserClaim();
+
+// Get unclaimed epochs
+const unclaimed = await client.rewards.getUnclaimedEpochs();
+
+// Build claim transaction
+const claimTx = await client.rewards.buildClaimTransaction({
+  epoch,
+  amount,
+  merkleProof,
+});
+```
+
+### ViLink (`client.vilink`)
+
+Cross-dApp action deep links.
+
+```typescript
+// Create tip action
+const tipTx = await client.vilink.buildCreateTipAction({
+  target: recipientPubkey,
+  amount: parseVCoin("10"),
+  expirySeconds: 86400, // 1 day
+});
+
+// Generate shareable URI
+const uri = client.vilink.generateUri(actionId);
+// => viwo://action/abc123...
+
+// Generate QR code data
+const qrData = client.vilink.generateQRData(actionId);
+
+// Check action validity
+const { valid, reason } = await client.vilink.isActionValid(creator, timestamp);
+```
+
+### Gasless (`client.gasless`)
+
+Session keys and gasless transactions.
+
+```typescript
+import { ACTION_SCOPES, FeeMethod } from "@viwoapp/sdk";
+
+// Create session key
+const sessionKeypair = Keypair.generate();
+const scope = ACTION_SCOPES.tip | ACTION_SCOPES.vouch;
+
+const sessionTx = await client.gasless.buildCreateSessionTransaction({
+  sessionPubkey: sessionKeypair.publicKey,
+  scope,
+  durationSeconds: 24 * 3600,
+  maxActions: 100,
+  feeMethod: FeeMethod.VCoinDeduction,
+});
+
+// Check session validity
+const { valid } = await client.gasless.isSessionValid(user, sessionPubkey);
+
+// Revoke session
+const revokeTx = await client.gasless.buildRevokeSessionTransaction(sessionPubkey);
+```
+
+### Identity (`client.identity`)
+
+User identity management.
+
+```typescript
+// Get identity
+const identity = await client.identity.getIdentity();
+console.log("Level:", client.identity.getVerificationLevelName(identity.verificationLevel));
+
+// Get verification requirements
+const reqs = client.identity.getVerificationRequirements(level);
+```
+
+### 5A Protocol (`client.fivea`)
+
+Reputation scoring.
+
+```typescript
+// Get 5A score
+const score = await client.fivea.getScore();
+console.log("Composite:", client.fivea.formatScore(score.composite));
+console.log("Tier:", client.fivea.getScoreTier(score.composite));
+
+// Get score breakdown
+const breakdown = client.fivea.getScoreBreakdown(score);
+
+// Get reward multiplier
+const multiplier = client.fivea.getRewardMultiplier(score.composite);
+
+// Check vouch capability
+const { canVouch, reason } = await client.fivea.canVouchFor(target);
+```
+
+### Content (`client.content`)
+
+Content registry operations.
+
+```typescript
+// Get user energy
+const energy = await client.content.getEnergy();
+const currentEnergy = client.content.calculateRegenEnergy(energy);
+
+// Check create capability
+const { canCreate } = await client.content.canCreateContent();
+
+// Build transactions
+const createTx = await client.content.buildCreateContentTransaction(contentHash);
+const editTx = await client.content.buildEditContentTransaction(contentId, newHash);
+```
+
+## Constants
+
+```typescript
+import {
+  PROGRAM_IDS,
+  SEEDS,
+  VCOIN_DECIMALS,
+  STAKING_TIERS,
+  LOCK_DURATIONS,
+  SSCRE_CONSTANTS,
+  VILINK_CONSTANTS,
+  GASLESS_CONSTANTS,
+  ACTION_SCOPES,
+  FIVE_A_CONSTANTS,
+  GOVERNANCE_CONSTANTS,
+  CONTENT_CONSTANTS,
+} from "@viwoapp/sdk";
+```
+
+## Types
+
+```typescript
+import type {
+  // Staking
+  StakingPool,
+  UserStake,
+  StakingTier,
+  StakeParams,
+  
+  // Governance
+  Proposal,
+  VoteRecord,
+  ProposalStatus,
+  
+  // Rewards
+  RewardsPoolConfig,
+  EpochDistribution,
+  UserClaim,
+  ClaimRewardsParams,
+  
+  // ViLink
+  ViLinkConfig,
+  ViLinkAction,
+  ActionType,
+  CreateActionParams,
+  
+  // Gasless
+  GaslessConfig,
+  SessionKey,
+  FeeMethod,
+  CreateSessionParams,
+  
+  // Identity
+  Identity,
+  VerificationLevel,
+  
+  // 5A
+  FiveAScore,
+  VouchRecord,
+  
+  // Content
+  ContentRecord,
+  UserEnergy,
+  ContentState,
+} from "@viwoapp/sdk";
+```
+
+## Utilities
+
+```typescript
+import {
+  formatVCoin,
+  parseVCoin,
+  getCurrentTimestamp,
+  timestampToDate,
+  dateToTimestamp,
+  TransactionBuilder,
+} from "@viwoapp/sdk";
+
+// Format VCoin amount
+formatVCoin(new BN(1000000000)); // "1.000000000"
+
+// Parse VCoin string to BN
+parseVCoin("100.5"); // BN
+
+// Transaction builder
+const builder = new TransactionBuilder();
+builder.add(instruction1).add(instruction2);
+const tx = builder.build();
+```
+
+## License
+
+MIT
+

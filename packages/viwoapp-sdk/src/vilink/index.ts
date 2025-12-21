@@ -1,0 +1,339 @@
+import { PublicKey, Transaction, Keypair } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
+
+import type { ViWoClient } from "../client";
+import type { ViLinkConfig, ViLinkAction, CreateActionParams, ActionType } from "../types";
+import { VILINK_CONSTANTS, ACTION_SCOPES } from "../constants";
+import { formatVCoin, parseVCoin, getCurrentTimestamp } from "../core";
+
+/**
+ * ViLink Client for cross-dApp action deep links
+ * 
+ * @example
+ * ```typescript
+ * const vilinkClient = client.vilink;
+ * 
+ * // Create a tip action link
+ * const action = await vilinkClient.createTipAction({
+ *   target: recipientPubkey,
+ *   amount: parseVCoin("10"),
+ * });
+ * 
+ * // Generate shareable URI
+ * const uri = vilinkClient.generateUri(action.actionId);
+ * // => viwo://action/abc123...
+ * 
+ * // Execute action from URI
+ * await vilinkClient.executeAction(actionId);
+ * ```
+ */
+export class ViLinkClient {
+  constructor(private client: ViWoClient) {}
+  
+  /**
+   * Get ViLink configuration
+   */
+  async getConfig(): Promise<ViLinkConfig | null> {
+    try {
+      const configPda = this.client.pdas.getViLinkConfig();
+      const accountInfo = await this.client.connection.connection.getAccountInfo(configPda);
+      
+      if (!accountInfo) {
+        return null;
+      }
+      
+      const data = accountInfo.data;
+      return {
+        authority: new PublicKey(data.slice(8, 40)),
+        vcoinMint: new PublicKey(data.slice(40, 72)),
+        treasury: new PublicKey(data.slice(72, 104)),
+        enabledActions: data[200],
+        totalActionsCreated: new BN(data.slice(201, 209), "le"),
+        totalActionsExecuted: new BN(data.slice(209, 217), "le"),
+        totalTipVolume: new BN(data.slice(217, 225), "le"),
+        paused: data[225] !== 0,
+        platformFeeBps: data.readUInt16LE(226),
+      };
+    } catch {
+      return null;
+    }
+  }
+  
+  /**
+   * Get action by ID
+   */
+  async getAction(creator: PublicKey, timestamp: BN): Promise<ViLinkAction | null> {
+    try {
+      const actionPda = this.client.pdas.getViLinkAction(creator, timestamp);
+      const accountInfo = await this.client.connection.connection.getAccountInfo(actionPda);
+      
+      if (!accountInfo) {
+        return null;
+      }
+      
+      const data = accountInfo.data;
+      return {
+        actionId: new Uint8Array(data.slice(8, 40)),
+        creator: new PublicKey(data.slice(40, 72)),
+        target: new PublicKey(data.slice(72, 104)),
+        actionType: data[104] as ActionType,
+        amount: new BN(data.slice(105, 113), "le"),
+        expiresAt: new BN(data.slice(145, 153), "le"),
+        executed: data[153] !== 0,
+        executionCount: data.readUInt32LE(193),
+        maxExecutions: data.readUInt32LE(197),
+      };
+    } catch {
+      return null;
+    }
+  }
+  
+  /**
+   * Get user action statistics
+   */
+  async getUserStats(user?: PublicKey): Promise<any | null> {
+    const target = user || this.client.publicKey;
+    if (!target) {
+      throw new Error("No user specified and wallet not connected");
+    }
+    
+    try {
+      const statsPda = this.client.pdas.getUserActionStats(target);
+      const accountInfo = await this.client.connection.connection.getAccountInfo(statsPda);
+      
+      if (!accountInfo) {
+        return null;
+      }
+      
+      const data = accountInfo.data;
+      return {
+        user: new PublicKey(data.slice(8, 40)),
+        actionsCreated: new BN(data.slice(40, 48), "le"),
+        actionsExecuted: new BN(data.slice(48, 56), "le"),
+        tipsSent: new BN(data.slice(56, 64), "le"),
+        tipsReceived: new BN(data.slice(64, 72), "le"),
+        vcoinSent: new BN(data.slice(72, 80), "le"),
+        vcoinReceived: new BN(data.slice(80, 88), "le"),
+      };
+    } catch {
+      return null;
+    }
+  }
+  
+  /**
+   * Get action type name
+   */
+  getActionTypeName(actionType: ActionType): string {
+    const names = [
+      "Tip",
+      "Vouch",
+      "Follow",
+      "Challenge",
+      "Stake",
+      "ContentReact",
+      "Delegate",
+      "Vote",
+    ];
+    return names[actionType] || "Unknown";
+  }
+  
+  /**
+   * Check if action type is enabled
+   */
+  async isActionTypeEnabled(actionType: ActionType): Promise<boolean> {
+    const config = await this.getConfig();
+    if (!config) return false;
+    return (config.enabledActions & (1 << actionType)) !== 0;
+  }
+  
+  /**
+   * Check if action is valid for execution
+   */
+  async isActionValid(creator: PublicKey, timestamp: BN): Promise<{
+    valid: boolean;
+    reason?: string;
+  }> {
+    const action = await this.getAction(creator, timestamp);
+    
+    if (!action) {
+      return { valid: false, reason: "Action not found" };
+    }
+    
+    const now = getCurrentTimestamp();
+    
+    if (now > action.expiresAt.toNumber()) {
+      return { valid: false, reason: "Action has expired" };
+    }
+    
+    if (action.executed && action.maxExecutions === 1) {
+      return { valid: false, reason: "Action already executed" };
+    }
+    
+    if (action.maxExecutions > 0 && action.executionCount >= action.maxExecutions) {
+      return { valid: false, reason: "Max executions reached" };
+    }
+    
+    return { valid: true };
+  }
+  
+  /**
+   * Calculate platform fee for tip
+   */
+  calculateFee(amount: BN): { fee: BN; net: BN } {
+    const fee = amount.muln(VILINK_CONSTANTS.platformFeeBps).divn(10000);
+    return {
+      fee,
+      net: amount.sub(fee),
+    };
+  }
+  
+  // ============ URI Utilities ============
+  
+  /**
+   * Generate ViLink URI from action ID
+   */
+  generateUri(actionId: Uint8Array, baseUrl: string = "viwo://action"): string {
+    const idHex = Buffer.from(actionId).toString("hex");
+    return `${baseUrl}/${idHex}`;
+  }
+  
+  /**
+   * Parse action ID from URI
+   */
+  parseUri(uri: string): Uint8Array | null {
+    const match = uri.match(/viwo:\/\/action\/([a-f0-9]{64})/i);
+    if (!match) return null;
+    return new Uint8Array(Buffer.from(match[1], "hex"));
+  }
+  
+  /**
+   * Generate QR code data for action
+   */
+  generateQRData(actionId: Uint8Array): string {
+    return this.generateUri(actionId, "https://viwoapp.com/action");
+  }
+  
+  /**
+   * Generate shareable link with metadata
+   */
+  generateShareableLink(
+    actionId: Uint8Array,
+    metadata?: { title?: string; amount?: string }
+  ): string {
+    const baseUri = this.generateUri(actionId, "https://viwoapp.com/action");
+    
+    if (!metadata) return baseUri;
+    
+    const params = new URLSearchParams();
+    if (metadata.title) params.set("t", metadata.title);
+    if (metadata.amount) params.set("a", metadata.amount);
+    
+    return `${baseUri}?${params.toString()}`;
+  }
+  
+  // ============ Transaction Building ============
+  
+  /**
+   * Build create tip action transaction
+   */
+  async buildCreateTipAction(params: {
+    target: PublicKey;
+    amount: BN;
+    expirySeconds?: number;
+    oneTime?: boolean;
+    metadata?: string;
+  }): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+    
+    // Validate amount
+    const minAmount = parseVCoin(VILINK_CONSTANTS.minTipAmount.toString());
+    const maxAmount = parseVCoin(VILINK_CONSTANTS.maxTipAmount.toString());
+    
+    if (params.amount.lt(minAmount)) {
+      throw new Error(`Tip amount below minimum: ${VILINK_CONSTANTS.minTipAmount} VCoin`);
+    }
+    
+    if (params.amount.gt(maxAmount)) {
+      throw new Error(`Tip amount exceeds maximum: ${VILINK_CONSTANTS.maxTipAmount} VCoin`);
+    }
+    
+    const tx = new Transaction();
+    
+    // Add create action instruction
+    // tx.add(await this.program.methods.createAction(0, params.amount, params.target, ...)...);
+    
+    return tx;
+  }
+  
+  /**
+   * Build create vouch action transaction
+   */
+  async buildCreateVouchAction(params: {
+    target: PublicKey;
+    expirySeconds?: number;
+  }): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+    
+    const tx = new Transaction();
+    
+    // Add create vouch action instruction
+    // tx.add(await this.program.methods.createAction(1, new BN(0), params.target, ...)...);
+    
+    return tx;
+  }
+  
+  /**
+   * Build create follow action transaction
+   */
+  async buildCreateFollowAction(params: {
+    target: PublicKey;
+    maxExecutions?: number;
+    expirySeconds?: number;
+  }): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+    
+    const tx = new Transaction();
+    
+    // Add create follow action instruction
+    
+    return tx;
+  }
+  
+  /**
+   * Build execute tip action transaction
+   */
+  async buildExecuteTipAction(
+    creator: PublicKey,
+    timestamp: BN
+  ): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+    
+    const { valid, reason } = await this.isActionValid(creator, timestamp);
+    if (!valid) {
+      throw new Error(reason);
+    }
+    
+    const action = await this.getAction(creator, timestamp);
+    if (action?.creator.equals(this.client.publicKey)) {
+      throw new Error("Cannot execute own action");
+    }
+    
+    const tx = new Transaction();
+    
+    // Add execute tip action instruction
+    // tx.add(await this.program.methods.executeTipAction()...);
+    
+    return tx;
+  }
+}
+
+export { VILINK_CONSTANTS, ACTION_SCOPES };
+

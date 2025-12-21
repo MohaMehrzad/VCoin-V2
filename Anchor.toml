@@ -1,0 +1,44 @@
+[toolchain]
+package_manager = "yarn"
+anchor_version = "0.32.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+vcoin_token = "VCNtkM3xg8ihH3JY8bQbqjUWCNEAVCiqUGmPjAqPNwP"
+vevcoin_token = "VEVCnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjBqQ"
+staking_protocol = "STKGnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjCrR"
+transfer_hook = "E5FWQsncH5hWRYX2ysiTA9uA2vhdQtQP473tDU9GWhyi"
+identity_protocol = "CnxKPyRgU3HZDUvbAFPAddYJVWM2rWhLVq9QoEnBgJdB"
+five_a_protocol = "EPVUXY5NSTxWRGU4JF3zowtc5wB6HE9aUwFHG61W9CCH"
+content_registry = "3Ex3eTSLUcLdfkMdUD91FH3a5CaFSzydMtCwAWGvW5vY"
+governance_protocol = "3fgzSVwUho1rp4k87ZZ43K9fysxy1WqabDNWTemmD1vi"
+sscre_protocol = "FZrjuWJE6VW7qSxB8Jhd4hxv1fSnYBsRCzBTfWhVN8zC"
+vilink_protocol = "FYaKjTU8fq6W8nBQB6LhFBvCzYtvNzYNd6Gdr4dQELfT"
+gasless_protocol = "FZyRfP5qeChTZ9z2M2aHkXQ8QLHbRQ5aK7dJ2BpPtYXj"
+
+[programs.devnet]
+vcoin_token = "VCNtkM3xg8ihH3JY8bQbqjUWCNEAVCiqUGmPjAqPNwP"
+vevcoin_token = "VEVCnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjBqQ"
+staking_protocol = "STKGnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjCrR"
+transfer_hook = "E5FWQsncH5hWRYX2ysiTA9uA2vhdQtQP473tDU9GWhyi"
+identity_protocol = "CnxKPyRgU3HZDUvbAFPAddYJVWM2rWhLVq9QoEnBgJdB"
+five_a_protocol = "EPVUXY5NSTxWRGU4JF3zowtc5wB6HE9aUwFHG61W9CCH"
+content_registry = "3Ex3eTSLUcLdfkMdUD91FH3a5CaFSzydMtCwAWGvW5vY"
+governance_protocol = "3fgzSVwUho1rp4k87ZZ43K9fysxy1WqabDNWTemmD1vi"
+sscre_protocol = "FZrjuWJE6VW7qSxB8Jhd4hxv1fSnYBsRCzBTfWhVN8zC"
+vilink_protocol = "FYaKjTU8fq6W8nBQB6LhFBvCzYtvNzYNd6Gdr4dQELfT"
+gasless_protocol = "FZyRfP5qeChTZ9z2M2aHkXQ8QLHbRQ5aK7dJ2BpPtYXj"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
+

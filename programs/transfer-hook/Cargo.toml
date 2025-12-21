@@ -1,0 +1,29 @@
+[package]
+name = "transfer-hook"
+version = "0.1.0"
+description = "VCoin Transfer Hook for 5A score updates and wash trading detection"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "transfer_hook"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.32.0", features = ["init-if-needed"] }
+anchor-spl = { version = "0.32.0", features = ["token_2022"] }
+spl-token-2022 = "6.0"
+spl-transfer-hook-interface = "0.8"
+spl-tlv-account-resolution = "0.8"
+
+
+
+
+

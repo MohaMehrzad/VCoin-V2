@@ -1,0 +1,80 @@
+{
+  "name": "@viwoapp/sdk",
+  "version": "0.1.0",
+  "description": "ViWoApp SDK - TypeScript SDK for VCoin Protocol Integration",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "viwoapp",
+    "vcoin",
+    "solana",
+    "blockchain",
+    "sdk"
+  ],
+  "author": "ViWoApp Team",
+  "license": "MIT",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.0",
+    "@solana/web3.js": "^1.95.0",
+    "@solana/spl-token": "^0.4.0",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@coral-xyz/anchor": ">=0.30.0",
+    "@solana/web3.js": ">=1.90.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.esm.js",
+      "require": "./dist/core/index.js"
+    },
+    "./staking": {
+      "types": "./dist/staking/index.d.ts",
+      "import": "./dist/staking/index.esm.js",
+      "require": "./dist/staking/index.js"
+    },
+    "./governance": {
+      "types": "./dist/governance/index.d.ts",
+      "import": "./dist/governance/index.esm.js",
+      "require": "./dist/governance/index.js"
+    },
+    "./rewards": {
+      "types": "./dist/rewards/index.d.ts",
+      "import": "./dist/rewards/index.esm.js",
+      "require": "./dist/rewards/index.js"
+    },
+    "./vilink": {
+      "types": "./dist/vilink/index.d.ts",
+      "import": "./dist/vilink/index.esm.js",
+      "require": "./dist/vilink/index.js"
+    },
+    "./gasless": {
+      "types": "./dist/gasless/index.d.ts",
+      "import": "./dist/gasless/index.esm.js",
+      "require": "./dist/gasless/index.js"
+    }
+  }
+}
+
