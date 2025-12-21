@@ -46,6 +46,8 @@ pub mod errors {
         Overflow,
         #[msg("Invalid extra account metas")]
         InvalidExtraAccountMetas,
+        #[msg("Invalid token mint")]
+        InvalidMint,
     }
 }
 
@@ -517,10 +519,12 @@ pub struct Execute<'info> {
     )]
     pub hook_config: Account<'info, HookConfig>,
     
-    /// Source token account
+    /// Source token account - MUST use VCoin mint
+    #[account(constraint = sender.mint == hook_config.vcoin_mint @ TransferHookError::InvalidMint)]
     pub sender: InterfaceAccount<'info, TokenAccount>,
     
-    /// Destination token account  
+    /// Destination token account - MUST use VCoin mint
+    #[account(constraint = receiver.mint == hook_config.vcoin_mint @ TransferHookError::InvalidMint)]
     pub receiver: InterfaceAccount<'info, TokenAccount>,
     
     #[account(

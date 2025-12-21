@@ -76,6 +76,10 @@ pub mod errors {
         Overflow,
         #[msg("User has no active stake")]
         NoActiveStake,
+        #[msg("Invalid token account owner")]
+        InvalidTokenAccount,
+        #[msg("Invalid token mint")]
+        InvalidMint,
     }
 }
 
@@ -617,18 +621,23 @@ pub struct Stake<'info> {
     pub user_stake: Account<'info, UserStake>,
     
     /// VCoin mint
-    #[account(constraint = vcoin_mint.key() == pool.vcoin_mint)]
+    #[account(constraint = vcoin_mint.key() == pool.vcoin_mint @ StakingError::InvalidMint)]
     pub vcoin_mint: InterfaceAccount<'info, Mint>,
     
-    /// User's VCoin token account
-    #[account(mut)]
+    /// User's VCoin token account - MUST be owned by user and use VCoin mint
+    #[account(
+        mut,
+        constraint = user_vcoin_account.owner == user.key() @ StakingError::InvalidTokenAccount,
+        constraint = user_vcoin_account.mint == pool.vcoin_mint @ StakingError::InvalidMint
+    )]
     pub user_vcoin_account: InterfaceAccount<'info, TokenAccount>,
     
     /// Pool vault for staked VCoin
     #[account(
         mut,
         seeds = [POOL_VAULT_SEED],
-        bump
+        bump,
+        constraint = pool_vault.mint == pool.vcoin_mint @ StakingError::InvalidMint
     )]
     pub pool_vault: InterfaceAccount<'info, TokenAccount>,
     
@@ -670,18 +679,23 @@ pub struct Unstake<'info> {
     pub user_stake: Account<'info, UserStake>,
     
     /// VCoin mint
-    #[account(constraint = vcoin_mint.key() == pool.vcoin_mint)]
+    #[account(constraint = vcoin_mint.key() == pool.vcoin_mint @ StakingError::InvalidMint)]
     pub vcoin_mint: InterfaceAccount<'info, Mint>,
     
-    /// User's VCoin token account
-    #[account(mut)]
+    /// User's VCoin token account - MUST be owned by user and use VCoin mint
+    #[account(
+        mut,
+        constraint = user_vcoin_account.owner == user.key() @ StakingError::InvalidTokenAccount,
+        constraint = user_vcoin_account.mint == pool.vcoin_mint @ StakingError::InvalidMint
+    )]
     pub user_vcoin_account: InterfaceAccount<'info, TokenAccount>,
     
     /// Pool vault
     #[account(
         mut,
         seeds = [POOL_VAULT_SEED],
-        bump
+        bump,
+        constraint = pool_vault.mint == pool.vcoin_mint @ StakingError::InvalidMint
     )]
     pub pool_vault: InterfaceAccount<'info, TokenAccount>,
     

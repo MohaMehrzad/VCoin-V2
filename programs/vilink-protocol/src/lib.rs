@@ -84,6 +84,12 @@ pub mod errors {
         InvalidTarget,
         #[msg("Arithmetic overflow")]
         Overflow,
+        #[msg("Invalid token account owner")]
+        InvalidTokenAccount,
+        #[msg("Invalid token mint")]
+        InvalidMint,
+        #[msg("Invalid treasury account")]
+        InvalidTreasury,
     }
 }
 
@@ -531,6 +537,32 @@ pub mod vilink_protocol {
         let target_stats = &mut ctx.accounts.target_stats;
         
         require!(!config.paused, ViLinkError::ProtocolPaused);
+        
+        // Validate token accounts (runtime checks to reduce stack size)
+        require!(
+            ctx.accounts.executor_token_account.owner == ctx.accounts.executor.key(),
+            ViLinkError::InvalidTokenAccount
+        );
+        require!(
+            ctx.accounts.executor_token_account.mint == config.vcoin_mint,
+            ViLinkError::InvalidMint
+        );
+        require!(
+            ctx.accounts.target_token_account.owner == action.target,
+            ViLinkError::InvalidTarget
+        );
+        require!(
+            ctx.accounts.target_token_account.mint == config.vcoin_mint,
+            ViLinkError::InvalidMint
+        );
+        require!(
+            ctx.accounts.treasury_token_account.owner == config.treasury,
+            ViLinkError::InvalidTreasury
+        );
+        require!(
+            ctx.accounts.treasury_token_account.mint == config.vcoin_mint,
+            ViLinkError::InvalidMint
+        );
         
         let clock = Clock::get()?;
         
@@ -1010,18 +1042,18 @@ pub struct ExecuteTipAction<'info> {
     pub target_stats: Account<'info, UserActionStats>,
     
     /// VCoin mint
-    #[account(constraint = vcoin_mint.key() == config.vcoin_mint)]
+    #[account(constraint = vcoin_mint.key() == config.vcoin_mint @ ViLinkError::InvalidMint)]
     pub vcoin_mint: InterfaceAccount<'info, Mint>,
     
-    /// Executor's token account
+    /// Executor's token account (validated in instruction handler to reduce stack size)
     #[account(mut)]
     pub executor_token_account: InterfaceAccount<'info, TokenAccount>,
     
-    /// Target's token account
+    /// Target's token account (validated in instruction handler to reduce stack size)
     #[account(mut)]
     pub target_token_account: InterfaceAccount<'info, TokenAccount>,
     
-    /// Treasury token account
+    /// Treasury token account (validated in instruction handler to reduce stack size)
     #[account(mut)]
     pub treasury_token_account: InterfaceAccount<'info, TokenAccount>,
     

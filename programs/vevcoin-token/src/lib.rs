@@ -45,6 +45,10 @@ pub mod errors {
         InsufficientBalance,
         #[msg("Cannot mint/burn zero tokens")]
         ZeroAmount,
+        #[msg("Invalid token account owner")]
+        InvalidTokenAccount,
+        #[msg("Invalid token mint")]
+        InvalidMint,
     }
 }
 
@@ -366,12 +370,16 @@ pub struct MintVeVCoin<'info> {
     /// The veVCoin mint
     #[account(
         mut,
-        constraint = mint.key() == config.mint
+        constraint = mint.key() == config.mint @ VeVCoinError::InvalidMint
     )]
     pub mint: InterfaceAccount<'info, Mint>,
     
-    /// User's token account for veVCoin
-    #[account(mut)]
+    /// User's token account for veVCoin - MUST be owned by user and use veVCoin mint
+    #[account(
+        mut,
+        constraint = user_token_account.owner == user.key() @ VeVCoinError::InvalidTokenAccount,
+        constraint = user_token_account.mint == config.mint @ VeVCoinError::InvalidMint
+    )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
     
     #[account(mut)]
@@ -408,12 +416,16 @@ pub struct BurnVeVCoin<'info> {
     /// The veVCoin mint
     #[account(
         mut,
-        constraint = mint.key() == config.mint
+        constraint = mint.key() == config.mint @ VeVCoinError::InvalidMint
     )]
     pub mint: InterfaceAccount<'info, Mint>,
     
-    /// User's token account for veVCoin
-    #[account(mut)]
+    /// User's token account for veVCoin - MUST be owned by user and use veVCoin mint
+    #[account(
+        mut,
+        constraint = user_token_account.owner == user.key() @ VeVCoinError::InvalidTokenAccount,
+        constraint = user_token_account.mint == config.mint @ VeVCoinError::InvalidMint
+    )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
     
     pub token_program: Program<'info, Token2022>,

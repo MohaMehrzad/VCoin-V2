@@ -85,6 +85,10 @@ pub mod errors {
         FundingLayerInactive,
         #[msg("Arithmetic overflow")]
         Overflow,
+        #[msg("Invalid token account owner")]
+        InvalidTokenAccount,
+        #[msg("Invalid token mint")]
+        InvalidMint,
     }
 }
 
@@ -1036,14 +1040,19 @@ pub struct ClaimRewards<'info> {
     )]
     pub pool_vault: InterfaceAccount<'info, TokenAccount>,
     
-    /// User's token account
-    #[account(mut)]
+    /// User's token account - MUST be owned by user and use VCoin mint
+    #[account(
+        mut,
+        constraint = user_token_account.owner == user.key() @ SSCREError::InvalidTokenAccount,
+        constraint = user_token_account.mint == pool_config.vcoin_mint @ SSCREError::InvalidMint
+    )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
     
     /// Fee recipient's token account
     #[account(
         mut,
-        constraint = fee_account.owner == pool_config.fee_recipient
+        constraint = fee_account.owner == pool_config.fee_recipient @ SSCREError::InvalidTokenAccount,
+        constraint = fee_account.mint == pool_config.vcoin_mint @ SSCREError::InvalidMint
     )]
     pub fee_account: InterfaceAccount<'info, TokenAccount>,
     

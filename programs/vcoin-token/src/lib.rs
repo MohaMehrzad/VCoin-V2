@@ -42,6 +42,8 @@ pub mod errors {
         ZeroSlashAmount,
         #[msg("Token is paused")]
         TokenPaused,
+        #[msg("Invalid token mint")]
+        InvalidMint,
     }
 }
 
@@ -313,12 +315,15 @@ pub struct MintTokens<'info> {
     /// The VCoin mint
     #[account(
         mut,
-        constraint = mint.key() == config.mint
+        constraint = mint.key() == config.mint @ VCoinError::InvalidMint
     )]
     pub mint: InterfaceAccount<'info, Mint>,
     
-    /// Destination token account
-    #[account(mut)]
+    /// Destination token account - MUST use VCoin mint
+    #[account(
+        mut,
+        constraint = destination.mint == config.mint @ VCoinError::InvalidMint
+    )]
     pub destination: InterfaceAccount<'info, TokenAccount>,
     
     pub token_program: Program<'info, Token2022>,
@@ -339,12 +344,15 @@ pub struct SlashTokens<'info> {
     /// The VCoin mint
     #[account(
         mut,
-        constraint = mint.key() == config.mint
+        constraint = mint.key() == config.mint @ VCoinError::InvalidMint
     )]
     pub mint: InterfaceAccount<'info, Mint>,
     
-    /// Target account to slash tokens from
-    #[account(mut)]
+    /// Target account to slash tokens from - MUST use VCoin mint
+    #[account(
+        mut,
+        constraint = target_account.mint == config.mint @ VCoinError::InvalidMint
+    )]
     pub target_account: InterfaceAccount<'info, TokenAccount>,
     
     pub token_program: Program<'info, Token2022>,

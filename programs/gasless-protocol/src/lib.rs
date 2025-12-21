@@ -94,6 +94,10 @@ pub mod errors {
         InvalidActionType,
         #[msg("Arithmetic overflow")]
         Overflow,
+        #[msg("Invalid token account owner")]
+        InvalidTokenAccount,
+        #[msg("Invalid token mint")]
+        InvalidMint,
     }
 }
 
@@ -883,18 +887,23 @@ pub struct DeductVCoinFee<'info> {
     )]
     pub user_stats: Account<'info, UserGaslessStats>,
     
-    #[account(constraint = vcoin_mint.key() == config.vcoin_mint)]
+    #[account(constraint = vcoin_mint.key() == config.vcoin_mint @ GaslessError::InvalidMint)]
     pub vcoin_mint: InterfaceAccount<'info, Mint>,
     
-    /// User's VCoin account
-    #[account(mut)]
+    /// User's VCoin account - MUST be owned by user and use VCoin mint
+    #[account(
+        mut,
+        constraint = user_token_account.owner == user.key() @ GaslessError::InvalidTokenAccount,
+        constraint = user_token_account.mint == config.vcoin_mint @ GaslessError::InvalidMint
+    )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
     
-    /// Fee vault
+    /// Fee vault - PDA owned vault with VCoin mint
     #[account(
         mut,
         seeds = [FEE_VAULT_SEED],
-        bump
+        bump,
+        constraint = fee_vault.mint == config.vcoin_mint @ GaslessError::InvalidMint
     )]
     pub fee_vault: InterfaceAccount<'info, TokenAccount>,
     
