@@ -10,7 +10,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg)](https://solana.com)
 [![Tests](https://img.shields.io/badge/tests-377%20passing-brightgreen.svg)](https://github.com/MohaMehrzad/VCoin-V2)
-[![Security](https://img.shields.io/badge/audit-24%2F24%20fixed-success.svg)](https://viwoapp.com/docs/implementation)
 
 [![Whitepaper](https://img.shields.io/badge/docs-Whitepaper-blue.svg)](https://viwoapp.com/whitepaper)
 [![Token Economy](https://img.shields.io/badge/docs-Token%20Economy-blue.svg)](https://viwoapp.com/docs/economy)
