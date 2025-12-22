@@ -7,6 +7,9 @@ pub mod instructions;
 pub mod state;
 pub mod utils;
 
+#[cfg(test)]
+mod tests;
+
 use contexts::*;
 use instructions::query::get_stake_info::UserStakeInfo;
 

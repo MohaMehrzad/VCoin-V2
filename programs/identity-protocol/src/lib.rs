@@ -8,6 +8,9 @@ pub mod instructions;
 pub mod state;
 pub mod utils;
 
+#[cfg(test)]
+mod tests;
+
 use contexts::*;
 
 declare_id!("3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG");

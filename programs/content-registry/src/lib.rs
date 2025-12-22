@@ -24,6 +24,9 @@ pub mod contexts;
 pub mod instructions;
 pub mod utils;
 
+#[cfg(test)]
+mod tests;
+
 use contexts::*;
 use instructions::*;
 

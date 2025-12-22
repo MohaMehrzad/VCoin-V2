@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 /// Proposal status enum
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum ProposalStatus {
     #[default]
     Pending = 0,

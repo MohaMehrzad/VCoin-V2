@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::constants::*;
 
 /// Subscription tiers
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum SubscriptionTier {
     #[default]
     Free = 0,

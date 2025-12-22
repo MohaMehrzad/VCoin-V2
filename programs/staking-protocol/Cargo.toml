@@ -26,6 +26,11 @@ spl-token-2022 = "6.0"
 vcoin-token = { path = "../vcoin-token", features = ["cpi"] }
 vevcoin-token = { path = "../vevcoin-token", features = ["cpi"] }
 
+[dev-dependencies]
+solana-program-test = "2.0"
+solana-sdk = "2.0"
+tokio = { version = "1.14", features = ["full"] }
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
 

@@ -10,7 +10,7 @@ members = [
     "programs/governance-protocol",
     "programs/sscre-protocol",
     "programs/vilink-protocol",
-    "programs/gasless-protocol"
+    "programs/gasless-protocol",
 ]
 resolver = "2"
 

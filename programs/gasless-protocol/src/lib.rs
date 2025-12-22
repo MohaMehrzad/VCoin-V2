@@ -30,6 +30,9 @@ pub mod state;
 pub mod contexts;
 pub mod instructions;
 
+#[cfg(test)]
+mod tests;
+
 use contexts::*;
 use instructions::*;
 

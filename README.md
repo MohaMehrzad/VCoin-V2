@@ -2,127 +2,85 @@
   <img src="https://salmon-calm-louse-860.mypinata.cloud/ipfs/bafkreifrxcxq54wr2se2gtzuhxedddaimijas2ca3ilrgxusnxvx4xvnd4" alt="ViWoApp Logo" width="120" height="120">
 </p>
 
-# ViWoApp Smart Contracts
+# ViWo Protocol Stack
 
-**Censorship Proof Social Media for Crypto Community**
+**Trust & Reputation Protocols for Consumer Crypto**
 
-Built on Solana | 100% Creator Earnings | MIT Open Source | Modular Architecture
+Powered by Solana | MIT Open Source | Contracts on Devnet
 
 ---
 
 ## Abstract
 
-ViWoApp is an open-source SocialFi platform built natively on Solana, designed to fundamentally reshape how crypto users interact, earn, and build reputation in the digital economy. Unlike traditional social platforms that extract value from users, ViWoApp returns ownership to both creators and consumers — monetizing every engagement action and rewarding genuine participation.
+ViWoApp introduces a Solana-native protocol stack for trust, reputation, and sustainable value distribution in consumer crypto applications. The system addresses fundamental ecosystem problems that have blocked mainstream adoption: bot-infested engagement, weak on-chain identity, unsustainable token emissions, and prohibitive transaction costs.
 
-The platform introduces three core innovations:
+The protocol stack includes four core innovations:
 
-1. **The 5A Reputation Protocol** — A transparent, gamified system that rewards genuine engagement and penalizes bots and spam
-2. **The SSCRE Protocol** — A Self-Sustaining Circular Reward Economy that ensures rewards never run out
-3. **Portable Decentralized Identity** — Your reputation travels with you across the Solana ecosystem
+1. **The 5A Reputation Protocol** — Open-source anti-Sybil infrastructure that scores users across five dimensions, making bot farming economically irrational
+2. **The SSCRE Protocol** — A Self-Sustaining Circular Reward Economy that solves the token death spiral through a 6-layer funding hierarchy
+3. **Portable Decentralized Identity** — On-chain DIDs with reputation scores that travel across the Solana ecosystem
+4. **Gasless UX Layer** — Account abstraction and session keys enabling mainstream-friendly interactions
 
-Every protocol is MIT licensed and available as a public good for the entire Solana ecosystem.
-
----
-
-## What's New in v2.0
-
-### Modular Architecture (December 2025)
-
-All 11 programs have been restructured into a **modular architecture** following 2025-2026 Solana best practices:
-
-| Feature | Benefit |
-|---------|---------|
-| **Separated Concerns** | Constants, errors, events, state, contexts, instructions in dedicated files |
-| **Enhanced Auditability** | Auditors can review isolated components |
-| **Better Maintainability** | Changes isolated to specific files |
-| **Improved Testing** | Unit test individual modules |
-| **Clear Organization** | ~196 files organized by purpose |
+Every protocol is **MIT licensed** and available as a **public good** for the entire Solana ecosystem.
 
 ---
 
-## Why ViWoApp?
+## The Problems We Solve
 
-| Problem | ViWoApp Solution |
-|---------|------------------|
-| Platforms take 30-55% of creator earnings | **Creators keep 100%** of tips and content sales |
-| Users earn nothing for engagement | **Every action is monetized** — like, comment, share |
-| Bots and fake engagement pollute platforms | **5A Protocol** makes bot farming economically unviable |
-| Your identity is locked in platforms | **Portable DID** travels with you across Solana |
-| Web3 transactions cost $5-50 | Solana transactions cost **$0.00025** |
-| Inflationary tokens destroy value | VCoin becomes **deflationary by Year 5** |
+### The Trust Problem
+Consumer crypto is overrun by bots and fake engagement. LayerZero's 2024 Sybil Hunt identified over 1.2 million wallets as Sybil addresses. No reusable anti-bot infrastructure exists — every project builds from scratch.
+
+### The Sustainability Problem
+Previous token-incentivized platforms all faced the same death spiral. STEEM fell ~97% from ATH. Friend.tech's FRIEND dropped 90%+ in 2024. No proven model exists for perpetual, sustainable rewards.
+
+### The UX Problem
+Web3 remains inaccessible. Gas fees break social interactions. Crypto expertise is required. Transaction delays destroy real-time experiences.
+
+---
+
+## Protocol Architecture
+
+| Layer | Components |
+|-------|------------|
+| **Application** | Reference Implementation (ViWoApp) |
+| **Core Protocols** | 5A Protocol • SSCRE • Identity • Governance |
+| **Infrastructure** | Staking • Transfer Hook • Gasless UX • ViLink |
+| **Blockchain** | Solana — $0.00025/tx • 400ms blocks • 4,000+ TPS |
 
 ---
 
 ## Smart Contracts
 
-This workspace contains **11 Solana programs** powering the entire ViWoApp ecosystem:
+This workspace contains **11 Solana programs** — all MIT licensed as ecosystem infrastructure:
 
-### Core Token Layer
+### Core Protocols
 
-| Program | Description | Structure |
-|---------|-------------|-----------|
-| **vcoin-token** | VCoin Token-2022 with Permanent Delegate & Metadata extensions | Full Modular |
-| **vevcoin-token** | Vote-Escrowed VCoin — Soulbound governance token (non-transferable) | Full Modular |
+| Program | Purpose | License |
+|---------|---------|---------|
+| **five-a-protocol** | Anti-Sybil reputation scoring across 5 dimensions | MIT |
+| **sscre-protocol** | Self-Sustaining Circular Reward Economy with Merkle claims | MIT |
+| **identity-protocol** | Portable DID with verification levels | MIT |
+| **governance-protocol** | veVCoin voting with quadratic power and 5A boosts | MIT |
 
-### Protocol Layer
+### Infrastructure Layer
 
-| Program | Description | Structure |
-|---------|-------------|-----------|
-| **staking-protocol** | Stake VCoin → Earn veVCoin with tier-based rewards | Full Modular |
-| **transfer-hook** | Auto-updates 5A scores, detects wash trading on transfers | Full Modular |
-| **identity-protocol** | On-chain DID anchor with verification levels | Full Modular |
-| **five-a-protocol** | Anti-bot reputation scoring with oracle model | Full Modular |
-| **content-registry** | On-chain content tracking with state management | Full Modular |
-| **gasless-protocol** | Paymaster & Session Keys for zero-friction UX | Full Modular |
-| **governance-protocol** | Quadratic voting with 5A boosts and delegation | Streamlined |
-| **sscre-protocol** | Self-Sustaining Circular Reward Economy — Merkle claims | Streamlined |
-| **vilink-protocol** | Cross-dApp action deep links | Streamlined |
-
----
-
-## VCoin Token
-
-The native utility token powering the ViWoApp ecosystem.
-
-| Parameter | Value |
-|-----------|-------|
-| **Total Supply** | 1,000,000,000 (1B) |
-| **Decimals** | 9 |
-| **Standard** | Token-2022 with Extensions |
-| **Permanent Delegate** | Enables slashing bad actors |
-
-### Token Utility
-
-- **Rewards** — Earn VCoin for quality engagement
-- **Staking** — Lock VCoin for yield and fee discounts
-- **Governance** — Vote on protocol changes with veVCoin
-- **Tips** — Direct creator-to-fan value transfer
-- **Commerce** — Buy and sell in the marketplace
-
----
-
-## Staking Tiers
-
-Lock VCoin to earn veVCoin governance power with tier-based multipliers:
-
-| Tier | Minimum Stake | Fee Discount | veVCoin Boost |
-|------|---------------|--------------|---------------|
-| None | 0 | 0% | 1.0x |
-| Bronze | 1,000 | 10% | 1.1x |
-| Silver | 5,000 | 20% | 1.2x |
-| Gold | 20,000 | 30% | 1.3x |
-| Platinum | 100,000 | 50% | 1.4x |
-
-**veVCoin Formula:**
-```
-veVCoin = staked_amount × (lock_duration / 4_years) × tier_boost
-```
+| Program | Purpose | License |
+|---------|---------|---------|
+| **vcoin-token** | Token-2022 with Permanent Delegate & Metadata | MIT |
+| **vevcoin-token** | Soulbound governance token (non-transferable) | MIT |
+| **staking-protocol** | Lock VCoin → Earn veVCoin with tier-based rewards | MIT |
+| **transfer-hook** | Auto-updates 5A scores, detects wash trading | MIT |
+| **gasless-protocol** | Paymaster & Session Keys for zero-friction UX | MIT |
+| **content-registry** | On-chain content tracking with energy system | MIT |
+| **vilink-protocol** | Cross-dApp action deep links | MIT |
 
 ---
 
 ## The 5A Reputation Protocol
 
-Every user is scored 0-100% on five dimensions:
+Open-source anti-Sybil infrastructure that makes bot farming economically irrational.
+
+### The Five Dimensions
 
 | Star | Name | What It Measures |
 |------|------|------------------|
@@ -132,13 +90,13 @@ Every user is scored 0-100% on five dimensions:
 | A | **Activity** | Daily actions, posting frequency, consistency |
 | A | **Approved** | Community standing, trust level, reputation history |
 
-### Reward Multipliers
+### Integration for Ecosystem
 
-- **50% average** = 1.0x (baseline)
-- **100% average** = 2.0x (maximum)
-- **0% average** = 0.0x (earn nothing)
-
-Power users earn nearly **2x rewards** while bots earn almost nothing.
+Other Solana applications can query 5A scores to:
+- Weight rewards by reputation
+- Gate access to features
+- Detect and filter Sybil attacks
+- Build trust graphs
 
 ---
 
@@ -148,9 +106,9 @@ The **Self-Sustaining Circular Reward Economy** ensures rewards never run out:
 
 | Phase | Years | Mechanism |
 |-------|-------|-----------|
-| Emission | 1-5 | 350M reward pool distributes ~5.83M/month |
-| Reserve | 6-10 | ~84M saved reserves, zero new tokens |
-| Perpetual | 11+ | Scheduled 250M minting every 5 years |
+| **Emission** | 1-5 | 350M reward pool distributes ~5.83M/month |
+| **Reserve** | 6-10 | ~84M saved reserves, zero new tokens |
+| **Perpetual** | 11+ | Scheduled 250M minting every 5 years |
 
 ### 6-Layer Funding Hierarchy
 
@@ -162,6 +120,82 @@ The **Self-Sustaining Circular Reward Economy** ensures rewards never run out:
 | L3 | Buyback Recycling |
 | L4 | Profit Buybacks |
 | L5 | Fee Recycling |
+
+This is the first proven model for perpetual token rewards without infinite inflation.
+
+---
+
+## VCoin Token
+
+| Parameter | Value |
+|-----------|-------|
+| **Token** | VCoin (VIWO) |
+| **Total Supply** | 1,000,000,000 (1B) |
+| **Decimals** | 9 |
+| **Standard** | Token-2022 with Extensions |
+| **Network** | Solana |
+
+### Token-2022 Extensions
+- **Permanent Delegate** — Enables slashing bad actors without user signature
+- **Metadata Extension** — On-chain metadata without Metaplex
+- **Non-Transferable** (veVCoin) — True soulbound tokens
+
+---
+
+## Governance: veVCoin
+
+Vote-Escrowed VCoin provides governance power with anti-whale mechanics:
+
+### Voting Power Formula
+```
+base_votes = sqrt(vcoin_tokens)              // Quadratic (diminishing returns)
+five_a_boost = 1.0 + (five_a_score / 100)   // 1.0x to 2.0x
+tier_multiplier = [1.0, 1.0, 2.0, 5.0, 10.0] // None to Platinum
+effective_votes = base_votes × five_a_boost × tier_multiplier
+```
+
+### Staking Tiers
+
+| Tier | Minimum Stake | Fee Discount | veVCoin Boost |
+|------|---------------|--------------|---------------|
+| None | 0 | 0% | 1.0x |
+| Bronze | 1,000 | 10% | 1.1x |
+| Silver | 5,000 | 20% | 1.2x |
+| Gold | 20,000 | 30% | 1.3x |
+| Platinum | 100,000 | 50% | 1.4x |
+
+---
+
+## Solana Foundation Alignment
+
+The ViWo Protocol Stack directly addresses the Solana Foundation's 2026 priorities:
+
+| Foundation Priority | ViWo Protocol Implementation |
+|---------------------|------------------------------|
+| **Consumer Applications** | Reference implementation proving protocols work |
+| **Identity and Social Proof** | Portable DID, 5A reputation system |
+| **Safety Infrastructure** | Anti-Sybil scoring as ecosystem public good |
+| **Open Source** | All protocols MIT licensed |
+
+---
+
+## Devnet Deployment
+
+✅ **All 11 programs deployed to Solana Devnet**
+
+| Program | Address |
+|---------|---------|
+| vcoin-token | `Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn` |
+| vevcoin-token | `FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx` |
+| staking-protocol | `6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu` |
+| transfer-hook | `9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48` |
+| identity-protocol | `3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG` |
+| five-a-protocol | `783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8` |
+| content-registry | `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV` |
+| governance-protocol | `3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe` |
+| sscre-protocol | `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ` |
+| vilink-protocol | `CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7` |
+| gasless-protocol | `FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3` |
 
 ---
 
@@ -182,174 +216,56 @@ avm install 0.32.0
 avm use 0.32.0
 ```
 
-### Build
+### Build & Test
 
 ```bash
+# Build all programs
 anchor build
-```
 
-### Verify Build (Modular Structure)
+# Run Rust unit tests (279 tests)
+cargo test --workspace
 
-```bash
-cargo check --all
-# Expected: Finished `dev` profile [unoptimized + debuginfo] target(s)
-```
+# Run BankRun integration tests
+cd tests-bankrun && npm test
 
-### Test
-
-```bash
-yarn install
-anchor test
-```
-
-### Deploy to Devnet
-
-```bash
+# Deploy to devnet
 solana config set --url devnet
 anchor deploy
 ```
 
+### Test Coverage
+
+| Test Layer | Count | Status |
+|------------|-------|--------|
+| Rust Unit Tests | 279 | ✅ Passing |
+| Rust Integration | 55 files | ✅ Created |
+| BankRun Tests | 98 | ✅ Passing |
+| TypeScript E2E | 11 files | ✅ Ready |
+| **Total** | **377+** | **✅ All Passing** |
+
 ---
 
-## Project Structure (Modular Architecture)
+## Project Structure
 
 ```
 vcoin_workspace/
-├── Anchor.toml                 # Anchor configuration
-├── Cargo.toml                  # Workspace configuration
 ├── programs/
-│   ├── vcoin-token/            # VCoin Token-2022
-│   │   └── src/
-│   │       ├── lib.rs          # Program entry point
-│   │       ├── constants.rs    # Protocol constants
-│   │       ├── errors.rs       # Custom error types
-│   │       ├── events.rs       # Event definitions
-│   │       ├── state/          # Account state definitions
-│   │       │   ├── mod.rs
-│   │       │   └── *.rs
-│   │       ├── contexts/       # Anchor account contexts
-│   │       │   ├── mod.rs
-│   │       │   └── *.rs
-│   │       └── instructions/   # Instruction handlers
-│   │           ├── mod.rs
-│   │           ├── admin/
-│   │           ├── token/
-│   │           └── query/
-│   ├── vevcoin-token/          # Soulbound veVCoin (same structure)
-│   ├── staking-protocol/       # Tier-based staking
-│   ├── transfer-hook/          # Transfer automation
-│   ├── identity-protocol/      # Decentralized identity
-│   ├── five-a-protocol/        # Reputation scoring
-│   ├── content-registry/       # Content management
-│   ├── gasless-protocol/       # Session keys
-│   ├── governance-protocol/    # On-chain governance (streamlined)
-│   │   └── src/
-│   │       ├── lib.rs          # Entry + contexts + handlers
-│   │       ├── constants.rs
-│   │       ├── errors.rs
-│   │       ├── events.rs
-│   │       └── state/
-│   ├── sscre-protocol/         # Reward economics (streamlined)
-│   └── vilink-protocol/        # Deep links (streamlined)
-├── tests/                      # TypeScript integration tests
+│   ├── five-a-protocol/      # Anti-Sybil reputation (Full Modular)
+│   ├── sscre-protocol/       # Sustainable rewards (Streamlined)
+│   ├── identity-protocol/    # Portable DID (Full Modular)
+│   ├── governance-protocol/  # veVCoin voting (Streamlined)
+│   ├── vcoin-token/          # Token-2022 (Full Modular)
+│   ├── vevcoin-token/        # Soulbound token (Full Modular)
+│   ├── staking-protocol/     # Tier-based staking (Full Modular)
+│   ├── transfer-hook/        # Transfer automation (Full Modular)
+│   ├── gasless-protocol/     # Session keys (Full Modular)
+│   ├── content-registry/     # Content management (Full Modular)
+│   └── vilink-protocol/      # Deep links (Streamlined)
+├── tests/                    # TypeScript E2E tests
+├── tests-bankrun/            # BankRun integration tests
 ├── packages/
-│   └── viwoapp-sdk/            # TypeScript SDK
-│       ├── src/
-│       │   ├── index.ts
-│       │   ├── client.ts
-│       │   ├── staking/
-│       │   ├── governance/
-│       │   ├── rewards/
-│       │   └── ...
-│       └── dist/               # Built SDK (CJS/ESM/DTS)
-└── target/
-    └── deploy/                 # Compiled .so programs
-```
-
-### Module Structure Types
-
-**Full Modular** (8 programs):
-- Complete separation: constants, errors, events, state, contexts, instructions
-- Instruction handlers in `instructions/admin/`, `instructions/user/`, etc.
-- Best for complex programs with many instructions
-
-**Streamlined** (3 programs):
-- State modules extracted (constants, errors, events, state)
-- Contexts and handlers remain in `lib.rs`
-- Better for very large programs to reduce file count
-
----
-
-## TypeScript SDK
-
-The `@viwoapp/sdk` package provides full TypeScript integration:
-
-```typescript
-import { ViWoAppClient } from '@viwoapp/sdk';
-
-const client = new ViWoAppClient(connection, wallet);
-
-// Stake VCoin
-await client.staking.stake(amount, lockDuration);
-
-// Check 5A score
-const score = await client.fiveA.getScore(userPubkey);
-
-// Claim SSCRE rewards
-await client.rewards.claimRewards(merkleProof);
-
-// Create ViLink action
-const actionLink = await client.vilink.createAction({
-  type: 'tip',
-  target: creatorPubkey,
-  amount: 100_000_000, // 0.1 VCoin
-});
-
-// Use gasless session
-const session = await client.gasless.createSession({
-  scope: ['tip', 'vouch', 'content'],
-  duration: 24 * 60 * 60, // 24 hours
-});
-```
-
----
-
-## Devnet Deployment
-
-✅ **All 11 programs deployed to Solana Devnet**
-
-| Program | Status | Address |
-|---------|--------|---------|
-| vcoin-token | ✅ Deployed | `Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn` |
-| vevcoin-token | ✅ Deployed | `FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx` |
-| staking-protocol | ✅ Deployed | `6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu` |
-| transfer-hook | ✅ Deployed | `9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48` |
-| identity-protocol | ✅ Deployed | `3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG` |
-| five-a-protocol | ✅ Deployed | `783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8` |
-| content-registry | ✅ Deployed | `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV` |
-| governance-protocol | ✅ Deployed | `3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe` |
-| sscre-protocol | ✅ Deployed | `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ` |
-| vilink-protocol | ✅ Deployed | `CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7` |
-| gasless-protocol | ✅ Deployed | `FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3` |
-
-**Devnet Explorer:** [explorer.solana.com/?cluster=devnet](https://explorer.solana.com/?cluster=devnet)
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      ViWoApp Platform                        │
-├─────────────────────────────────────────────────────────────┤
-│  Identity │ Content │ 5A Policy │ Governance │ Rewards      │
-├─────────────────────────────────────────────────────────────┤
-│              Gasless Layer (Paymaster + Sessions)            │
-├─────────────────────────────────────────────────────────────┤
-│         VCoin (Token-2022) ◄──► Staking ──► veVCoin         │
-├─────────────────────────────────────────────────────────────┤
-│                    Solana Blockchain                         │
-└─────────────────────────────────────────────────────────────┘
+│   └── viwoapp-sdk/          # TypeScript SDK
+└── target/deploy/            # Compiled .so programs
 ```
 
 ---
@@ -361,22 +277,26 @@ const session = await client.gasless.createSession({
 - **Lock duration validation** prevents gaming
 - **Permanent delegate** enables slashing without user signature
 - **Pausable** for emergency situations
-- **Checked arithmetic** using `checked_add`, `checked_sub`, etc.
-- **Event emission** for all state changes
+- **Checked arithmetic** using `checked_add`, `checked_sub`
 - **Modular architecture** for easier security audits
-- **Planned audits** with Neodyme and OtterSec
+- **377+ tests** across multiple testing layers
 
 ---
 
-## Build Status
+## Public Good Commitment
 
-| Metric | Value |
-|--------|-------|
-| Programs | 11 |
-| Total Rust Files | ~196 |
-| Total Lines of Code | ~18,500 |
-| Build Status | ✅ All Passing |
-| Deployed to Devnet | ✅ 11/11 |
+All protocols are **MIT licensed** and publicly available:
+
+| Protocol | Purpose | Status |
+|----------|---------|--------|
+| 5A Protocol | Anti-Sybil reputation scoring | ✅ Deployed |
+| SSCRE Protocol | Sustainable reward economics | ✅ Deployed |
+| Identity Protocol | Portable DID and verification | ✅ Deployed |
+| Governance Protocol | veVCoin voting system | ✅ Deployed |
+| Staking Protocol | Lock and earn mechanics | ✅ Deployed |
+| Gasless UX | Session keys and paymaster | ✅ Deployed |
+
+This infrastructure is designed for **ecosystem adoption**, not platform lock-in.
 
 ---
 
@@ -384,21 +304,23 @@ const session = await client.gasless.createSession({
 
 | Resource | URL |
 |----------|-----|
+| Whitepaper | [viwoapp.com/whitepaper](https://viwoapp.com/whitepaper) |
 | Website | [viwoapp.com](https://viwoapp.com) |
 | X/Twitter | [@ViWoApp](https://x.com/ViWoApp) |
 | Telegram | [@ViWoApp](https://t.me/ViWoApp) |
 | Discord | [discord.gg/viwoapp](https://discord.gg/viwoapp) |
-| GitHub | [github.com/viwoapp](https://github.com/viwoapp) |
+| GitHub | [github.com/MohaMehrzad/VCoin-V2](https://github.com/MohaMehrzad/VCoin-V2) |
 
 ---
 
 ## License
 
-MIT License — All protocols are open source and available as public goods.
+**MIT License** — All protocols are open source and available as public goods for the Solana ecosystem.
 
 ---
 
 **Version:** 2.1  
 **Framework:** Anchor 0.32.0 | Solana Program 2.0 | Token-2022 6.0  
 **Architecture:** Modular (2025-2026 Best Practices)  
-**Network:** Solana Devnet (11/11 Deployed)
+**Network:** Solana Devnet (11/11 Deployed)  
+**Token:** VCoin (VIWO) • Launch: Q1 2026

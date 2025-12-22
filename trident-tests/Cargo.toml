@@ -1,0 +1,47 @@
+[package]
+name = "trident-tests"
+version = "0.1.0"
+description = "Trident fuzz tests for ViWoApp Solana programs"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Trident fuzzing framework
+trident-client = "0.8"
+trident-fuzz = "0.1"
+
+# Anchor and Solana
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
+solana-sdk = { workspace = true }
+spl-token-2022 = { workspace = true }
+
+# Serialization
+borsh = { workspace = true }
+serde = { workspace = true }
+
+# Program dependencies
+vcoin-token = { path = "../programs/vcoin-token", features = ["cpi", "no-entrypoint"] }
+vevcoin-token = { path = "../programs/vevcoin-token", features = ["cpi", "no-entrypoint"] }
+staking-protocol = { path = "../programs/staking-protocol", features = ["cpi", "no-entrypoint"] }
+transfer-hook = { path = "../programs/transfer-hook", features = ["cpi", "no-entrypoint"] }
+identity-protocol = { path = "../programs/identity-protocol", features = ["cpi", "no-entrypoint"] }
+five-a-protocol = { path = "../programs/five-a-protocol", features = ["cpi", "no-entrypoint"] }
+content-registry = { path = "../programs/content-registry", features = ["cpi", "no-entrypoint"] }
+governance-protocol = { path = "../programs/governance-protocol", features = ["cpi", "no-entrypoint"] }
+sscre-protocol = { path = "../programs/sscre-protocol", features = ["cpi", "no-entrypoint"] }
+vilink-protocol = { path = "../programs/vilink-protocol", features = ["cpi", "no-entrypoint"] }
+gasless-protocol = { path = "../programs/gasless-protocol", features = ["cpi", "no-entrypoint"] }
+
+[[bin]]
+name = "fuzz_staking"
+path = "src/fuzz_staking.rs"
+
+[[bin]]
+name = "fuzz_governance"
+path = "src/fuzz_governance.rs"
+
+[[bin]]
+name = "fuzz_5a"
+path = "src/fuzz_5a.rs"
+

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 /// Verification levels
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum VerificationLevel {
     #[default]
     None = 0,

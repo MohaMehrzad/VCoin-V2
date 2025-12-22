@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::constants::*;
 
 /// Staking tier enum
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum StakingTier {
     #[default]
     None = 0,

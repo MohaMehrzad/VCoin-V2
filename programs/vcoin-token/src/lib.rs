@@ -6,6 +6,9 @@ pub mod errors;
 pub mod instructions;
 pub mod state;
 
+#[cfg(test)]
+mod tests;
+
 use contexts::*;
 
 declare_id!("Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn");

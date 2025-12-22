@@ -28,6 +28,9 @@ pub mod errors;
 pub mod events;
 pub mod state;
 
+#[cfg(test)]
+mod tests;
+
 use constants::*;
 use errors::*;
 use state::*;

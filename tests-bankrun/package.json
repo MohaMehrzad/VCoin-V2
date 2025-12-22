@@ -1,0 +1,29 @@
+{
+  "name": "viwoapp-bankrun-tests",
+  "version": "0.1.0",
+  "description": "Fast integration tests using Bankrun (10-100x faster than solana-test-validator)",
+  "scripts": {
+    "test": "node --test --import tsx tests/*.test.ts",
+    "test:staking": "node --test --import tsx tests/staking.test.ts",
+    "test:governance": "node --test --import tsx tests/governance.test.ts",
+    "test:5a": "node --test --import tsx tests/five-a.test.ts",
+    "test:sscre": "node --test --import tsx tests/sscre.test.ts",
+    "test:vcoin": "node --test --import tsx tests/vcoin-token.test.ts",
+    "test:vevcoin": "node --test --import tsx tests/vevcoin-token.test.ts",
+    "test:hook": "node --test --import tsx tests/transfer-hook.test.ts",
+    "test:vilink": "node --test --import tsx tests/vilink.test.ts",
+    "test:gasless": "node --test --import tsx tests/gasless.test.ts"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.32.0",
+    "@solana/web3.js": "^1.95.0",
+    "@solana/spl-token": "^0.4.0",
+    "solana-bankrun": "^0.3.0",
+    "anchor-bankrun": "^0.4.0",
+    "chai": "^4.3.4",
+    "@types/chai": "^4.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
+

@@ -1297,6 +1297,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"js-sha3@npm:^0.9.3":
+  version: 0.9.3
+  resolution: "js-sha3@npm:0.9.3"
+  checksum: 10c0/6976feaf79842e39b87d17e41c5bd397240a5d68920ea911fdfb3615eea29f72c6067a5aa19e38989a29b3031ff39834ec9fb2ab066c59368751296629a798f1
+  languageName: node
+  linkType: hard
+
 "js-yaml@npm:4.1.0":
   version: 4.1.0
   resolution: "js-yaml@npm:4.1.0"
@@ -2159,6 +2166,7 @@ __metadata:
     "@types/chai": "npm:^4.3.0"
     "@types/mocha": "npm:^9.0.0"
     chai: "npm:^4.3.4"
+    js-sha3: "npm:^0.9.3"
     mocha: "npm:^9.0.3"
     prettier: "npm:^2.6.2"
     ts-mocha: "npm:^10.0.0"

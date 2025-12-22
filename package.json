@@ -1,16 +1,44 @@
 {
   "name": "vcoin-workspace",
   "version": "0.1.0",
-  "description": "VCoin Token and Staking Protocol on Solana",
+  "description": "VCoin Token and Staking Protocol on Solana - ViWoApp",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "test": "anchor test"
+    "test": "anchor test",
+    "test:anchor": "anchor test",
+    "test:anchor:verbose": "anchor test -- --verbose",
+    "test:rust": "cargo test -p tests-rust",
+    "test:rust:unit": "cargo test -p tests-rust --test unit_tests",
+    "test:rust:property": "cargo test -p tests-rust --test property_tests",
+    "test:rust:security": "cargo test -p tests-rust --test security_tests",
+    "test:rust:invariant": "cargo test -p tests-rust --test invariant_tests",
+    "test:rust:integration": "cargo test -p tests-rust --test integration_tests",
+    "test:rust:verbose": "cargo test -p tests-rust -- --nocapture",
+    "test:bankrun": "cd tests-bankrun && npm test",
+    "test:bankrun:staking": "cd tests-bankrun && npm run test:staking",
+    "test:bankrun:governance": "cd tests-bankrun && npm run test:governance",
+    "test:bankrun:5a": "cd tests-bankrun && npm run test:5a",
+    "test:bankrun:sscre": "cd tests-bankrun && npm run test:sscre",
+    "test:fuzz": "cargo run -p trident-tests --bin fuzz_staking",
+    "test:fuzz:staking": "cargo run -p trident-tests --bin fuzz_staking",
+    "test:fuzz:governance": "cargo run -p trident-tests --bin fuzz_governance",
+    "test:fuzz:5a": "cargo run -p trident-tests --bin fuzz_5a",
+    "test:all": "npm run test:rust && npm run test:anchor",
+    "test:quick": "cargo test -p tests-rust --test unit_tests -- --quiet",
+    "coverage": "cargo +nightly test -p tests-rust -- --nocapture",
+    "coverage:html": "grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o coverage",
+    "audit": "cargo audit",
+    "check": "cargo check --all",
+    "clippy": "cargo clippy --all-targets --all-features -- -D warnings",
+    "build": "anchor build",
+    "build:verify": "cargo check --all && anchor build"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.0",
     "@solana/spl-token": "^0.4.0",
-    "@solana/web3.js": "^1.95.0"
+    "@solana/web3.js": "^1.95.0",
+    "js-sha3": "^0.9.3"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",

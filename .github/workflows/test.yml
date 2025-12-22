@@ -1,0 +1,281 @@
+# ViWoApp Solana Smart Contract Testing Pipeline
+# Comprehensive CI/CD for all 11 programs
+#
+# Triggers:
+# - Push to main/develop branches
+# - Pull requests to main
+# - Manual dispatch
+#
+# Jobs:
+# 1. Build - Compile all programs
+# 2. Unit Tests - Rust unit tests
+# 3. Integration Tests - TypeScript integration tests
+# 4. Property Tests - Property-based tests with proptest
+# 5. Security Tests - Security-focused tests
+# 6. Coverage - Code coverage reporting
+
+name: ViWoApp Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SOLANA_VERSION: "2.0.0"
+  ANCHOR_VERSION: "0.32.0"
+  RUST_TOOLCHAIN: "1.79.0"
+  NODE_VERSION: "20"
+
+jobs:
+  # ============================================================================
+  # Build Job
+  # ============================================================================
+  build:
+    name: Build Programs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: VCoinContract/vcoin_workspace
+      
+      - name: Install Solana
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      
+      - name: Install Anchor
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+      
+      - name: Build Programs
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          anchor build
+      
+      - name: Check Formatting
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          cargo fmt --all -- --check
+      
+      - name: Clippy Lints
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+      
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: program-builds
+          path: VCoinContract/vcoin_workspace/target/deploy/*.so
+          retention-days: 7
+
+  # ============================================================================
+  # Rust Unit Tests
+  # ============================================================================
+  rust-tests:
+    name: Rust Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: VCoinContract/vcoin_workspace
+      
+      - name: Install Solana
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      
+      - name: Run Unit Tests
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          cargo test -p tests-rust --test unit_tests -- --nocapture
+      
+      - name: Run Property Tests
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          cargo test -p tests-rust --test property_tests -- --nocapture
+      
+      - name: Run Security Tests
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          cargo test -p tests-rust --test security_tests -- --nocapture
+      
+      - name: Run Invariant Tests
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          cargo test -p tests-rust --test invariant_tests -- --nocapture
+
+  # ============================================================================
+  # TypeScript Integration Tests
+  # ============================================================================
+  typescript-tests:
+    name: TypeScript Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+          cache-dependency-path: VCoinContract/vcoin_workspace/yarn.lock
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      
+      - name: Install Solana
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      
+      - name: Install Anchor
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+      
+      - name: Install Dependencies
+        working-directory: VCoinContract/vcoin_workspace
+        run: yarn install
+      
+      - name: Build Programs
+        working-directory: VCoinContract/vcoin_workspace
+        run: anchor build
+      
+      - name: Run Anchor Tests
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          solana-keygen new --no-bip39-passphrase --silent
+          anchor test
+
+  # ============================================================================
+  # Code Coverage
+  # ============================================================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+      
+      - name: Install grcov
+        run: cargo install grcov
+      
+      - name: Install Solana
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      
+      - name: Run Tests with Coverage
+        working-directory: VCoinContract/vcoin_workspace
+        env:
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: "-Cinstrument-coverage"
+          LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+        run: |
+          cargo +nightly test -p tests-rust
+      
+      - name: Generate Coverage Report
+        working-directory: VCoinContract/vcoin_workspace
+        run: |
+          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o coverage.lcov
+      
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: VCoinContract/vcoin_workspace/coverage.lcov
+          fail_ci_if_error: false
+          verbose: true
+
+  # ============================================================================
+  # Security Audit
+  # ============================================================================
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      
+      - name: Run Security Audit
+        working-directory: VCoinContract/vcoin_workspace
+        run: cargo audit
+        continue-on-error: true
+      
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+      
+      - name: Check Dependencies
+        working-directory: VCoinContract/vcoin_workspace
+        run: cargo deny check
+        continue-on-error: true
+
+  # ============================================================================
+  # All Tests Passed
+  # ============================================================================
+  all-tests-passed:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [build, rust-tests, typescript-tests]
+    if: always()
+    steps:
+      - name: Check Results
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" && \
+                "${{ needs.rust-tests.result }}" == "success" && \
+                "${{ needs.typescript-tests.result }}" == "success" ]]; then
+            echo "✅ All tests passed!"
+            exit 0
+          else
+            echo "❌ Some tests failed"
+            echo "Build: ${{ needs.build.result }}"
+            echo "Rust Tests: ${{ needs.rust-tests.result }}"
+            echo "TypeScript Tests: ${{ needs.typescript-tests.result }}"
+            exit 1
+          fi
+
