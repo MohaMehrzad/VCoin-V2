@@ -14,6 +14,35 @@ Powered by Solana | MIT Open Source | Contracts on Devnet
 
 ---
 
+## Table of Contents
+
+- [Abstract](#abstract)
+- [The Problems We Solve](#the-problems-we-solve)
+- [Protocol Architecture](#protocol-architecture)
+- [Smart Contracts](#smart-contracts)
+- [The 5A Reputation Protocol](#the-5a-reputation-protocol)
+- [SSCRE Protocol](#sscre-protocol)
+- [VCoin Token](#vcoin-token)
+- [Governance: veVCoin](#governance-vevcoin)
+- [Solana Foundation Alignment](#solana-foundation-alignment)
+- [Devnet Deployment](#devnet-deployment)
+- [Development](#development)
+- [TypeScript SDK](#typescript-sdk)
+  - [Installation](#installation)
+  - [Quick Start](#quick-start)
+  - [SDK Modules](#sdk-modules)
+  - [Staking Client](#staking-client)
+  - [Governance Client](#governance-client)
+  - [Constants & Utilities](#constants--utilities)
+  - [PDA Helpers](#pda-helpers)
+- [Project Structure](#project-structure)
+- [Security](#security)
+- [Public Good Commitment](#public-good-commitment)
+- [Links](#links)
+- [License](#license)
+
+---
+
 ## Abstract
 
 ViWoApp introduces a Solana-native protocol stack for trust, reputation, and sustainable value distribution in consumer crypto applications. The system addresses fundamental ecosystem problems that have blocked mainstream adoption: bot-infested engagement, weak on-chain identity, unsustainable token emissions, and prohibitive transaction costs.
