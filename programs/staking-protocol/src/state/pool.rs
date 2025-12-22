@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct StakingPool {
     /// Admin authority
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// VCoin mint address
     pub vcoin_mint: Pubkey,
     /// veVCoin mint address
@@ -24,11 +26,15 @@ pub struct StakingPool {
     pub bump: u8,
     /// Vault bump seed
     pub vault_bump: u8,
+    /// M-01 Security Fix: Reentrancy guard for CPI protection
+    /// Set to true during stake/unstake operations to prevent reentrancy
+    pub reentrancy_guard: bool,
 }
 
 impl StakingPool {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // vcoin_mint
         32 + // vevcoin_mint
         32 + // vevcoin_program
@@ -37,6 +43,7 @@ impl StakingPool {
         8 +  // total_stakers
         1 +  // paused
         1 +  // bump
-        1;   // vault_bump
+        1 +  // vault_bump
+        1;   // reentrancy_guard (M-01)
 }
 

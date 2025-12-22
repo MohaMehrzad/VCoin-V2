@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct GovernanceConfig {
     /// Admin authority
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// Staking program
     pub staking_program: Pubkey,
     /// 5A Protocol program
@@ -31,6 +33,7 @@ pub struct GovernanceConfig {
 impl GovernanceConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // staking_program
         32 + // five_a_program
         8 +  // proposal_threshold

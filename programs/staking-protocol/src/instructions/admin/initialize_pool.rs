@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::contexts::InitializePool;
+use crate::events::StakingPoolInitialized;
 
 /// Initialize the staking pool
 pub fn handler(ctx: Context<InitializePool>, vevcoin_program: Pubkey) -> Result<()> {
@@ -16,6 +17,16 @@ pub fn handler(ctx: Context<InitializePool>, vevcoin_program: Pubkey) -> Result<
     pool.paused = false;
     pool.bump = ctx.bumps.pool;
     pool.vault_bump = ctx.bumps.pool_vault;
+    
+    let clock = Clock::get()?;
+    
+    // L-01: Emit pool initialized event
+    emit!(StakingPoolInitialized {
+        authority: pool.authority,
+        vcoin_mint: pool.vcoin_mint,
+        vevcoin_mint: pool.vevcoin_mint,
+        timestamp: clock.unix_timestamp,
+    });
     
     msg!("Staking pool initialized");
     msg!("VCoin Mint: {}", pool.vcoin_mint);

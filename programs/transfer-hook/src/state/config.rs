@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct HookConfig {
     /// Admin authority
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// VCoin mint address
     pub vcoin_mint: Pubkey,
     /// 5A Protocol program (for CPI calls)
@@ -27,6 +29,7 @@ pub struct HookConfig {
 impl HookConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // vcoin_mint
         32 + // five_a_program
         1 +  // block_wash_trading

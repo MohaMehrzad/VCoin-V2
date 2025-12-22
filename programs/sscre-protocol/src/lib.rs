@@ -260,7 +260,7 @@ pub mod sscre_protocol {
         }
         
         user_claim.user = user_key;
-        user_claim.mark_epoch_claimed(epoch_dist.epoch);
+        user_claim.mark_epoch_claimed(epoch_dist.epoch)?;
         user_claim.total_claimed = user_claim.total_claimed.saturating_add(net_amount);
         user_claim.claims_count = user_claim.claims_count.saturating_add(1);
         
@@ -319,14 +319,23 @@ pub mod sscre_protocol {
     }
     
     /// Reset circuit breaker (after investigation)
+    /// M-05 Security Fix: Requires cooldown period before reset
     pub fn reset_circuit_breaker(ctx: Context<ResetCircuitBreaker>) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
         let cb = &mut ctx.accounts.circuit_breaker;
         
+        // M-05: Enforce 6-hour cooldown period after trigger
+        let clock = Clock::get()?;
+        require!(
+            clock.unix_timestamp >= cb.last_trigger_at + CIRCUIT_BREAKER_COOLDOWN,
+            SSCREError::CircuitBreakerCooldown
+        );
+        
         cb.is_active = false;
         config.circuit_breaker_active = false;
         
-        msg!("Circuit breaker reset");
+        msg!("Circuit breaker reset after {} hours cooldown", 
+            (clock.unix_timestamp - cb.last_trigger_at) / 3600);
         Ok(())
     }
     
@@ -337,10 +346,53 @@ pub mod sscre_protocol {
         Ok(())
     }
     
-    /// Update authority
-    pub fn update_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
-        ctx.accounts.pool_config.authority = new_authority;
-        msg!("Authority updated to: {}", new_authority);
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
+        let config = &mut ctx.accounts.pool_config;
+        
+        require!(
+            new_authority != config.authority,
+            SSCREError::CannotProposeSelf
+        );
+        
+        require!(
+            new_authority != Pubkey::default(),
+            SSCREError::InvalidAuthority
+        );
+        
+        config.pending_authority = new_authority;
+        
+        msg!("Authority transfer proposed to: {}", new_authority);
+        Ok(())
+    }
+    
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        let config = &mut ctx.accounts.pool_config;
+        
+        let old_authority = config.authority;
+        let new_authority = ctx.accounts.new_authority.key();
+        
+        config.authority = new_authority;
+        config.pending_authority = Pubkey::default();
+        
+        msg!("Authority transferred from {} to {}", old_authority, new_authority);
+        Ok(())
+    }
+    
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
+        let config = &mut ctx.accounts.pool_config;
+        
+        require!(
+            config.pending_authority != Pubkey::default(),
+            SSCREError::NoPendingTransfer
+        );
+        
+        let cancelled = config.pending_authority;
+        config.pending_authority = Pubkey::default();
+        
+        msg!("Authority transfer to {} cancelled", cancelled);
         Ok(())
     }
     
@@ -492,6 +544,20 @@ pub struct UpdateAuthority<'info> {
     #[account(mut, seeds = [POOL_CONFIG_SEED], bump = pool_config.bump, has_one = authority @ SSCREError::Unauthorized)]
     pub pool_config: Account<'info, RewardsPoolConfig>,
     pub authority: Signer<'info>,
+}
+
+/// Context for accepting authority transfer (H-02 security fix)
+#[derive(Accounts)]
+pub struct AcceptAuthority<'info> {
+    #[account(
+        mut,
+        seeds = [POOL_CONFIG_SEED],
+        bump = pool_config.bump,
+        constraint = pool_config.pending_authority == new_authority.key() @ SSCREError::NotPendingAuthority,
+        constraint = pool_config.pending_authority != Pubkey::default() @ SSCREError::NoPendingTransfer
+    )]
+    pub pool_config: Account<'info, RewardsPoolConfig>,
+    pub new_authority: Signer<'info>,
 }
 
 #[derive(Accounts)]

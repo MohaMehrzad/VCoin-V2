@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022;
+use crate::constants::MAX_FEE_SLIPPAGE_BPS;
 use crate::contexts::DeductVCoinFee;
 use crate::errors::GaslessError;
 use crate::events::FeeCollected;
@@ -12,11 +13,20 @@ pub fn handler(ctx: Context<DeductVCoinFee>, amount: u64) -> Result<()> {
     
     let clock = Clock::get()?;
     
-    // Calculate VCoin fee equivalent
-    let vcoin_fee = config.sol_fee_per_tx
+    // Calculate expected VCoin fee equivalent
+    let expected_vcoin_fee = config.sol_fee_per_tx
         .saturating_mul(config.vcoin_fee_multiplier);
     
-    let fee_to_deduct = if amount > 0 { amount } else { vcoin_fee };
+    let fee_to_deduct = if amount > 0 { amount } else { expected_vcoin_fee };
+    
+    // L-03: Slippage protection - ensure fee doesn't deviate too much from expected
+    if amount > 0 && expected_vcoin_fee > 0 {
+        let max_slippage = config.max_slippage_bps.max(MAX_FEE_SLIPPAGE_BPS);
+        let max_allowed_fee = expected_vcoin_fee
+            .saturating_mul(10000_u64.saturating_add(max_slippage as u64))
+            .saturating_div(10000);
+        require!(fee_to_deduct <= max_allowed_fee, GaslessError::SlippageExceeded);
+    }
     
     // Transfer VCoin from user to fee vault
     token_2022::transfer_checked(

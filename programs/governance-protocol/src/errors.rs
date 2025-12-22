@@ -44,5 +44,33 @@ pub enum GovernanceError {
     InvalidZKProof,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("Decryption share already submitted by this committee member")]
+    DecryptionShareAlreadySubmitted,
+    #[msg("Invalid committee index")]
+    InvalidCommitteeIndex,
+    
+    // H-02: Two-step authority transfer errors
+    #[msg("Not the pending authority")]
+    NotPendingAuthority,
+    
+    #[msg("No pending authority transfer")]
+    NoPendingTransfer,
+    
+    #[msg("Cannot propose self as new authority")]
+    CannotProposeSelf,
+    
+    #[msg("Invalid authority address (zero)")]
+    InvalidAuthority,
+    
+    // M-07: Delegation expiry enforcement
+    #[msg("Delegation has expired and cannot be used for voting")]
+    DelegationExpired,
+    
+    #[msg("Delegation is not active")]
+    DelegationNotActive,
+    
+    // L-04: URI validation
+    #[msg("Invalid description URI format (must start with ipfs://, https://, or ar://)")]
+    InvalidDescriptionUri,
 }
 

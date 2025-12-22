@@ -41,5 +41,28 @@ pub enum StakingError {
     
     #[msg("Invalid token mint")]
     InvalidMint,
+    
+    #[msg("veVCoin mint CPI failed")]
+    VeVCoinMintFailed,
+    
+    #[msg("veVCoin burn CPI failed")]
+    VeVCoinBurnFailed,
+    
+    // H-02: Two-step authority transfer errors
+    #[msg("Not the pending authority")]
+    NotPendingAuthority,
+    
+    #[msg("No pending authority transfer")]
+    NoPendingTransfer,
+    
+    #[msg("Cannot propose self as new authority")]
+    CannotProposeSelf,
+    
+    #[msg("Invalid authority address (zero)")]
+    InvalidAuthority,
+    
+    // M-01: Reentrancy protection
+    #[msg("Reentrancy detected - operation already in progress")]
+    ReentrancyDetected,
 }
 

@@ -9,6 +9,15 @@
 [![npm version](https://img.shields.io/npm/v/@viwoapp/sdk.svg)](https://www.npmjs.com/package/@viwoapp/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg)](https://solana.com)
+[![Tests](https://img.shields.io/badge/tests-377%20passing-brightgreen.svg)](https://github.com/MohaMehrzad/VCoin-V2)
+[![Security](https://img.shields.io/badge/audit-24%2F24%20fixed-success.svg)](https://viwoapp.com/docs/implementation)
+
+[![Whitepaper](https://img.shields.io/badge/docs-Whitepaper-blue.svg)](https://viwoapp.com/whitepaper)
+[![Token Economy](https://img.shields.io/badge/docs-Token%20Economy-blue.svg)](https://viwoapp.com/docs/economy)
+[![Implementation](https://img.shields.io/badge/docs-Implementation-blue.svg)](https://viwoapp.com/docs/implementation)
+[![Infrastructure](https://img.shields.io/badge/docs-Infrastructure-blue.svg)](https://viwoapp.com/docs/infrastructure)
+[![Roadmap](https://img.shields.io/badge/docs-Roadmap-blue.svg)](https://viwoapp.com/docs/roadmap)
+[![Pitch](https://img.shields.io/badge/deck-Pitch-orange.svg)](https://viwoapp.com/pitch)
 
 Powered by Solana | MIT Open Source | Contracts on Devnet
 
@@ -39,6 +48,9 @@ Powered by Solana | MIT Open Source | Contracts on Devnet
 - [Security](#security)
 - [Public Good Commitment](#public-good-commitment)
 - [Links](#links)
+  - [Documentation](#documentation)
+  - [Resources](#resources)
+  - [Community](#community)
 - [License](#license)
 
 ---
@@ -501,15 +513,31 @@ This infrastructure is designed for **ecosystem adoption**, not platform lock-in
 
 ## Links
 
+### Documentation
+
+[![Whitepaper](https://img.shields.io/badge/📄-Whitepaper-blue.svg?style=for-the-badge)](https://viwoapp.com/whitepaper)
+[![Pitch Deck](https://img.shields.io/badge/📊-Pitch%20Deck-orange.svg?style=for-the-badge)](https://viwoapp.com/pitch)
+[![Token Economy](https://img.shields.io/badge/💰-Token%20Economy-green.svg?style=for-the-badge)](https://viwoapp.com/docs/economy)
+[![Implementation](https://img.shields.io/badge/🔧-Implementation-purple.svg?style=for-the-badge)](https://viwoapp.com/docs/implementation)
+[![Infrastructure](https://img.shields.io/badge/🏗️-Infrastructure-red.svg?style=for-the-badge)](https://viwoapp.com/docs/infrastructure)
+[![App Guide](https://img.shields.io/badge/📱-App%20Guide-teal.svg?style=for-the-badge)](https://viwoapp.com/docs/app)
+[![Roadmap](https://img.shields.io/badge/🗺️-Roadmap-yellow.svg?style=for-the-badge)](https://viwoapp.com/docs/roadmap)
+
+### Resources
+
 | Resource | URL |
 |----------|-----|
 | **npm SDK** | [@viwoapp/sdk](https://www.npmjs.com/package/@viwoapp/sdk) |
-| Whitepaper | [viwoapp.com/whitepaper](https://viwoapp.com/whitepaper) |
 | Website | [viwoapp.com](https://viwoapp.com) |
+| GitHub | [github.com/MohaMehrzad/VCoin-V2](https://github.com/MohaMehrzad/VCoin-V2) |
+
+### Community
+
+| Platform | URL |
+|----------|-----|
 | X/Twitter | [@ViWoApp](https://x.com/ViWoApp) |
 | Telegram | [@ViWoApp](https://t.me/ViWoApp) |
 | Discord | [discord.gg/viwoapp](https://discord.gg/viwoapp) |
-| GitHub | [github.com/MohaMehrzad/VCoin-V2](https://github.com/MohaMehrzad/VCoin-V2) |
 
 ---
 

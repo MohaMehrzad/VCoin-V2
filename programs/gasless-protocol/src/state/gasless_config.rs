@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct GaslessConfig {
     /// Admin authority
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// Fee payer wallet (paymaster)
     pub fee_payer: Pubkey,
     /// VCoin mint
@@ -36,6 +38,8 @@ pub struct GaslessConfig {
     pub current_day: u32,
     /// Day's spent budget
     pub day_spent: u64,
+    /// L-03: Maximum fee slippage allowed (bps)
+    pub max_slippage_bps: u16,
     /// PDA bump
     pub bump: u8,
 }
@@ -43,6 +47,7 @@ pub struct GaslessConfig {
 impl GaslessConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // fee_payer
         32 + // vcoin_mint
         32 + // fee_vault
@@ -58,6 +63,7 @@ impl GaslessConfig {
         1 +  // paused
         4 +  // current_day
         8 +  // day_spent
+        2 +  // max_slippage_bps (L-03)
         1;   // bump
     
     /// Get current day number

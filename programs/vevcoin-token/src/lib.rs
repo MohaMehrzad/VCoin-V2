@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 pub mod constants;
 pub mod contexts;
 pub mod errors;
+pub mod events;
 pub mod instructions;
 pub mod state;
 
@@ -54,9 +55,19 @@ pub mod vevcoin_token {
         instructions::admin::update_staking_protocol::handler(ctx, new_staking_protocol)
     }
 
-    /// Update the authority
-    pub fn update_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::update_authority::handler(ctx, new_authority)
+    }
+
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::accept_authority::handler(ctx)
+    }
+
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateConfig>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer::handler(ctx)
     }
 
     /// Get user's veVCoin balance (view function)

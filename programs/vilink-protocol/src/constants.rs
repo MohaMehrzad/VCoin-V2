@@ -24,3 +24,9 @@ pub const MAX_TIP_AMOUNT: u64 = 10_000_000_000_000; // 10,000 VCoin
 /// Fee configuration
 pub const PLATFORM_FEE_BPS: u16 = 250; // 2.5%
 
+/// M-02 Security Fix: Platform fee bounds
+/// Maximum platform fee (10%)
+pub const MAX_PLATFORM_FEE_BPS: u16 = 1000;
+/// Minimum platform fee (0.1%)
+pub const MIN_PLATFORM_FEE_BPS: u16 = 10;
+

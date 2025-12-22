@@ -12,6 +12,7 @@ pub mod delegate_votes;
 pub mod revoke_delegation;
 pub mod update_config;
 pub mod update_authority;
+pub mod accept_authority;
 pub mod get_proposal;
 
 pub use initialize::*;
@@ -28,5 +29,6 @@ pub use delegate_votes::*;
 pub use revoke_delegation::*;
 pub use update_config::*;
 pub use update_authority::*;
+pub use accept_authority::*;
 pub use get_proposal::*;
 

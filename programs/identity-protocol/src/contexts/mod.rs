@@ -7,6 +7,7 @@ mod link_sas_attestation;
 mod subscribe;
 mod update_config;
 mod update_authority;
+mod accept_authority;
 mod get_identity;
 
 pub use initialize::*;
@@ -17,5 +18,6 @@ pub use link_sas_attestation::*;
 pub use subscribe::*;
 pub use update_config::*;
 pub use update_authority::*;
+pub use accept_authority::*;
 pub use get_identity::*;
 

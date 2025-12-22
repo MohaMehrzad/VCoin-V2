@@ -9,6 +9,7 @@ pub mod private_voting_config;
 pub mod delegation;
 pub mod delegate_stats;
 pub mod utils;
+pub mod decryption_share;
 
 pub use vote_choice::*;
 pub use proposal_status::*;
@@ -21,4 +22,5 @@ pub use private_voting_config::*;
 pub use delegation::*;
 pub use delegate_stats::*;
 pub use utils::*;
+pub use decryption_share::*;
 

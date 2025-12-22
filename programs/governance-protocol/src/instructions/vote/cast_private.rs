@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::constants::ZK_VOTING_ENABLED;
 use crate::contexts::CastPrivateVote;
 use crate::errors::GovernanceError;
 use crate::events::VoteCast;
@@ -9,6 +10,12 @@ pub fn handler(
     encrypted_weight: [u8; 32],
     zk_proof: [u8; 128],
 ) -> Result<()> {
+    // === CRITICAL FIX C-01: Block until ZK verifier implemented ===
+    // The ZK proof is currently NOT verified. Setting ZK_VOTING_ENABLED to true
+    // without implementing proper verification would allow vote manipulation.
+    require!(ZK_VOTING_ENABLED, GovernanceError::ZKVotingNotEnabled);
+    // === END CRITICAL FIX ===
+    
     let proposal = &ctx.accounts.proposal;
     let private_config = &ctx.accounts.private_voting_config;
     

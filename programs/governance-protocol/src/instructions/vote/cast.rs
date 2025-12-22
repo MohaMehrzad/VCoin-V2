@@ -28,6 +28,22 @@ pub fn handler(
         GovernanceError::ZKVotingNotEnabled
     );
     
+    // M-07 Security Fix: Validate delegation expiry if voting with delegated power
+    if let Some(delegation) = &ctx.accounts.delegation {
+        // Check that delegation hasn't expired (0 = never expires)
+        if delegation.expires_at > 0 {
+            require!(
+                clock.unix_timestamp < delegation.expires_at,
+                GovernanceError::DelegationExpired
+            );
+        }
+        // Ensure the delegation is for this voter and still valid
+        require!(
+            delegation.delegate == ctx.accounts.voter.key(),
+            GovernanceError::Unauthorized
+        );
+    }
+    
     let vote_choice = VoteChoice::from_u8(choice)
         .ok_or(GovernanceError::InvalidVoteChoice)?;
     

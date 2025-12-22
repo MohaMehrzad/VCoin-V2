@@ -4,11 +4,16 @@ use anchor_spl::token_2022;
 use crate::constants::STAKING_POOL_SEED;
 use crate::contexts::Unstake;
 use crate::errors::StakingError;
+use crate::events::Unstaked;
 use crate::state::StakingTier;
 
 /// Unstake VCoin after lock expires
-/// Burns all veVCoin
+/// Burns veVCoin proportionally
+/// M-01 Security Fix: Added reentrancy guard for CPI protection
 pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
+    // M-01: Check reentrancy guard before proceeding
+    require!(!ctx.accounts.pool.reentrancy_guard, StakingError::ReentrancyDetected);
+    
     // Get values for validation first
     let staked_amount = ctx.accounts.user_stake.staked_amount;
     let lock_end = ctx.accounts.user_stake.lock_end;
@@ -43,13 +48,40 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
     let current_total_stakers = ctx.accounts.pool.total_stakers;
     let current_total_staked = ctx.accounts.pool.total_staked;
     
-    // Transfer VCoin back to user
     let seeds = &[
         STAKING_POOL_SEED,
         &[pool_bump],
     ];
     let signer_seeds = &[&seeds[..]];
     
+    // M-01: Set reentrancy guard before CPI operations
+    {
+        let pool_mut = &mut ctx.accounts.pool;
+        pool_mut.reentrancy_guard = true;
+    }
+    
+    // === CRITICAL FIX C-04: Burn veVCoin via CPI FIRST ===
+    if vevcoin_to_burn > 0 {
+        vevcoin_token::cpi::burn_vevcoin(
+            CpiContext::new_with_signer(
+                ctx.accounts.vevcoin_program.to_account_info(),
+                vevcoin_token::cpi::accounts::BurnVeVCoin {
+                    staking_protocol: ctx.accounts.pool.to_account_info(),
+                    user: ctx.accounts.user.to_account_info(),
+                    config: ctx.accounts.vevcoin_config.to_account_info(),
+                    user_account: ctx.accounts.user_vevcoin.to_account_info(),
+                    mint: ctx.accounts.vevcoin_mint.to_account_info(),
+                    user_token_account: ctx.accounts.user_vevcoin_account.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            vevcoin_to_burn,
+        )?;
+    }
+    // === END CRITICAL FIX ===
+    
+    // Transfer VCoin back to user
     token_2022::transfer_checked(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -83,6 +115,18 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
     
     // Update pool
     pool.total_staked = current_total_staked.checked_sub(amount).ok_or(StakingError::Overflow)?;
+    
+    // M-01: Clear reentrancy guard after CPI operations complete
+    pool.reentrancy_guard = false;
+    
+    // L-01: Emit unstaking event
+    emit!(Unstaked {
+        user: ctx.accounts.user.key(),
+        amount,
+        vevcoin_burned: vevcoin_to_burn,
+        remaining_stake: new_staked_amount,
+        timestamp: now,
+    });
     
     msg!("Unstaked {} VCoin", amount);
     msg!("veVCoin burned: {}", vevcoin_to_burn);

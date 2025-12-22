@@ -7,6 +7,8 @@ use anchor_lang::prelude::*;
 pub struct VCoinConfig {
     /// The authority that can mint tokens and update config
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// The VCoin mint address
     pub mint: Pubkey,
     /// The treasury token account that receives initial minted tokens
@@ -24,6 +26,7 @@ pub struct VCoinConfig {
 impl VCoinConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // mint
         32 + // treasury
         32 + // permanent_delegate

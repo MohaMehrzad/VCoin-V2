@@ -1,5 +1,9 @@
 use crate::constants::*;
 
+/// M-03 Security Fix: Domain separator for SSCRE merkle leaves
+/// Prevents second preimage attacks by adding unique prefix to hash computation
+pub const SSCRE_LEAF_DOMAIN: &[u8] = b"SSCRE_CLAIM_V1";
+
 /// Get 5A score multiplier
 pub fn get_five_a_multiplier(score: u16) -> u64 {
     if score >= 8000 {
@@ -16,10 +20,13 @@ pub fn get_five_a_multiplier(score: u16) -> u64 {
 }
 
 /// Compute merkle leaf from user, amount, and epoch
+/// M-03 Security Fix: Added domain separation to prevent second preimage attacks
 pub fn compute_leaf(user: &anchor_lang::prelude::Pubkey, amount: u64, epoch: u64) -> [u8; 32] {
     use solana_program::keccak;
     
-    let mut data = Vec::with_capacity(48);
+    // M-03: Domain separator + user (32) + amount (8) + epoch (8) = 62 bytes
+    let mut data = Vec::with_capacity(62);
+    data.extend_from_slice(SSCRE_LEAF_DOMAIN);  // Domain separator for uniqueness
     data.extend_from_slice(user.as_ref());
     data.extend_from_slice(&amount.to_le_bytes());
     data.extend_from_slice(&epoch.to_le_bytes());

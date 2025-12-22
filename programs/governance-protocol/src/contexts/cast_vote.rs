@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{Proposal, VoteRecord};
+use crate::state::{Proposal, VoteRecord, Delegation};
 
 #[derive(Accounts)]
 pub struct CastVote<'info> {
@@ -22,6 +22,10 @@ pub struct CastVote<'info> {
     
     #[account(mut)]
     pub voter: Signer<'info>,
+    
+    /// M-07 Security Fix: Optional delegation account for voting on behalf of delegator
+    /// If provided, expiry is validated in the handler
+    pub delegation: Option<Account<'info, Delegation>>,
     
     pub system_program: Program<'info, System>,
 }

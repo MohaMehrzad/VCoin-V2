@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 pub mod constants;
 pub mod contexts;
 pub mod errors;
+pub mod events;
 pub mod instructions;
 pub mod state;
 pub mod utils;
@@ -62,9 +63,19 @@ pub mod staking_protocol {
         instructions::admin::set_paused::handler(ctx, paused)
     }
 
-    /// Update the pool authority
-    pub fn update_authority(ctx: Context<AdminAction>, new_authority: Pubkey) -> Result<()> {
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<AdminAction>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::update_authority::handler(ctx, new_authority)
+    }
+
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::accept_authority::handler(ctx)
+    }
+
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<AdminAction>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer::handler(ctx)
     }
 
     /// Get user's staking info (view function)

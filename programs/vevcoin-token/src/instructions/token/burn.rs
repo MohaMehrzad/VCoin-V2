@@ -4,6 +4,7 @@ use anchor_spl::token_2022;
 use crate::constants::VEVCOIN_CONFIG_SEED;
 use crate::contexts::BurnVeVCoin;
 use crate::errors::VeVCoinError;
+use crate::events::VeVCoinBurned;
 
 /// Burn veVCoin from a user (only callable by staking protocol)
 /// Called when user unstakes VCoin
@@ -59,6 +60,14 @@ pub fn handler(ctx: Context<BurnVeVCoin>, amount: u64) -> Result<()> {
     if new_balance == 0 {
         config.total_holders = current_total_holders.checked_sub(1).unwrap();
     }
+    
+    // L-01: Emit veVCoin burned event
+    emit!(VeVCoinBurned {
+        user: ctx.accounts.user.key(),
+        amount,
+        remaining_supply: config.total_supply,
+        timestamp: clock.unix_timestamp,
+    });
     
     msg!("Burned {} veVCoin from {}", amount, ctx.accounts.user.key());
     msg!("New balance: {}", user_account.balance);

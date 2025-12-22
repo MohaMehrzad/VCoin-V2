@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::contexts::InitializeMint;
+use crate::events::VCoinInitialized;
 
 /// Initialize the VCoin mint with Token-2022 extensions
 /// This creates the mint with:
@@ -16,6 +17,16 @@ pub fn handler(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Resu
     config.total_minted = 0;
     config.paused = false;
     config.bump = ctx.bumps.config;
+    
+    let clock = Clock::get()?;
+    
+    // L-01: Emit initialization event
+    emit!(VCoinInitialized {
+        authority: config.authority,
+        mint: config.mint,
+        permanent_delegate,
+        timestamp: clock.unix_timestamp,
+    });
     
     msg!("VCoin mint initialized");
     msg!("Mint: {}", config.mint);

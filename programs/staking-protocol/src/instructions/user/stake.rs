@@ -1,17 +1,22 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022;
 
-use crate::constants::{MIN_LOCK_DURATION, MAX_LOCK_DURATION};
+use crate::constants::{MIN_LOCK_DURATION, MAX_LOCK_DURATION, STAKING_POOL_SEED};
 use crate::contexts::Stake;
 use crate::errors::StakingError;
+use crate::events::Staked;
 use crate::state::StakingTier;
 use crate::utils::calculate_vevcoin;
 
 /// Stake VCoin with a lock duration
 /// Mints veVCoin proportional to stake amount, lock duration, and tier
+/// M-01 Security Fix: Added reentrancy guard for CPI protection
 pub fn handler(ctx: Context<Stake>, amount: u64, lock_duration: i64) -> Result<()> {
-    let pool = &mut ctx.accounts.pool;
-    let user_stake = &mut ctx.accounts.user_stake;
+    let pool = &ctx.accounts.pool;
+    let user_stake = &ctx.accounts.user_stake;
+    
+    // M-01: Check reentrancy guard before proceeding
+    require!(!pool.reentrancy_guard, StakingError::ReentrancyDetected);
     
     // Validations
     require!(!pool.paused, StakingError::PoolPaused);
@@ -42,6 +47,17 @@ pub fn handler(ctx: Context<Stake>, amount: u64, lock_duration: i64) -> Result<(
     let new_vevcoin = calculate_vevcoin(new_staked_amount, lock_duration, new_tier)?;
     let vevcoin_to_mint = new_vevcoin.checked_sub(old_vevcoin).unwrap_or(0);
     
+    // Capture pool bump before mutable borrow
+    let pool_bump = ctx.bumps.pool;
+    let is_new_staker = user_stake.staked_amount == 0;
+    
+    // M-01: Set reentrancy guard before CPI operations
+    // Note: We set this via mutable borrow scope to ensure it's set
+    {
+        let pool_mut = &mut ctx.accounts.pool;
+        pool_mut.reentrancy_guard = true;
+    }
+    
     // Transfer VCoin to pool vault
     token_2022::transfer_checked(
         CpiContext::new(
@@ -57,8 +73,36 @@ pub fn handler(ctx: Context<Stake>, amount: u64, lock_duration: i64) -> Result<(
         ctx.accounts.vcoin_mint.decimals,
     )?;
     
+    // === CRITICAL FIX C-04: Mint veVCoin via CPI ===
+    if vevcoin_to_mint > 0 {
+        let seeds = &[STAKING_POOL_SEED, &[pool_bump]];
+        let signer_seeds = &[&seeds[..]];
+        
+        vevcoin_token::cpi::mint_vevcoin(
+            CpiContext::new_with_signer(
+                ctx.accounts.vevcoin_program.to_account_info(),
+                vevcoin_token::cpi::accounts::MintVeVCoin {
+                    staking_protocol: ctx.accounts.pool.to_account_info(),
+                    user: ctx.accounts.user.to_account_info(),
+                    config: ctx.accounts.vevcoin_config.to_account_info(),
+                    user_account: ctx.accounts.user_vevcoin.to_account_info(),
+                    mint: ctx.accounts.vevcoin_mint.to_account_info(),
+                    user_token_account: ctx.accounts.user_vevcoin_account.to_account_info(),
+                    payer: ctx.accounts.user.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            vevcoin_to_mint,
+        )?;
+    }
+    // === END CRITICAL FIX ===
+    
     // Update user stake
-    let is_new_staker = user_stake.staked_amount == 0;
+    let user_stake = &mut ctx.accounts.user_stake;
+    let pool = &mut ctx.accounts.pool;
+    
     user_stake.owner = ctx.accounts.user.key();
     user_stake.staked_amount = new_staked_amount;
     user_stake.lock_duration = lock_duration;
@@ -74,6 +118,19 @@ pub fn handler(ctx: Context<Stake>, amount: u64, lock_duration: i64) -> Result<(
     
     // Update pool
     pool.total_staked = pool.total_staked.checked_add(amount).ok_or(StakingError::Overflow)?;
+    
+    // M-01: Clear reentrancy guard after CPI operations complete
+    pool.reentrancy_guard = false;
+    
+    // L-01: Emit staking event
+    emit!(Staked {
+        user: ctx.accounts.user.key(),
+        amount,
+        lock_duration,
+        vevcoin_minted: vevcoin_to_mint,
+        tier: new_tier.as_u8(),
+        timestamp: now,
+    });
     
     msg!("Staked {} VCoin", amount);
     msg!("Lock duration: {} seconds", lock_duration);

@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::contexts::UpdateTier;
 use crate::errors::StakingError;
+use crate::events::TierUpdated;
 use crate::state::StakingTier;
 use crate::utils::calculate_vevcoin;
 
@@ -23,6 +24,16 @@ pub fn handler(ctx: Context<UpdateTier>) -> Result<()> {
         new_tier,
     )?;
     user_stake.ve_vcoin_amount = new_vevcoin;
+    
+    let clock = Clock::get()?;
+    
+    // L-01: Emit tier update event
+    emit!(TierUpdated {
+        user: ctx.accounts.user.key(),
+        old_tier,
+        new_tier: new_tier.as_u8(),
+        timestamp: clock.unix_timestamp,
+    });
     
     msg!("Tier updated from {} to {}", old_tier, new_tier.as_u8());
     msg!("veVCoin updated to: {}", new_vevcoin);

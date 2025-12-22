@@ -47,6 +47,36 @@ pub struct Unstake<'info> {
     )]
     pub pool_vault: InterfaceAccount<'info, TokenAccount>,
     
+    // === veVCoin accounts for CPI ===
+    
+    /// veVCoin mint
+    #[account(
+        mut,
+        constraint = vevcoin_mint.key() == pool.vevcoin_mint @ StakingError::InvalidMint
+    )]
+    pub vevcoin_mint: InterfaceAccount<'info, Mint>,
+    
+    /// User's veVCoin token account (Token-2022)
+    #[account(
+        mut,
+        constraint = user_vevcoin_account.owner == user.key() @ StakingError::InvalidTokenAccount,
+        constraint = user_vevcoin_account.mint == pool.vevcoin_mint @ StakingError::InvalidMint
+    )]
+    pub user_vevcoin_account: InterfaceAccount<'info, TokenAccount>,
+    
+    /// UserVeVCoin PDA tracking account
+    /// CHECK: Validated in vevcoin program CPI
+    #[account(mut)]
+    pub user_vevcoin: UncheckedAccount<'info>,
+    
+    /// veVCoin config PDA
+    /// CHECK: Validated in vevcoin program CPI
+    #[account(mut)]
+    pub vevcoin_config: UncheckedAccount<'info>,
+    
+    /// veVCoin program for CPI
+    pub vevcoin_program: Program<'info, vevcoin_token::program::VevcoinToken>,
+    
     pub token_program: Program<'info, Token2022>,
 }
 

@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct IdentityConfig {
     /// Admin authority
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// SAS program ID (Solana Attestation Service)
     pub sas_program: Pubkey,
     /// USDC mint for subscriptions
@@ -29,6 +31,7 @@ pub struct IdentityConfig {
 impl IdentityConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // sas_program
         32 + // usdc_mint
         32 + // treasury

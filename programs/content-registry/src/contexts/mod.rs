@@ -9,6 +9,7 @@ pub mod initialize_user_energy;
 pub mod update_user_tier;
 pub mod update_config;
 pub mod update_authority;
+pub mod accept_authority;
 pub mod get_content;
 pub mod get_energy;
 
@@ -23,6 +24,7 @@ pub use initialize_user_energy::*;
 pub use update_user_tier::*;
 pub use update_config::*;
 pub use update_authority::*;
+pub use accept_authority::*;
 pub use get_content::*;
 pub use get_energy::*;
 

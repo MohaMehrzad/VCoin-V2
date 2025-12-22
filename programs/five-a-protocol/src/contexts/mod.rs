@@ -8,6 +8,7 @@ mod evaluate_vouch;
 mod update_user_score;
 mod update_config;
 mod update_authority;
+mod accept_authority;
 mod get_score;
 
 pub use initialize::*;
@@ -19,5 +20,6 @@ pub use evaluate_vouch::*;
 pub use update_user_score::*;
 pub use update_config::*;
 pub use update_authority::*;
+pub use accept_authority::*;
 pub use get_score::*;
 

@@ -28,6 +28,8 @@ pub struct PrivateVotingConfig {
     pub aggregated_against: u128,
     /// Aggregated abstain
     pub aggregated_abstain: u128,
+    /// Track which committee members have submitted shares (C-02 fix)
+    pub shares_submitted: [bool; 5],
     /// PDA bump
     pub bump: u8,
 }
@@ -46,6 +48,7 @@ impl PrivateVotingConfig {
         16 + // aggregated_for
         16 + // aggregated_against
         16 + // aggregated_abstain
+        5 +  // shares_submitted (C-02 fix)
         1;   // bump
 }
 

@@ -4,6 +4,7 @@ use anchor_spl::token_2022;
 use crate::constants::VEVCOIN_CONFIG_SEED;
 use crate::contexts::MintVeVCoin;
 use crate::errors::VeVCoinError;
+use crate::events::VeVCoinMinted;
 
 /// Mint veVCoin to a user (only callable by staking protocol)
 /// Called when user stakes VCoin
@@ -65,6 +66,14 @@ pub fn handler(ctx: Context<MintVeVCoin>, amount: u64) -> Result<()> {
     user_account.balance = current_balance.checked_add(amount).unwrap();
     user_account.last_update_at = now;
     config.total_supply = current_total_supply.checked_add(amount).unwrap();
+    
+    // L-01: Emit veVCoin minted event
+    emit!(VeVCoinMinted {
+        user: ctx.accounts.user.key(),
+        amount,
+        total_supply: config.total_supply,
+        timestamp: now,
+    });
     
     msg!("Minted {} veVCoin to {}", amount, ctx.accounts.user.key());
     msg!("New balance: {}", user_account.balance);

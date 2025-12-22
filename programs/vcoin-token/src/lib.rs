@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 pub mod constants;
 pub mod contexts;
 pub mod errors;
+pub mod events;
 pub mod instructions;
 pub mod state;
 
@@ -39,8 +40,33 @@ pub mod vcoin_token {
     }
 
     /// Slash tokens from an account using permanent delegate authority
+    /// DEPRECATED: Use propose_slash -> approve_slash -> execute_slash flow instead
+    /// This legacy function is kept for backwards compatibility
     pub fn slash_tokens(ctx: Context<SlashTokens>, amount: u64) -> Result<()> {
         instructions::token::slash::handler(ctx, amount)
+    }
+
+    /// Propose a slash request (H-01 Security Fix - Step 1)
+    /// Only permanent delegate can propose; requires governance approval
+    pub fn propose_slash(
+        ctx: Context<ProposeSlash>,
+        target: Pubkey,
+        amount: u64,
+        reason_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::token::propose_slash::handler(ctx, target, amount, reason_hash)
+    }
+
+    /// Approve a slash request (H-01 Security Fix - Step 2)
+    /// Only governance authority can approve; starts 48h timelock
+    pub fn approve_slash(ctx: Context<ApproveSlash>, proposal_id: u64) -> Result<()> {
+        instructions::token::approve_slash::handler(ctx, proposal_id)
+    }
+
+    /// Execute an approved slash (H-01 Security Fix - Step 3)
+    /// Requires 48h timelock to have expired after governance approval
+    pub fn execute_slash(ctx: Context<ExecuteSlash>) -> Result<()> {
+        instructions::token::execute_slash::handler(ctx)
     }
 
     /// Pause/unpause token operations
@@ -48,9 +74,19 @@ pub mod vcoin_token {
         instructions::admin::set_paused::handler(ctx, paused)
     }
 
-    /// Update the authority
-    pub fn update_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::update_authority::handler(ctx, new_authority)
+    }
+
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::accept_authority::handler(ctx)
+    }
+
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateConfig>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer::handler(ctx)
     }
 
     /// Update the permanent delegate (for slashing)

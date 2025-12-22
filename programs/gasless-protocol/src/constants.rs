@@ -19,6 +19,11 @@ pub const SSCRE_DEDUCTION_BPS: u16 = 100;       // 1% from SSCRE claims
 pub const DAILY_SUBSIDY_BUDGET_SOL: u64 = 10_000_000_000; // 10 SOL per day
 pub const MAX_SUBSIDIZED_TX_PER_USER: u32 = 50; // Max 50 free tx per user per day
 
+/// L-03: Slippage protection for fee calculations
+/// Maximum fee slippage allowed in basis points (5% = 500 bps)
+pub const MAX_FEE_SLIPPAGE_BPS: u16 = 500;
+pub const DEFAULT_MAX_SLIPPAGE_BPS: u16 = 500;
+
 /// Action scope bits
 pub const SCOPE_TIP: u16 = 1 << 0;
 pub const SCOPE_VOUCH: u16 = 1 << 1;

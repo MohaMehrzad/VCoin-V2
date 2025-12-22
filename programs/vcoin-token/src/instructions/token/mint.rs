@@ -4,6 +4,7 @@ use anchor_spl::token_2022;
 use crate::constants::{TOTAL_SUPPLY, VCOIN_CONFIG_SEED};
 use crate::contexts::MintTokens;
 use crate::errors::VCoinError;
+use crate::events::TokensMinted;
 
 /// Mint VCoin tokens to a specified account
 /// Only the authority can mint tokens
@@ -51,6 +52,16 @@ pub fn handler(ctx: Context<MintTokens>, amount: u64) -> Result<()> {
     
     // Update total minted
     ctx.accounts.config.total_minted = total_minted.checked_add(amount).unwrap();
+    
+    let clock = Clock::get()?;
+    
+    // L-01: Emit tokens minted event
+    emit!(TokensMinted {
+        recipient: ctx.accounts.destination.key(),
+        amount,
+        total_minted: ctx.accounts.config.total_minted,
+        timestamp: clock.unix_timestamp,
+    });
     
     msg!("Minted {} VCoin tokens", amount);
     msg!("Total minted: {}", ctx.accounts.config.total_minted);

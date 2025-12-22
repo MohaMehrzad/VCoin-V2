@@ -21,6 +21,10 @@ pub const MIN_CLAIM_AMOUNT: u64 = 1_000_000_000; // 1 VCoin minimum
 pub const MAX_EPOCH_EMISSION: u64 = 10_000_000 * 1_000_000_000; // 10M VCoin max per epoch
 pub const MAX_SINGLE_CLAIM: u64 = 100_000 * 1_000_000_000;      // 100K VCoin max single claim
 
+/// M-05 Security Fix: Circuit breaker cooldown period (6 hours)
+/// Prevents immediate reset after trigger, allowing time for investigation
+pub const CIRCUIT_BREAKER_COOLDOWN: i64 = 6 * 60 * 60; // 6 hours in seconds
+
 /// 5A Score multipliers (x1000 for precision)
 pub const SCORE_MULT_0_20: u64 = 100;   // 0.1x (10%)
 pub const SCORE_MULT_20_40: u64 = 400;  // 0.4x (40%)

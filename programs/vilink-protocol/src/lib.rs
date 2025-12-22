@@ -434,7 +434,14 @@ pub mod vilink_protocol {
     }
     
     /// Update platform fee
+    /// M-02 Security Fix: Validates fee is within acceptable bounds (0.1% - 10%)
     pub fn set_platform_fee(ctx: Context<UpdateConfig>, fee_bps: u16) -> Result<()> {
+        // M-02: Validate fee bounds to prevent excessive or zero fees
+        require!(
+            fee_bps >= MIN_PLATFORM_FEE_BPS && fee_bps <= MAX_PLATFORM_FEE_BPS,
+            ViLinkError::InvalidFeeRange
+        );
+        
         ctx.accounts.config.platform_fee_bps = fee_bps;
         msg!("Platform fee updated to {} bps", fee_bps);
         Ok(())
@@ -447,10 +454,53 @@ pub mod vilink_protocol {
         Ok(())
     }
     
-    /// Update authority
-    pub fn update_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
-        ctx.accounts.config.authority = new_authority;
-        msg!("Authority updated to: {}", new_authority);
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        
+        require!(
+            new_authority != config.authority,
+            ViLinkError::CannotProposeSelf
+        );
+        
+        require!(
+            new_authority != Pubkey::default(),
+            ViLinkError::InvalidAuthority
+        );
+        
+        config.pending_authority = new_authority;
+        
+        msg!("Authority transfer proposed to: {}", new_authority);
+        Ok(())
+    }
+    
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        
+        let old_authority = config.authority;
+        let new_authority = ctx.accounts.new_authority.key();
+        
+        config.authority = new_authority;
+        config.pending_authority = Pubkey::default();
+        
+        msg!("Authority transferred from {} to {}", old_authority, new_authority);
+        Ok(())
+    }
+    
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        
+        require!(
+            config.pending_authority != Pubkey::default(),
+            ViLinkError::NoPendingTransfer
+        );
+        
+        let cancelled = config.pending_authority;
+        config.pending_authority = Pubkey::default();
+        
+        msg!("Authority transfer to {} cancelled", cancelled);
         Ok(())
     }
     
@@ -547,8 +597,8 @@ pub struct RegisterDApp<'info> {
     pub config: Account<'info, ViLinkConfig>,
     #[account(init, payer = authority, space = RegisteredDApp::LEN, seeds = [DAPP_REGISTRY_SEED, dapp_authority.key().as_ref()], bump)]
     pub dapp: Account<'info, RegisteredDApp>,
-    /// CHECK: dApp authority being registered
-    pub dapp_authority: AccountInfo<'info>,
+    /// dApp authority must sign to prove ownership (L-05 Security Fix)
+    pub dapp_authority: Signer<'info>,
     #[account(mut)]
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -577,6 +627,20 @@ pub struct UpdateAuthority<'info> {
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump, has_one = authority @ ViLinkError::Unauthorized)]
     pub config: Account<'info, ViLinkConfig>,
     pub authority: Signer<'info>,
+}
+
+/// Context for accepting authority transfer (H-02 security fix)
+#[derive(Accounts)]
+pub struct AcceptAuthority<'info> {
+    #[account(
+        mut,
+        seeds = [CONFIG_SEED],
+        bump = config.bump,
+        constraint = config.pending_authority == new_authority.key() @ ViLinkError::NotPendingAuthority,
+        constraint = config.pending_authority != Pubkey::default() @ ViLinkError::NoPendingTransfer
+    )]
+    pub config: Account<'info, ViLinkConfig>,
+    pub new_authority: Signer<'info>,
 }
 
 #[derive(Accounts)]

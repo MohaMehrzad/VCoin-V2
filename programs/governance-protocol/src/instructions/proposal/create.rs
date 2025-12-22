@@ -1,8 +1,17 @@
 use anchor_lang::prelude::*;
+use crate::constants::{VALID_URI_PREFIX_IPFS, VALID_URI_PREFIX_HTTPS, VALID_URI_PREFIX_AR, MAX_URI_LENGTH};
 use crate::contexts::CreateProposal;
 use crate::errors::GovernanceError;
 use crate::events::ProposalCreated;
 use crate::state::ProposalStatus;
+
+/// Check if URI has a valid prefix (L-04 Security Fix)
+fn is_valid_uri(uri: &str) -> bool {
+    let bytes = uri.as_bytes();
+    bytes.starts_with(VALID_URI_PREFIX_IPFS) ||
+    bytes.starts_with(VALID_URI_PREFIX_HTTPS) ||
+    bytes.starts_with(VALID_URI_PREFIX_AR)
+}
 
 pub fn handler(
     ctx: Context<CreateProposal>,
@@ -13,7 +22,10 @@ pub fn handler(
 ) -> Result<()> {
     let config = &mut ctx.accounts.governance_config;
     require!(!config.paused, GovernanceError::GovernancePaused);
-    require!(description_uri.len() <= 128, GovernanceError::Overflow);
+    require!(description_uri.len() <= MAX_URI_LENGTH, GovernanceError::Overflow);
+    
+    // L-04: Validate URI format
+    require!(is_valid_uri(&description_uri), GovernanceError::InvalidDescriptionUri);
     
     let clock = Clock::get()?;
     

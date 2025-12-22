@@ -118,9 +118,19 @@ pub mod gasless_protocol {
         admin::set_paused::handler(ctx, paused)
     }
     
-    /// Update authority
-    pub fn update_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
         admin::update_authority::handler(ctx, new_authority)
+    }
+    
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        admin::accept_authority::handler(ctx)
+    }
+    
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
+        admin::cancel_authority_transfer::handler(ctx)
     }
     
     /// Get session key info

@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::constants::{MIN_LOCK_DURATION, MAX_LOCK_DURATION};
 use crate::contexts::ExtendLock;
 use crate::errors::StakingError;
+use crate::events::LockExtended;
 use crate::state::StakingTier;
 use crate::utils::calculate_vevcoin;
 
@@ -29,10 +30,22 @@ pub fn handler(ctx: Context<ExtendLock>, new_lock_duration: i64) -> Result<()> {
     let new_vevcoin = calculate_vevcoin(user_stake.staked_amount, new_lock_duration, tier)?;
     let vevcoin_to_mint = new_vevcoin.checked_sub(old_vevcoin).unwrap_or(0);
     
+    // Capture old_lock_end before updating
+    let old_lock_end = user_stake.lock_end;
+    
     // Update stake
     user_stake.lock_duration = new_lock_duration;
     user_stake.lock_end = new_lock_end;
     user_stake.ve_vcoin_amount = new_vevcoin;
+    
+    // L-01: Emit lock extension event
+    emit!(LockExtended {
+        user: ctx.accounts.user.key(),
+        old_lock_end,
+        new_lock_end,
+        new_vevcoin,
+        timestamp: now,
+    });
     
     msg!("Extended lock to {} seconds", new_lock_duration);
     msg!("New lock end: {}", new_lock_end);

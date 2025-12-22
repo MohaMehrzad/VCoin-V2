@@ -46,7 +46,12 @@ pub fn handler(ctx: Context<Execute>, amount: u64) -> Result<()> {
             pair_transfers_24h: pair_tracking.transfers_24h,
         });
         
-        // Note: We don't block, just flag. Blocking happens in governance decisions.
+        // M-04 Security Fix: Optionally block transfers when wash trading is detected
+        // When block_wash_trading is enabled, the transfer is rejected
+        // Otherwise, we just emit the event and allow the transfer
+        if config.block_wash_trading {
+            return Err(TransferHookError::WashTradingDetected.into());
+        }
     }
     
     // Emit transfer processed event

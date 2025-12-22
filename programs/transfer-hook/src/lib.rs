@@ -63,9 +63,19 @@ pub mod transfer_hook {
         instructions::admin::set_paused::handler(ctx, paused)
     }
     
-    /// Update authority
-    pub fn update_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
+    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::update_authority::handler(ctx, new_authority)
+    }
+    
+    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::accept_authority::handler(ctx)
+    }
+    
+    /// Cancel a pending authority transfer (H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer::handler(ctx)
     }
     
     /// Query user activity stats

@@ -15,4 +15,15 @@ pub const TOKEN_URI: &str = "https://viwoapp.com/vcoin-metadata.json";
 
 /// PDA Seeds
 pub const VCOIN_CONFIG_SEED: &[u8] = b"vcoin-config";
+pub const SLASH_REQUEST_SEED: &[u8] = b"slash-request"; // H-01
+
+/// H-01: Slashing governance timelock
+pub const SLASH_TIMELOCK_SECONDS: i64 = 48 * 60 * 60; // 48 hours after governance approval
+
+/// H-01: Slash request status
+pub const SLASH_STATUS_PENDING: u8 = 0;
+pub const SLASH_STATUS_APPROVED: u8 = 1;
+pub const SLASH_STATUS_EXECUTED: u8 = 2;
+pub const SLASH_STATUS_REJECTED: u8 = 3;
+pub const SLASH_STATUS_CANCELLED: u8 = 4;
 

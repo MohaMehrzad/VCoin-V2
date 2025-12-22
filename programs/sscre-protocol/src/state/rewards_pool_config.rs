@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct RewardsPoolConfig {
     /// Admin authority
     pub authority: Pubkey,
+    /// Pending authority for two-step transfer (H-02 security fix)
+    pub pending_authority: Pubkey,
     /// VCoin mint
     pub vcoin_mint: Pubkey,
     /// Pool vault holding VCoin rewards
@@ -37,6 +39,7 @@ pub struct RewardsPoolConfig {
 impl RewardsPoolConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // pending_authority (NEW - H-02)
         32 + // vcoin_mint
         32 + // pool_vault
         32 + // five_a_program
