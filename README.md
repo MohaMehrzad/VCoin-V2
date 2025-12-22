@@ -6,6 +6,10 @@
 
 **Trust & Reputation Protocols for Consumer Crypto**
 
+[![npm version](https://img.shields.io/npm/v/@viwoapp/sdk.svg)](https://www.npmjs.com/package/@viwoapp/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg)](https://solana.com)
+
 Powered by Solana | MIT Open Source | Contracts on Devnet
 
 ---
@@ -470,6 +474,7 @@ This infrastructure is designed for **ecosystem adoption**, not platform lock-in
 
 | Resource | URL |
 |----------|-----|
+| **npm SDK** | [@viwoapp/sdk](https://www.npmjs.com/package/@viwoapp/sdk) |
 | Whitepaper | [viwoapp.com/whitepaper](https://viwoapp.com/whitepaper) |
 | Website | [viwoapp.com](https://viwoapp.com) |
 | X/Twitter | [@ViWoApp](https://x.com/ViWoApp) |
