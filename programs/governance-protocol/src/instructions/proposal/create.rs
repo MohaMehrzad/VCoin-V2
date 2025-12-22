@@ -1,0 +1,55 @@
+use anchor_lang::prelude::*;
+use crate::contexts::CreateProposal;
+use crate::errors::GovernanceError;
+use crate::events::ProposalCreated;
+use crate::state::ProposalStatus;
+
+pub fn handler(
+    ctx: Context<CreateProposal>,
+    title_hash: [u8; 32],
+    description_uri: String,
+    proposal_type: u8,
+    enable_private_voting: bool,
+) -> Result<()> {
+    let config = &mut ctx.accounts.governance_config;
+    require!(!config.paused, GovernanceError::GovernancePaused);
+    require!(description_uri.len() <= 128, GovernanceError::Overflow);
+    
+    let clock = Clock::get()?;
+    
+    // Increment proposal count
+    config.proposal_count = config.proposal_count.saturating_add(1);
+    
+    let proposal = &mut ctx.accounts.proposal;
+    proposal.id = config.proposal_count;
+    proposal.proposer = ctx.accounts.proposer.key();
+    proposal.title_hash = title_hash;
+    
+    let uri_bytes = description_uri.as_bytes();
+    proposal.description_uri[..uri_bytes.len()].copy_from_slice(uri_bytes);
+    proposal.uri_len = uri_bytes.len() as u8;
+    
+    proposal.proposal_type = proposal_type;
+    proposal.start_time = clock.unix_timestamp;
+    proposal.end_time = clock.unix_timestamp + config.voting_period;
+    proposal.votes_for = 0;
+    proposal.votes_against = 0;
+    proposal.votes_abstain = 0;
+    proposal.status = ProposalStatus::Active as u8;
+    proposal.execution_time = 0;
+    proposal.executed = false;
+    proposal.is_private_voting = enable_private_voting;
+    proposal.bump = ctx.bumps.proposal;
+    
+    emit!(ProposalCreated {
+        id: proposal.id,
+        proposer: proposal.proposer,
+        proposal_type,
+        start_time: proposal.start_time,
+        end_time: proposal.end_time,
+    });
+    
+    msg!("Proposal created: {}", proposal.id);
+    Ok(())
+}
+

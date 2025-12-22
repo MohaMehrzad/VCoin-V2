@@ -6,7 +6,7 @@
 
 **Censorship Proof Social Media for Crypto Community**
 
-Built on Solana | 100% Creator Earnings | MIT Open Source
+Built on Solana | 100% Creator Earnings | MIT Open Source | Modular Architecture
 
 ---
 
@@ -21,6 +21,22 @@ The platform introduces three core innovations:
 3. **Portable Decentralized Identity** — Your reputation travels with you across the Solana ecosystem
 
 Every protocol is MIT licensed and available as a public good for the entire Solana ecosystem.
+
+---
+
+## What's New in v2.0
+
+### Modular Architecture (December 2025)
+
+All 11 programs have been restructured into a **modular architecture** following 2025-2026 Solana best practices:
+
+| Feature | Benefit |
+|---------|---------|
+| **Separated Concerns** | Constants, errors, events, state, contexts, instructions in dedicated files |
+| **Enhanced Auditability** | Auditors can review isolated components |
+| **Better Maintainability** | Changes isolated to specific files |
+| **Improved Testing** | Unit test individual modules |
+| **Clear Organization** | ~196 files organized by purpose |
 
 ---
 
@@ -43,24 +59,24 @@ This workspace contains **11 Solana programs** powering the entire ViWoApp ecosy
 
 ### Core Token Layer
 
-| Program | Description |
-|---------|-------------|
-| **vcoin-token** | VCoin Token-2022 with Permanent Delegate & Metadata extensions |
-| **vevcoin-token** | Vote-Escrowed VCoin — Soulbound governance token (non-transferable) |
+| Program | Description | Structure |
+|---------|-------------|-----------|
+| **vcoin-token** | VCoin Token-2022 with Permanent Delegate & Metadata extensions | Full Modular |
+| **vevcoin-token** | Vote-Escrowed VCoin — Soulbound governance token (non-transferable) | Full Modular |
 
 ### Protocol Layer
 
-| Program | Description |
-|---------|-------------|
-| **staking-protocol** | Stake VCoin → Earn veVCoin with tier-based rewards |
-| **transfer-hook** | Auto-updates 5A scores, detects wash trading on transfers |
-| **identity-protocol** | On-chain DID anchor with verification levels |
-| **five-a-protocol** | Anti-bot reputation scoring with oracle model |
-| **content-registry** | On-chain content tracking with state management |
-| **governance-protocol** | Quadratic voting with 5A boosts and delegation |
-| **sscre-protocol** | Self-Sustaining Circular Reward Economy — Merkle claims |
-| **vilink-protocol** | Cross-dApp action deep links |
-| **gasless-protocol** | Paymaster & Session Keys for zero-friction UX |
+| Program | Description | Structure |
+|---------|-------------|-----------|
+| **staking-protocol** | Stake VCoin → Earn veVCoin with tier-based rewards | Full Modular |
+| **transfer-hook** | Auto-updates 5A scores, detects wash trading on transfers | Full Modular |
+| **identity-protocol** | On-chain DID anchor with verification levels | Full Modular |
+| **five-a-protocol** | Anti-bot reputation scoring with oracle model | Full Modular |
+| **content-registry** | On-chain content tracking with state management | Full Modular |
+| **gasless-protocol** | Paymaster & Session Keys for zero-friction UX | Full Modular |
+| **governance-protocol** | Quadratic voting with 5A boosts and delegation | Streamlined |
+| **sscre-protocol** | Self-Sustaining Circular Reward Economy — Merkle claims | Streamlined |
+| **vilink-protocol** | Cross-dApp action deep links | Streamlined |
 
 ---
 
@@ -154,14 +170,29 @@ The **Self-Sustaining Circular Reward Economy** ensures rewards never run out:
 ### Prerequisites
 
 ```bash
-# Install Solana development tools
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Solana CLI (v3.0+)
 curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
+
+# Install Anchor CLI (v0.32.0)
+cargo install --git https://github.com/coral-xyz/anchor avm --locked
+avm install 0.32.0
+avm use 0.32.0
 ```
 
 ### Build
 
 ```bash
 anchor build
+```
+
+### Verify Build (Modular Structure)
+
+```bash
+cargo check --all
+# Expected: Finished `dev` profile [unoptimized + debuginfo] target(s)
 ```
 
 ### Test
@@ -180,7 +211,7 @@ anchor deploy
 
 ---
 
-## Project Structure
+## Project Structure (Modular Architecture)
 
 ```
 vcoin_workspace/
@@ -188,22 +219,64 @@ vcoin_workspace/
 ├── Cargo.toml                  # Workspace configuration
 ├── programs/
 │   ├── vcoin-token/            # VCoin Token-2022
-│   ├── vevcoin-token/          # Soulbound veVCoin
+│   │   └── src/
+│   │       ├── lib.rs          # Program entry point
+│   │       ├── constants.rs    # Protocol constants
+│   │       ├── errors.rs       # Custom error types
+│   │       ├── events.rs       # Event definitions
+│   │       ├── state/          # Account state definitions
+│   │       │   ├── mod.rs
+│   │       │   └── *.rs
+│   │       ├── contexts/       # Anchor account contexts
+│   │       │   ├── mod.rs
+│   │       │   └── *.rs
+│   │       └── instructions/   # Instruction handlers
+│   │           ├── mod.rs
+│   │           ├── admin/
+│   │           ├── token/
+│   │           └── query/
+│   ├── vevcoin-token/          # Soulbound veVCoin (same structure)
 │   ├── staking-protocol/       # Tier-based staking
 │   ├── transfer-hook/          # Transfer automation
 │   ├── identity-protocol/      # Decentralized identity
 │   ├── five-a-protocol/        # Reputation scoring
 │   ├── content-registry/       # Content management
-│   ├── governance-protocol/    # On-chain governance
-│   ├── sscre-protocol/         # Reward economics
-│   ├── vilink-protocol/        # Deep links
-│   └── gasless-protocol/       # Session keys
+│   ├── gasless-protocol/       # Session keys
+│   ├── governance-protocol/    # On-chain governance (streamlined)
+│   │   └── src/
+│   │       ├── lib.rs          # Entry + contexts + handlers
+│   │       ├── constants.rs
+│   │       ├── errors.rs
+│   │       ├── events.rs
+│   │       └── state/
+│   ├── sscre-protocol/         # Reward economics (streamlined)
+│   └── vilink-protocol/        # Deep links (streamlined)
 ├── tests/                      # TypeScript integration tests
 ├── packages/
 │   └── viwoapp-sdk/            # TypeScript SDK
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── client.ts
+│       │   ├── staking/
+│       │   ├── governance/
+│       │   ├── rewards/
+│       │   └── ...
+│       └── dist/               # Built SDK (CJS/ESM/DTS)
 └── target/
     └── deploy/                 # Compiled .so programs
 ```
+
+### Module Structure Types
+
+**Full Modular** (8 programs):
+- Complete separation: constants, errors, events, state, contexts, instructions
+- Instruction handlers in `instructions/admin/`, `instructions/user/`, etc.
+- Best for complex programs with many instructions
+
+**Streamlined** (3 programs):
+- State modules extracted (constants, errors, events, state)
+- Contexts and handlers remain in `lib.rs`
+- Better for very large programs to reduce file count
 
 ---
 
@@ -224,25 +297,42 @@ const score = await client.fiveA.getScore(userPubkey);
 
 // Claim SSCRE rewards
 await client.rewards.claimRewards(merkleProof);
+
+// Create ViLink action
+const actionLink = await client.vilink.createAction({
+  type: 'tip',
+  target: creatorPubkey,
+  amount: 100_000_000, // 0.1 VCoin
+});
+
+// Use gasless session
+const session = await client.gasless.createSession({
+  scope: ['tip', 'vouch', 'content'],
+  duration: 24 * 60 * 60, // 24 hours
+});
 ```
 
 ---
 
 ## Devnet Deployment
 
+✅ **All 11 programs deployed to Solana Devnet**
+
 | Program | Status | Address |
 |---------|--------|---------|
-| vcoin-token | ✅ Deployed | `Fg6...` |
-| vevcoin-token | ✅ Deployed | `9xQ...` |
-| staking-protocol | ✅ Deployed | `4vS...` |
-| transfer-hook | ✅ Deployed | `Gh7...` |
-| identity-protocol | ✅ Deployed | `Bx8...` |
-| five-a-protocol | ✅ Deployed | `Ck9...` |
-| content-registry | ✅ Deployed | `Dm2...` |
-| governance-protocol | ✅ Deployed | `En3...` |
-| sscre-protocol | 🔄 Pending | — |
-| vilink-protocol | 🔄 Pending | — |
-| gasless-protocol | 🔄 Pending | — |
+| vcoin-token | ✅ Deployed | `Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn` |
+| vevcoin-token | ✅ Deployed | `FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx` |
+| staking-protocol | ✅ Deployed | `6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu` |
+| transfer-hook | ✅ Deployed | `9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48` |
+| identity-protocol | ✅ Deployed | `3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG` |
+| five-a-protocol | ✅ Deployed | `783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8` |
+| content-registry | ✅ Deployed | `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV` |
+| governance-protocol | ✅ Deployed | `3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe` |
+| sscre-protocol | ✅ Deployed | `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ` |
+| vilink-protocol | ✅ Deployed | `CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7` |
+| gasless-protocol | ✅ Deployed | `FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3` |
+
+**Devnet Explorer:** [explorer.solana.com/?cluster=devnet](https://explorer.solana.com/?cluster=devnet)
 
 ---
 
@@ -271,7 +361,22 @@ await client.rewards.claimRewards(merkleProof);
 - **Lock duration validation** prevents gaming
 - **Permanent delegate** enables slashing without user signature
 - **Pausable** for emergency situations
+- **Checked arithmetic** using `checked_add`, `checked_sub`, etc.
+- **Event emission** for all state changes
+- **Modular architecture** for easier security audits
 - **Planned audits** with Neodyme and OtterSec
+
+---
+
+## Build Status
+
+| Metric | Value |
+|--------|-------|
+| Programs | 11 |
+| Total Rust Files | ~196 |
+| Total Lines of Code | ~18,500 |
+| Build Status | ✅ All Passing |
+| Deployed to Devnet | ✅ 11/11 |
 
 ---
 
@@ -293,6 +398,30 @@ MIT License — All protocols are open source and available as public goods.
 
 ---
 
-**Version:** 1.0  
-**Framework:** Anchor 0.32.0  
-**Network:** Solana (Devnet/Mainnet)
+## Changelog
+
+### v2.1.0 (December 22, 2025)
+- ✅ All 11 programs deployed to Devnet
+- ✅ Program IDs updated in all lib.rs files
+- ✅ Anchor.toml updated with correct addresses
+- ✅ VCoin integration tests verified on devnet
+
+### v2.0.0 (December 22, 2025)
+- ✅ Modular architecture restructuring for all 11 programs
+- ✅ Full modular structure for 8 programs
+- ✅ Streamlined structure for 3 large programs
+- ✅ ~196 organized Rust files
+- ✅ Build verification passing
+
+### v1.0.0 (December 21, 2025)
+- ✅ Initial release with 11 programs
+- ✅ 8/11 programs deployed to Devnet
+- ✅ TypeScript SDK built and ready
+- ✅ All integration tests created
+
+---
+
+**Version:** 2.1  
+**Framework:** Anchor 0.32.0 | Solana Program 2.0 | Token-2022 6.0  
+**Architecture:** Modular (2025-2026 Best Practices)  
+**Network:** Solana Devnet (11/11 Deployed)

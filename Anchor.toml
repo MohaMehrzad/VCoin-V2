@@ -7,30 +7,30 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-vcoin_token = "VCNtkM3xg8ihH3JY8bQbqjUWCNEAVCiqUGmPjAqPNwP"
-vevcoin_token = "VEVCnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjBqQ"
-staking_protocol = "STKGnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjCrR"
-transfer_hook = "E5FWQsncH5hWRYX2ysiTA9uA2vhdQtQP473tDU9GWhyi"
-identity_protocol = "CnxKPyRgU3HZDUvbAFPAddYJVWM2rWhLVq9QoEnBgJdB"
-five_a_protocol = "EPVUXY5NSTxWRGU4JF3zowtc5wB6HE9aUwFHG61W9CCH"
-content_registry = "3Ex3eTSLUcLdfkMdUD91FH3a5CaFSzydMtCwAWGvW5vY"
-governance_protocol = "3fgzSVwUho1rp4k87ZZ43K9fysxy1WqabDNWTemmD1vi"
-sscre_protocol = "FZrjuWJE6VW7qSxB8Jhd4hxv1fSnYBsRCzBTfWhVN8zC"
-vilink_protocol = "FYaKjTU8fq6W8nBQB6LhFBvCzYtvNzYNd6Gdr4dQELfT"
-gasless_protocol = "FZyRfP5qeChTZ9z2M2aHkXQ8QLHbRQ5aK7dJ2BpPtYXj"
+vcoin_token = "Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn"
+vevcoin_token = "FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"
+staking_protocol = "6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu"
+transfer_hook = "9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48"
+identity_protocol = "3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG"
+five_a_protocol = "783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8"
+content_registry = "MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV"
+governance_protocol = "3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe"
+sscre_protocol = "6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"
+vilink_protocol = "CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7"
+gasless_protocol = "FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"
 
 [programs.devnet]
-vcoin_token = "VCNtkM3xg8ihH3JY8bQbqjUWCNEAVCiqUGmPjAqPNwP"
-vevcoin_token = "VEVCnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjBqQ"
-staking_protocol = "STKGnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjCrR"
-transfer_hook = "E5FWQsncH5hWRYX2ysiTA9uA2vhdQtQP473tDU9GWhyi"
-identity_protocol = "CnxKPyRgU3HZDUvbAFPAddYJVWM2rWhLVq9QoEnBgJdB"
-five_a_protocol = "EPVUXY5NSTxWRGU4JF3zowtc5wB6HE9aUwFHG61W9CCH"
-content_registry = "3Ex3eTSLUcLdfkMdUD91FH3a5CaFSzydMtCwAWGvW5vY"
-governance_protocol = "3fgzSVwUho1rp4k87ZZ43K9fysxy1WqabDNWTemmD1vi"
-sscre_protocol = "FZrjuWJE6VW7qSxB8Jhd4hxv1fSnYBsRCzBTfWhVN8zC"
-vilink_protocol = "FYaKjTU8fq6W8nBQB6LhFBvCzYtvNzYNd6Gdr4dQELfT"
-gasless_protocol = "FZyRfP5qeChTZ9z2M2aHkXQ8QLHbRQ5aK7dJ2BpPtYXj"
+vcoin_token = "Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn"
+vevcoin_token = "FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"
+staking_protocol = "6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu"
+transfer_hook = "9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48"
+identity_protocol = "3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG"
+five_a_protocol = "783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8"
+content_registry = "MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV"
+governance_protocol = "3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe"
+sscre_protocol = "6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"
+vilink_protocol = "CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7"
+gasless_protocol = "FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"
 
 [registry]
 url = "https://api.apr.dev"
@@ -41,4 +41,3 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
-
