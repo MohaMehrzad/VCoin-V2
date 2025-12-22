@@ -245,6 +245,172 @@ anchor deploy
 
 ---
 
+## TypeScript SDK
+
+The **@viwoapp/sdk** provides a complete TypeScript interface for integrating with all ViWo protocols.
+
+### Installation
+
+```bash
+# npm
+npm install @viwoapp/sdk
+
+# yarn
+yarn add @viwoapp/sdk
+
+# pnpm
+pnpm add @viwoapp/sdk
+```
+
+### Peer Dependencies
+
+```json
+{
+  "@coral-xyz/anchor": ">=0.30.0",
+  "@solana/web3.js": ">=1.90.0"
+}
+```
+
+### Quick Start
+
+```typescript
+import { ViWoClient, parseVCoin, LOCK_DURATIONS } from "@viwoapp/sdk";
+import { Connection, clusterApiUrl } from "@solana/web3.js";
+
+// Initialize client
+const connection = new Connection(clusterApiUrl("devnet"));
+const client = new ViWoClient(connection, wallet);
+
+// Staking example
+const stakingStats = await client.staking.getStats();
+console.log("Total Staked:", stakingStats.totalStaked);
+
+// Governance example
+const proposals = await client.governance.getActiveProposals();
+const votingPower = await client.governance.getVotingPower();
+```
+
+### SDK Modules
+
+| Module | Import | Purpose |
+|--------|--------|---------|
+| **Core** | `@viwoapp/sdk` | Connection, wallet adapters, utilities |
+| **Staking** | `@viwoapp/sdk/staking` | Stake VCoin, manage locks, tier info |
+| **Governance** | `@viwoapp/sdk/governance` | Proposals, voting, delegation |
+| **Rewards** | `@viwoapp/sdk/rewards` | SSCRE claim helpers, epoch info |
+| **Identity** | `@viwoapp/sdk/identity` | DID management, verification |
+| **5A Protocol** | `@viwoapp/sdk/fivea` | Reputation scores, oracle data |
+| **Gasless** | `@viwoapp/sdk/gasless` | Session keys, sponsored transactions |
+| **ViLink** | `@viwoapp/sdk/vilink` | Action deep links, cross-dApp |
+| **Content** | `@viwoapp/sdk/content` | Content registry, energy system |
+
+### Staking Client
+
+```typescript
+import { StakingClient, STAKING_TIERS, LOCK_DURATIONS } from "@viwoapp/sdk";
+
+// Get staking pool info
+const pool = await client.staking.getPool();
+console.log("Total Staked:", pool.totalStaked);
+
+// Get user stake
+const userStake = await client.staking.getUserStake();
+console.log("Your Tier:", client.staking.getTierName(userStake.tier));
+
+// Calculate tier for an amount
+const tier = client.staking.calculateTier(50000); // Gold tier
+
+// Calculate veVCoin rewards
+const vevcoin = client.staking.calculateVeVCoin(
+  parseVCoin("10000"),
+  LOCK_DURATIONS.oneYear
+);
+
+// Check unstake eligibility
+const { canUnstake, reason } = await client.staking.canUnstake();
+
+// Build stake transaction
+const tx = await client.staking.buildStakeTransaction({
+  amount: parseVCoin("1000"),
+  lockDuration: LOCK_DURATIONS.threeMonths,
+});
+```
+
+### Governance Client
+
+```typescript
+import { GovernanceClient, ProposalStatus } from "@viwoapp/sdk";
+
+// Get active proposals
+const proposals = await client.governance.getActiveProposals();
+
+// Get proposal details
+const proposal = await client.governance.getProposal(proposalId);
+console.log("Status:", client.governance.getStatusText(proposal.status));
+
+// Get proposal progress
+const progress = await client.governance.getProposalProgress(proposalId);
+console.log("For:", progress.forPercentage + "%");
+console.log("Quorum Reached:", progress.quorumReached);
+
+// Get voting power (based on veVCoin + 5A score)
+const votingPower = await client.governance.getVotingPower();
+
+// Build vote transaction
+const voteTx = await client.governance.buildVoteTransaction(proposalId, true);
+
+// Build create proposal transaction
+const createTx = await client.governance.buildCreateProposalTransaction({
+  title: "Increase staking rewards",
+  description: "Proposal to increase APY by 10%",
+  category: 1,
+  durationDays: 7,
+});
+```
+
+### Constants & Utilities
+
+```typescript
+import {
+  VCOIN_DECIMALS,
+  STAKING_TIERS,
+  LOCK_DURATIONS,
+  GOVERNANCE_CONSTANTS,
+  formatVCoin,
+  parseVCoin,
+} from "@viwoapp/sdk";
+
+// Format/parse VCoin amounts
+const display = formatVCoin(1000000000); // "1.0"
+const raw = parseVCoin("1000");          // BN(1000000000000)
+
+// Staking tier thresholds
+console.log(STAKING_TIERS.gold.minStake);     // 20000
+console.log(STAKING_TIERS.gold.feeDiscount);  // 30
+
+// Lock durations
+console.log(LOCK_DURATIONS.threeMonths);  // 7776000 seconds
+console.log(LOCK_DURATIONS.fourYears);    // 126144000 seconds
+
+// Governance constants
+console.log(GOVERNANCE_CONSTANTS.quorumBps);           // 400 (4%)
+console.log(GOVERNANCE_CONSTANTS.executionDelay);      // 172800 (48 hours)
+```
+
+### PDA Helpers
+
+```typescript
+// Get PDAs for all accounts
+const stakingPool = client.pdas.getStakingPool();
+const userStake = client.pdas.getUserStake(walletPubkey);
+const proposal = client.pdas.getProposal(proposalId);
+const voteRecord = client.pdas.getVoteRecord(voter, proposalPda);
+const identity = client.pdas.getIdentity(walletPubkey);
+const fiveAScore = client.pdas.getFiveAScore(walletPubkey);
+```
+
+---
+
 ## Project Structure
 
 ```
