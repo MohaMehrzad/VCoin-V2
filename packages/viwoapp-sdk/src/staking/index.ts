@@ -94,26 +94,26 @@ export class StakingClient {
       ? stakeAmount 
       : stakeAmount.toNumber() / Math.pow(10, VCOIN_DECIMALS);
     
-    if (amount >= STAKING_TIERS.diamond.minStake) return 4;
-    if (amount >= STAKING_TIERS.platinum.minStake) return 3;
-    if (amount >= STAKING_TIERS.gold.minStake) return 2;
-    if (amount >= STAKING_TIERS.silver.minStake) return 1;
-    return 0;
+    if (amount >= STAKING_TIERS.platinum.minStake) return 4; // Platinum
+    if (amount >= STAKING_TIERS.gold.minStake) return 3;     // Gold
+    if (amount >= STAKING_TIERS.silver.minStake) return 2;   // Silver
+    if (amount >= STAKING_TIERS.bronze.minStake) return 1;   // Bronze
+    return 0; // None
   }
   
   /**
    * Calculate veVCoin amount for given stake
+   * Formula: ve_vcoin = staked_amount × (lock_duration / 4_years) × tier_boost
    */
   calculateVeVCoin(amount: BN, lockDuration: number): BN {
-    // veVCoin = staked_amount × (1 + lock_months × 0.1) × tier_multiplier
-    const lockMonths = Math.floor(lockDuration / (30 * 24 * 3600));
-    const lockBonus = 1 + (lockMonths * 0.1);
+    const FOUR_YEARS = 4 * 365 * 24 * 3600; // 126,144,000 seconds
+    const lockRatio = lockDuration / FOUR_YEARS;
     
     const tier = this.calculateTier(amount);
-    const tierMultipliers = [1.0, 1.1, 1.25, 1.5, 2.0];
-    const tierBonus = tierMultipliers[tier];
+    const tierBoosts = [1.0, 1.1, 1.2, 1.3, 1.4]; // None, Bronze, Silver, Gold, Platinum
+    const tierBoost = tierBoosts[tier];
     
-    const multiplier = lockBonus * tierBonus;
+    const multiplier = lockRatio * tierBoost;
     const vevcoinAmount = amount.toNumber() * multiplier;
     
     return new BN(Math.floor(vevcoinAmount));
@@ -123,22 +123,22 @@ export class StakingClient {
    * Get tier name
    */
   getTierName(tier: StakingTier): string {
-    const names = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"];
+    const names = ["None", "Bronze", "Silver", "Gold", "Platinum"];
     return names[tier] || "Unknown";
   }
   
   /**
    * Get tier info
    */
-  getTierInfo(tier: StakingTier): typeof STAKING_TIERS.bronze {
+  getTierInfo(tier: StakingTier): typeof STAKING_TIERS.none {
     const tiers = [
+      STAKING_TIERS.none,
       STAKING_TIERS.bronze,
       STAKING_TIERS.silver,
       STAKING_TIERS.gold,
       STAKING_TIERS.platinum,
-      STAKING_TIERS.diamond,
     ];
-    return tiers[tier] || STAKING_TIERS.bronze;
+    return tiers[tier] || STAKING_TIERS.none;
   }
   
   /**

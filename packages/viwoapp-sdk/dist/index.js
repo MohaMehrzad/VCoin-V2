@@ -69,17 +69,17 @@ var import_anchor = require("@coral-xyz/anchor");
 // src/constants.ts
 var import_web3 = require("@solana/web3.js");
 var PROGRAM_IDS = {
-  vcoinToken: new import_web3.PublicKey("VCNtkM3xg8ihH3JY8bQbqjUWCNEAVCiqUGmPjAqPNwP"),
-  vevcoinToken: new import_web3.PublicKey("VEVCnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjBqQ"),
-  stakingProtocol: new import_web3.PublicKey("STKGnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjCrR"),
-  transferHook: new import_web3.PublicKey("E5FWQsncH5hWRYX2ysiTA9uA2vhdQtQP473tDU9GWhyi"),
-  identityProtocol: new import_web3.PublicKey("CnxKPyRgU3HZDUvbAFPAddYJVWM2rWhLVq9QoEnBgJdB"),
-  fiveAProtocol: new import_web3.PublicKey("EPVUXY5NSTxWRGU4JF3zowtc5wB6HE9aUwFHG61W9CCH"),
-  contentRegistry: new import_web3.PublicKey("3Ex3eTSLUcLdfkMdUD91FH3a5CaFSzydMtCwAWGvW5vY"),
-  governanceProtocol: new import_web3.PublicKey("3fgzSVwUho1rp4k87ZZ43K9fysxy1WqabDNWTemmD1vi"),
-  sscreProtocol: new import_web3.PublicKey("FZrjuWJE6VW7qSxB8Jhd4hxv1fSnYBsRCzBTfWhVN8zC"),
-  vilinkProtocol: new import_web3.PublicKey("FYaKjTU8fq6W8nBQB6LhFBvCzYtvNzYNd6Gdr4dQELfT"),
-  gaslessProtocol: new import_web3.PublicKey("FZyRfP5qeChTZ9z2M2aHkXQ8QLHbRQ5aK7dJ2BpPtYXj")
+  vcoinToken: new import_web3.PublicKey("Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn"),
+  vevcoinToken: new import_web3.PublicKey("FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"),
+  stakingProtocol: new import_web3.PublicKey("6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu"),
+  transferHook: new import_web3.PublicKey("9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48"),
+  identityProtocol: new import_web3.PublicKey("3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG"),
+  fiveAProtocol: new import_web3.PublicKey("783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8"),
+  contentRegistry: new import_web3.PublicKey("MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV"),
+  governanceProtocol: new import_web3.PublicKey("3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe"),
+  sscreProtocol: new import_web3.PublicKey("6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"),
+  vilinkProtocol: new import_web3.PublicKey("CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7"),
+  gaslessProtocol: new import_web3.PublicKey("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3")
 };
 var SEEDS = {
   // VCoin
@@ -126,11 +126,11 @@ var VEVCOIN_DECIMALS = 9;
 var VCOIN_TOTAL_SUPPLY = 1e9;
 var VCOIN_INITIAL_CIRCULATING = 1e8;
 var STAKING_TIERS = {
-  bronze: { minStake: 100, multiplier: 1, minLock: 0 },
-  silver: { minStake: 1e3, multiplier: 1.1, minLock: 30 * 24 * 3600 },
-  gold: { minStake: 1e4, multiplier: 1.25, minLock: 90 * 24 * 3600 },
-  platinum: { minStake: 5e4, multiplier: 1.5, minLock: 180 * 24 * 3600 },
-  diamond: { minStake: 1e5, multiplier: 2, minLock: 365 * 24 * 3600 }
+  none: { minStake: 0, feeDiscount: 0, boost: 1, minLock: 0 },
+  bronze: { minStake: 1e3, feeDiscount: 10, boost: 1.1, minLock: 0 },
+  silver: { minStake: 5e3, feeDiscount: 20, boost: 1.2, minLock: 0 },
+  gold: { minStake: 2e4, feeDiscount: 30, boost: 1.3, minLock: 0 },
+  platinum: { minStake: 1e5, feeDiscount: 50, boost: 1.4, minLock: 0 }
 };
 var LOCK_DURATIONS = {
   none: 0,
@@ -194,10 +194,15 @@ var FIVE_A_CONSTANTS = {
   // 100.00 with 2 decimal precision
   scoreWeights: {
     authenticity: 25,
+    // A1 - "Are you a real person?"
+    accuracy: 20,
+    // A2 - "Is your content quality?"
+    agility: 15,
+    // A3 - "Are you fast?"
     activity: 25,
-    age: 15,
-    associations: 20,
-    accumulation: 15
+    // A4 - "Do you show up daily?"
+    approved: 15
+    // A5 - "Does the community like you?"
   },
   scoreMultipliers: {
     "0-20": 0.1,
@@ -496,11 +501,11 @@ function dateToTimestamp(date) {
 
 // src/types.ts
 var StakingTier = /* @__PURE__ */ ((StakingTier2) => {
-  StakingTier2[StakingTier2["Bronze"] = 0] = "Bronze";
-  StakingTier2[StakingTier2["Silver"] = 1] = "Silver";
-  StakingTier2[StakingTier2["Gold"] = 2] = "Gold";
-  StakingTier2[StakingTier2["Platinum"] = 3] = "Platinum";
-  StakingTier2[StakingTier2["Diamond"] = 4] = "Diamond";
+  StakingTier2[StakingTier2["None"] = 0] = "None";
+  StakingTier2[StakingTier2["Bronze"] = 1] = "Bronze";
+  StakingTier2[StakingTier2["Silver"] = 2] = "Silver";
+  StakingTier2[StakingTier2["Gold"] = 3] = "Gold";
+  StakingTier2[StakingTier2["Platinum"] = 4] = "Platinum";
   return StakingTier2;
 })(StakingTier || {});
 var ProposalStatus = /* @__PURE__ */ ((ProposalStatus2) => {
@@ -531,9 +536,9 @@ var FeeMethod = /* @__PURE__ */ ((FeeMethod2) => {
 var VerificationLevel = /* @__PURE__ */ ((VerificationLevel2) => {
   VerificationLevel2[VerificationLevel2["None"] = 0] = "None";
   VerificationLevel2[VerificationLevel2["Basic"] = 1] = "Basic";
-  VerificationLevel2[VerificationLevel2["Standard"] = 2] = "Standard";
-  VerificationLevel2[VerificationLevel2["Enhanced"] = 3] = "Enhanced";
-  VerificationLevel2[VerificationLevel2["Premium"] = 4] = "Premium";
+  VerificationLevel2[VerificationLevel2["KYC"] = 2] = "KYC";
+  VerificationLevel2[VerificationLevel2["Full"] = 3] = "Full";
+  VerificationLevel2[VerificationLevel2["Enhanced"] = 4] = "Enhanced";
   return VerificationLevel2;
 })(VerificationLevel || {});
 var ContentState = /* @__PURE__ */ ((ContentState2) => {
@@ -604,22 +609,23 @@ var StakingClient = class {
    */
   calculateTier(stakeAmount) {
     const amount = typeof stakeAmount === "number" ? stakeAmount : stakeAmount.toNumber() / Math.pow(10, VCOIN_DECIMALS);
-    if (amount >= STAKING_TIERS.diamond.minStake) return 4;
-    if (amount >= STAKING_TIERS.platinum.minStake) return 3;
-    if (amount >= STAKING_TIERS.gold.minStake) return 2;
-    if (amount >= STAKING_TIERS.silver.minStake) return 1;
+    if (amount >= STAKING_TIERS.platinum.minStake) return 4;
+    if (amount >= STAKING_TIERS.gold.minStake) return 3;
+    if (amount >= STAKING_TIERS.silver.minStake) return 2;
+    if (amount >= STAKING_TIERS.bronze.minStake) return 1;
     return 0;
   }
   /**
    * Calculate veVCoin amount for given stake
+   * Formula: ve_vcoin = staked_amount × (lock_duration / 4_years) × tier_boost
    */
   calculateVeVCoin(amount, lockDuration) {
-    const lockMonths = Math.floor(lockDuration / (30 * 24 * 3600));
-    const lockBonus = 1 + lockMonths * 0.1;
+    const FOUR_YEARS = 4 * 365 * 24 * 3600;
+    const lockRatio = lockDuration / FOUR_YEARS;
     const tier = this.calculateTier(amount);
-    const tierMultipliers = [1, 1.1, 1.25, 1.5, 2];
-    const tierBonus = tierMultipliers[tier];
-    const multiplier = lockBonus * tierBonus;
+    const tierBoosts = [1, 1.1, 1.2, 1.3, 1.4];
+    const tierBoost = tierBoosts[tier];
+    const multiplier = lockRatio * tierBoost;
     const vevcoinAmount = amount.toNumber() * multiplier;
     return new import_anchor2.BN(Math.floor(vevcoinAmount));
   }
@@ -627,7 +633,7 @@ var StakingClient = class {
    * Get tier name
    */
   getTierName(tier) {
-    const names = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"];
+    const names = ["None", "Bronze", "Silver", "Gold", "Platinum"];
     return names[tier] || "Unknown";
   }
   /**
@@ -635,13 +641,13 @@ var StakingClient = class {
    */
   getTierInfo(tier) {
     const tiers = [
+      STAKING_TIERS.none,
       STAKING_TIERS.bronze,
       STAKING_TIERS.silver,
       STAKING_TIERS.gold,
-      STAKING_TIERS.platinum,
-      STAKING_TIERS.diamond
+      STAKING_TIERS.platinum
     ];
-    return tiers[tier] || STAKING_TIERS.bronze;
+    return tiers[tier] || STAKING_TIERS.none;
   }
   /**
    * Check if user can unstake
@@ -1780,12 +1786,13 @@ var FiveAClient = class {
       return {
         user: new import_web39.PublicKey(data.slice(8, 40)),
         authenticity: data.readUInt16LE(40),
-        activity: data.readUInt16LE(42),
-        age: data.readUInt16LE(44),
-        associations: data.readUInt16LE(46),
-        accumulation: data.readUInt16LE(48),
-        composite: data.readUInt16LE(50),
-        lastUpdated: new import_anchor8.BN(data.slice(52, 60), "le")
+        accuracy: data.readUInt16LE(42),
+        agility: data.readUInt16LE(44),
+        activity: data.readUInt16LE(46),
+        approved: data.readUInt16LE(48),
+        compositeScore: data.readUInt16LE(50),
+        lastUpdated: new import_anchor8.BN(data.slice(52, 60), "le"),
+        isPrivate: data[60] !== 0
       };
     } catch {
       return null;
@@ -1824,34 +1831,39 @@ var FiveAClient = class {
     const weights = FIVE_A_CONSTANTS.scoreWeights;
     return [
       {
-        component: "Authenticity",
+        component: "A1 - Authenticity",
+        description: "Are you a real person?",
         score: this.formatScore(score.authenticity),
         weight: weights.authenticity,
         contribution: this.formatScore(score.authenticity * weights.authenticity / 100)
       },
       {
-        component: "Activity",
+        component: "A2 - Accuracy",
+        description: "Is your content quality?",
+        score: this.formatScore(score.accuracy),
+        weight: weights.accuracy,
+        contribution: this.formatScore(score.accuracy * weights.accuracy / 100)
+      },
+      {
+        component: "A3 - Agility",
+        description: "Are you fast?",
+        score: this.formatScore(score.agility),
+        weight: weights.agility,
+        contribution: this.formatScore(score.agility * weights.agility / 100)
+      },
+      {
+        component: "A4 - Activity",
+        description: "Do you show up daily?",
         score: this.formatScore(score.activity),
         weight: weights.activity,
         contribution: this.formatScore(score.activity * weights.activity / 100)
       },
       {
-        component: "Age",
-        score: this.formatScore(score.age),
-        weight: weights.age,
-        contribution: this.formatScore(score.age * weights.age / 100)
-      },
-      {
-        component: "Associations",
-        score: this.formatScore(score.associations),
-        weight: weights.associations,
-        contribution: this.formatScore(score.associations * weights.associations / 100)
-      },
-      {
-        component: "Accumulation",
-        score: this.formatScore(score.accumulation),
-        weight: weights.accumulation,
-        contribution: this.formatScore(score.accumulation * weights.accumulation / 100)
+        component: "A5 - Approved",
+        description: "Does the community like you?",
+        score: this.formatScore(score.approved),
+        weight: weights.approved,
+        contribution: this.formatScore(score.approved * weights.approved / 100)
       }
     ];
   }
@@ -1881,8 +1893,8 @@ var FiveAClient = class {
     if (!myScore) {
       return { canVouch: false, reason: "No 5A score found" };
     }
-    if (myScore.composite < 4e3) {
-      return { canVouch: false, reason: "Score too low to vouch (min 40%)" };
+    if (myScore.compositeScore < 6e3) {
+      return { canVouch: false, reason: "Score too low to vouch (min 60%)" };
     }
     return { canVouch: true };
   }
@@ -1892,19 +1904,19 @@ var FiveAClient = class {
   getImprovementSuggestions(score) {
     const suggestions = [];
     if (score.authenticity < 6e3) {
-      suggestions.push("Complete identity verification to improve Authenticity");
+      suggestions.push("Complete identity verification to improve Authenticity (A1)");
+    }
+    if (score.accuracy < 6e3) {
+      suggestions.push("Create quality content to improve Accuracy (A2)");
+    }
+    if (score.agility < 6e3) {
+      suggestions.push("Respond faster to improve Agility (A3)");
     }
     if (score.activity < 6e3) {
-      suggestions.push("Engage more with content and users to improve Activity");
+      suggestions.push("Engage daily with content to improve Activity (A4)");
     }
-    if (score.age < 6e3) {
-      suggestions.push("Account age improves over time - stay active!");
-    }
-    if (score.associations < 6e3) {
-      suggestions.push("Get vouched by high-score users to improve Associations");
-    }
-    if (score.accumulation < 6e3) {
-      suggestions.push("Stake VCoin and earn rewards to improve Accumulation");
+    if (score.approved < 6e3) {
+      suggestions.push("Get vouched by high-score users to improve Approved (A5)");
     }
     return suggestions;
   }

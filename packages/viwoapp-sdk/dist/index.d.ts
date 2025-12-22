@@ -50,29 +50,34 @@ declare const VEVCOIN_DECIMALS = 9;
 declare const VCOIN_TOTAL_SUPPLY = 1000000000;
 declare const VCOIN_INITIAL_CIRCULATING = 100000000;
 declare const STAKING_TIERS: {
+    none: {
+        minStake: number;
+        feeDiscount: number;
+        boost: number;
+        minLock: number;
+    };
     bronze: {
         minStake: number;
-        multiplier: number;
+        feeDiscount: number;
+        boost: number;
         minLock: number;
     };
     silver: {
         minStake: number;
-        multiplier: number;
+        feeDiscount: number;
+        boost: number;
         minLock: number;
     };
     gold: {
         minStake: number;
-        multiplier: number;
+        feeDiscount: number;
+        boost: number;
         minLock: number;
     };
     platinum: {
         minStake: number;
-        multiplier: number;
-        minLock: number;
-    };
-    diamond: {
-        minStake: number;
-        multiplier: number;
+        feeDiscount: number;
+        boost: number;
         minLock: number;
     };
 };
@@ -122,10 +127,10 @@ declare const FIVE_A_CONSTANTS: {
     maxScore: number;
     scoreWeights: {
         authenticity: number;
+        accuracy: number;
+        agility: number;
         activity: number;
-        age: number;
-        associations: number;
-        accumulation: number;
+        approved: number;
     };
     scoreMultipliers: {
         "0-20": number;
@@ -241,11 +246,11 @@ interface VCoinConfig {
     totalBurned: BN;
 }
 declare enum StakingTier {
-    Bronze = 0,
-    Silver = 1,
-    Gold = 2,
-    Platinum = 3,
-    Diamond = 4
+    None = 0,
+    Bronze = 1,
+    Silver = 2,
+    Gold = 3,
+    Platinum = 4
 }
 interface StakingPool {
     authority: PublicKey;
@@ -415,11 +420,11 @@ interface UserGaslessStats {
     activeSession: PublicKey;
 }
 declare enum VerificationLevel {
-    None = 0,
-    Basic = 1,
-    Standard = 2,
-    Enhanced = 3,
-    Premium = 4
+    None = 0,// Wallet connected only
+    Basic = 1,// Email + phone verified
+    KYC = 2,// Identity documents verified
+    Full = 3,// KYC + biometric verification
+    Enhanced = 4
 }
 interface Identity {
     user: PublicKey;
@@ -431,12 +436,13 @@ interface Identity {
 interface FiveAScore {
     user: PublicKey;
     authenticity: number;
+    accuracy: number;
+    agility: number;
     activity: number;
-    age: number;
-    associations: number;
-    accumulation: number;
-    composite: number;
+    approved: number;
+    compositeScore: number;
     lastUpdated: BN;
+    isPrivate: boolean;
 }
 interface VouchRecord {
     voucher: PublicKey;
@@ -919,6 +925,7 @@ declare class FiveAClient {
      */
     getScoreBreakdown(score: FiveAScore): {
         component: string;
+        description: string;
         score: string;
         weight: number;
         contribution: string;
@@ -1142,6 +1149,7 @@ declare class StakingClient {
     calculateTier(stakeAmount: BN | number): StakingTier;
     /**
      * Calculate veVCoin amount for given stake
+     * Formula: ve_vcoin = staked_amount × (lock_duration / 4_years) × tier_boost
      */
     calculateVeVCoin(amount: BN, lockDuration: number): BN;
     /**
@@ -1151,7 +1159,7 @@ declare class StakingClient {
     /**
      * Get tier info
      */
-    getTierInfo(tier: StakingTier): typeof STAKING_TIERS.bronze;
+    getTierInfo(tier: StakingTier): typeof STAKING_TIERS.none;
     /**
      * Check if user can unstake
      */

@@ -1,19 +1,19 @@
 import { PublicKey } from "@solana/web3.js";
 
-// ============ Program IDs ============
+// ============ Program IDs (Devnet Deployed) ============
 
 export const PROGRAM_IDS = {
-  vcoinToken: new PublicKey("VCNtkM3xg8ihH3JY8bQbqjUWCNEAVCiqUGmPjAqPNwP"),
-  vevcoinToken: new PublicKey("VEVCnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjBqQ"),
-  stakingProtocol: new PublicKey("STKGnmRk9hYxBGhH3JY8bQbqjUWCNEAVCiqUGmPjCrR"),
-  transferHook: new PublicKey("E5FWQsncH5hWRYX2ysiTA9uA2vhdQtQP473tDU9GWhyi"),
-  identityProtocol: new PublicKey("CnxKPyRgU3HZDUvbAFPAddYJVWM2rWhLVq9QoEnBgJdB"),
-  fiveAProtocol: new PublicKey("EPVUXY5NSTxWRGU4JF3zowtc5wB6HE9aUwFHG61W9CCH"),
-  contentRegistry: new PublicKey("3Ex3eTSLUcLdfkMdUD91FH3a5CaFSzydMtCwAWGvW5vY"),
-  governanceProtocol: new PublicKey("3fgzSVwUho1rp4k87ZZ43K9fysxy1WqabDNWTemmD1vi"),
-  sscreProtocol: new PublicKey("FZrjuWJE6VW7qSxB8Jhd4hxv1fSnYBsRCzBTfWhVN8zC"),
-  vilinkProtocol: new PublicKey("FYaKjTU8fq6W8nBQB6LhFBvCzYtvNzYNd6Gdr4dQELfT"),
-  gaslessProtocol: new PublicKey("FZyRfP5qeChTZ9z2M2aHkXQ8QLHbRQ5aK7dJ2BpPtYXj"),
+  vcoinToken: new PublicKey("Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn"),
+  vevcoinToken: new PublicKey("FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"),
+  stakingProtocol: new PublicKey("6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu"),
+  transferHook: new PublicKey("9K14FcDRrBeHKD9FPNYeVJaEqJQTac2xspJyb1mM6m48"),
+  identityProtocol: new PublicKey("3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG"),
+  fiveAProtocol: new PublicKey("783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8"),
+  contentRegistry: new PublicKey("MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV"),
+  governanceProtocol: new PublicKey("3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe"),
+  sscreProtocol: new PublicKey("6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"),
+  vilinkProtocol: new PublicKey("CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7"),
+  gaslessProtocol: new PublicKey("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"),
 };
 
 // ============ PDA Seeds ============
@@ -79,11 +79,11 @@ export const VCOIN_INITIAL_CIRCULATING = 100_000_000; // 100 million
 // ============ Staking Constants ============
 
 export const STAKING_TIERS = {
-  bronze: { minStake: 100, multiplier: 1.0, minLock: 0 },
-  silver: { minStake: 1000, multiplier: 1.1, minLock: 30 * 24 * 3600 },
-  gold: { minStake: 10000, multiplier: 1.25, minLock: 90 * 24 * 3600 },
-  platinum: { minStake: 50000, multiplier: 1.5, minLock: 180 * 24 * 3600 },
-  diamond: { minStake: 100000, multiplier: 2.0, minLock: 365 * 24 * 3600 },
+  none:     { minStake: 0,       feeDiscount: 0,  boost: 1.0, minLock: 0 },
+  bronze:   { minStake: 1_000,   feeDiscount: 10, boost: 1.1, minLock: 0 },
+  silver:   { minStake: 5_000,   feeDiscount: 20, boost: 1.2, minLock: 0 },
+  gold:     { minStake: 20_000,  feeDiscount: 30, boost: 1.3, minLock: 0 },
+  platinum: { minStake: 100_000, feeDiscount: 50, boost: 1.4, minLock: 0 },
 };
 
 export const LOCK_DURATIONS = {
@@ -144,11 +144,11 @@ export const GASLESS_CONSTANTS = {
 export const FIVE_A_CONSTANTS = {
   maxScore: 10000, // 100.00 with 2 decimal precision
   scoreWeights: {
-    authenticity: 25,
-    activity: 25,
-    age: 15,
-    associations: 20,
-    accumulation: 15,
+    authenticity: 25, // A1 - "Are you a real person?"
+    accuracy: 20,     // A2 - "Is your content quality?"
+    agility: 15,      // A3 - "Are you fast?"
+    activity: 25,     // A4 - "Do you show up daily?"
+    approved: 15,     // A5 - "Does the community like you?"
   },
   scoreMultipliers: {
     "0-20": 0.1,

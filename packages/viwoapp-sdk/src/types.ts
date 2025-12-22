@@ -15,11 +15,11 @@ export interface VCoinConfig {
 // ============ Staking Types ============
 
 export enum StakingTier {
-  Bronze = 0,
-  Silver = 1,
-  Gold = 2,
-  Platinum = 3,
-  Diamond = 4,
+  None = 0,
+  Bronze = 1,
+  Silver = 2,
+  Gold = 3,
+  Platinum = 4,
 }
 
 export interface StakingPool {
@@ -220,11 +220,11 @@ export interface UserGaslessStats {
 // ============ Identity Types ============
 
 export enum VerificationLevel {
-  None = 0,
-  Basic = 1,
-  Standard = 2,
-  Enhanced = 3,
-  Premium = 4,
+  None = 0,     // Wallet connected only
+  Basic = 1,    // Email + phone verified
+  KYC = 2,      // Identity documents verified
+  Full = 3,     // KYC + biometric verification
+  Enhanced = 4, // Full + UniqueHuman attestation
 }
 
 export interface Identity {
@@ -239,13 +239,14 @@ export interface Identity {
 
 export interface FiveAScore {
   user: PublicKey;
-  authenticity: number;
-  activity: number;
-  age: number;
-  associations: number;
-  accumulation: number;
-  composite: number;
+  authenticity: number;  // A1 - "Are you a real person?"
+  accuracy: number;      // A2 - "Is your content quality?"
+  agility: number;       // A3 - "Are you fast?"
+  activity: number;      // A4 - "Do you show up daily?"
+  approved: number;      // A5 - "Does the community like you?"
+  compositeScore: number;
   lastUpdated: BN;
+  isPrivate: boolean;
 }
 
 export interface VouchRecord {

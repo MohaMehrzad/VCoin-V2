@@ -44,12 +44,13 @@ export class FiveAClient {
       return {
         user: new PublicKey(data.slice(8, 40)),
         authenticity: data.readUInt16LE(40),
-        activity: data.readUInt16LE(42),
-        age: data.readUInt16LE(44),
-        associations: data.readUInt16LE(46),
-        accumulation: data.readUInt16LE(48),
-        composite: data.readUInt16LE(50),
+        accuracy: data.readUInt16LE(42),
+        agility: data.readUInt16LE(44),
+        activity: data.readUInt16LE(46),
+        approved: data.readUInt16LE(48),
+        compositeScore: data.readUInt16LE(50),
         lastUpdated: new BN(data.slice(52, 60), "le"),
+        isPrivate: data[60] !== 0,
       };
     } catch {
       return null;
@@ -90,6 +91,7 @@ export class FiveAClient {
    */
   getScoreBreakdown(score: FiveAScore): {
     component: string;
+    description: string;
     score: string;
     weight: number;
     contribution: string;
@@ -98,34 +100,39 @@ export class FiveAClient {
     
     return [
       {
-        component: "Authenticity",
+        component: "A1 - Authenticity",
+        description: "Are you a real person?",
         score: this.formatScore(score.authenticity),
         weight: weights.authenticity,
         contribution: this.formatScore((score.authenticity * weights.authenticity) / 100),
       },
       {
-        component: "Activity",
+        component: "A2 - Accuracy",
+        description: "Is your content quality?",
+        score: this.formatScore(score.accuracy),
+        weight: weights.accuracy,
+        contribution: this.formatScore((score.accuracy * weights.accuracy) / 100),
+      },
+      {
+        component: "A3 - Agility",
+        description: "Are you fast?",
+        score: this.formatScore(score.agility),
+        weight: weights.agility,
+        contribution: this.formatScore((score.agility * weights.agility) / 100),
+      },
+      {
+        component: "A4 - Activity",
+        description: "Do you show up daily?",
         score: this.formatScore(score.activity),
         weight: weights.activity,
         contribution: this.formatScore((score.activity * weights.activity) / 100),
       },
       {
-        component: "Age",
-        score: this.formatScore(score.age),
-        weight: weights.age,
-        contribution: this.formatScore((score.age * weights.age) / 100),
-      },
-      {
-        component: "Associations",
-        score: this.formatScore(score.associations),
-        weight: weights.associations,
-        contribution: this.formatScore((score.associations * weights.associations) / 100),
-      },
-      {
-        component: "Accumulation",
-        score: this.formatScore(score.accumulation),
-        weight: weights.accumulation,
-        contribution: this.formatScore((score.accumulation * weights.accumulation) / 100),
+        component: "A5 - Approved",
+        description: "Does the community like you?",
+        score: this.formatScore(score.approved),
+        weight: weights.approved,
+        contribution: this.formatScore((score.approved * weights.approved) / 100),
       },
     ];
   }
@@ -164,9 +171,9 @@ export class FiveAClient {
       return { canVouch: false, reason: "No 5A score found" };
     }
     
-    // Check minimum score to vouch
-    if (myScore.composite < 4000) {
-      return { canVouch: false, reason: "Score too low to vouch (min 40%)" };
+    // Check minimum score to vouch (60% required per report)
+    if (myScore.compositeScore < 6000) {
+      return { canVouch: false, reason: "Score too low to vouch (min 60%)" };
     }
     
     // Would also check vouch limits, existing vouches, etc.
@@ -181,23 +188,23 @@ export class FiveAClient {
     const suggestions: string[] = [];
     
     if (score.authenticity < 6000) {
-      suggestions.push("Complete identity verification to improve Authenticity");
+      suggestions.push("Complete identity verification to improve Authenticity (A1)");
+    }
+    
+    if (score.accuracy < 6000) {
+      suggestions.push("Create quality content to improve Accuracy (A2)");
+    }
+    
+    if (score.agility < 6000) {
+      suggestions.push("Respond faster to improve Agility (A3)");
     }
     
     if (score.activity < 6000) {
-      suggestions.push("Engage more with content and users to improve Activity");
+      suggestions.push("Engage daily with content to improve Activity (A4)");
     }
     
-    if (score.age < 6000) {
-      suggestions.push("Account age improves over time - stay active!");
-    }
-    
-    if (score.associations < 6000) {
-      suggestions.push("Get vouched by high-score users to improve Associations");
-    }
-    
-    if (score.accumulation < 6000) {
-      suggestions.push("Stake VCoin and earn rewards to improve Accumulation");
+    if (score.approved < 6000) {
+      suggestions.push("Get vouched by high-score users to improve Approved (A5)");
     }
     
     return suggestions;
