@@ -398,29 +398,6 @@ MIT License — All protocols are open source and available as public goods.
 
 ---
 
-## Changelog
-
-### v2.1.0 (December 22, 2025)
-- ✅ All 11 programs deployed to Devnet
-- ✅ Program IDs updated in all lib.rs files
-- ✅ Anchor.toml updated with correct addresses
-- ✅ VCoin integration tests verified on devnet
-
-### v2.0.0 (December 22, 2025)
-- ✅ Modular architecture restructuring for all 11 programs
-- ✅ Full modular structure for 8 programs
-- ✅ Streamlined structure for 3 large programs
-- ✅ ~196 organized Rust files
-- ✅ Build verification passing
-
-### v1.0.0 (December 21, 2025)
-- ✅ Initial release with 11 programs
-- ✅ 8/11 programs deployed to Devnet
-- ✅ TypeScript SDK built and ready
-- ✅ All integration tests created
-
----
-
 **Version:** 2.1  
 **Framework:** Anchor 0.32.0 | Solana Program 2.0 | Token-2022 6.0  
 **Architecture:** Modular (2025-2026 Best Practices)  
