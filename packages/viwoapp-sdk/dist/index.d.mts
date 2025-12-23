@@ -44,6 +44,9 @@ declare const SEEDS: {
     registryConfig: string;
     content: string;
     userEnergy: string;
+    slashRequest: string;
+    decryptionShare: string;
+    pendingScore: string;
 };
 declare const VCOIN_DECIMALS = 9;
 declare const VEVCOIN_DECIMALS = 9;
@@ -95,12 +98,15 @@ declare const SSCRE_CONSTANTS: {
     claimWindow: number;
     gaslessFeeBps: number;
     minClaimAmount: number;
+    circuitBreakerCooldown: number;
 };
 declare const VILINK_CONSTANTS: {
     maxActionExpiry: number;
     minTipAmount: number;
     maxTipAmount: number;
     platformFeeBps: number;
+    maxPlatformFeeBps: number;
+    minPlatformFeeBps: number;
 };
 declare const ACTION_SCOPES: {
     tip: number;
@@ -122,6 +128,7 @@ declare const GASLESS_CONSTANTS: {
     sscreDeductionBps: number;
     dailySubsidyBudget: number;
     maxSubsidizedPerUser: number;
+    maxSlippageBps: number;
 };
 declare const FIVE_A_CONSTANTS: {
     maxScore: number;
@@ -139,6 +146,9 @@ declare const FIVE_A_CONSTANTS: {
         "60-80": number;
         "80-100": number;
     };
+    oracleConsensusRequired: number;
+    pendingScoreExpiry: number;
+    minScoreUpdateInterval: number;
 };
 declare const CONTENT_CONSTANTS: {
     maxEnergy: number;
@@ -153,6 +163,24 @@ declare const GOVERNANCE_CONSTANTS: {
     executionDelay: number;
     vetoWindow: number;
     quorumBps: number;
+    zkVotingEnabled: boolean;
+};
+declare const SECURITY_CONSTANTS: {
+    authorityTransferTimelock: number;
+    slashApprovalTimelock: number;
+    slashExpiry: number;
+    maxFeeSlippageBps: number;
+    minScoreUpdateInterval: number;
+    circuitBreakerCooldown: number;
+    oracleConsensusRequired: number;
+    pendingScoreExpiry: number;
+    maxPlatformFeeBps: number;
+    minPlatformFeeBps: number;
+};
+declare const VALID_URI_PREFIXES: readonly ["ipfs://", "https://", "ar://"];
+declare const MAX_URI_LENGTH = 128;
+declare const MERKLE_CONSTANTS: {
+    leafDomainPrefix: string;
 };
 
 interface ConnectionConfig {
@@ -237,13 +265,36 @@ declare function getCurrentTimestamp(): number;
 declare function timestampToDate(timestamp: number | BN): Date;
 declare function dateToTimestamp(date: Date): number;
 
-interface VCoinConfig {
+/** Two-step authority transfer fields (H-02) */
+interface PendingAuthorityFields {
+    pendingAuthority?: PublicKey;
+    pendingAuthorityActivatedAt?: BN;
+}
+interface VCoinConfig extends PendingAuthorityFields {
     authority: PublicKey;
     mint: PublicKey;
     permanentDelegate: PublicKey;
     paused: boolean;
     totalMinted: BN;
     totalBurned: BN;
+}
+/** Governance-controlled slashing request (H-01) */
+declare enum SlashStatus {
+    Proposed = 0,
+    Approved = 1,
+    Executed = 2,
+    Cancelled = 3
+}
+interface SlashRequest {
+    target: PublicKey;
+    amount: BN;
+    reason: Uint8Array;
+    proposer: PublicKey;
+    proposedAt: BN;
+    approvedAt?: BN;
+    executedAt?: BN;
+    status: SlashStatus;
+    governanceProposal?: PublicKey;
 }
 declare enum StakingTier {
     None = 0,
@@ -252,13 +303,14 @@ declare enum StakingTier {
     Gold = 3,
     Platinum = 4
 }
-interface StakingPool {
+interface StakingPool extends PendingAuthorityFields {
     authority: PublicKey;
     vcoinMint: PublicKey;
     vevcoinMint: PublicKey;
     totalStaked: BN;
     totalVevcoinMinted: BN;
     paused: boolean;
+    reentrancyGuard?: boolean;
 }
 interface UserStake {
     user: PublicKey;
@@ -305,13 +357,15 @@ interface CreateProposalParams {
     category: number;
     durationDays: number;
 }
-interface RewardsPoolConfig {
+interface RewardsPoolConfig extends PendingAuthorityFields {
     authority: PublicKey;
     vcoinMint: PublicKey;
     currentEpoch: BN;
     totalDistributed: BN;
     remainingReserves: BN;
     paused: boolean;
+    circuitBreakerActive?: boolean;
+    circuitBreakerTriggeredAt?: BN;
 }
 interface EpochDistribution {
     epoch: BN;
@@ -326,6 +380,9 @@ interface UserClaim {
     lastClaimedEpoch: BN;
     totalClaimed: BN;
     claimsCount: number;
+    claimedEpochsBitmap?: BN[];
+    claimedEpochsBitmapExt?: BN[];
+    highEpochsClaimed?: BN[];
 }
 interface ClaimRewardsParams {
     epoch: BN;
@@ -342,7 +399,7 @@ declare enum ActionType {
     Delegate = 6,
     Vote = 7
 }
-interface ViLinkConfig {
+interface ViLinkConfig extends PendingAuthorityFields {
     authority: PublicKey;
     vcoinMint: PublicKey;
     treasury: PublicKey;
@@ -379,7 +436,7 @@ declare enum FeeMethod {
     VCoinDeduction = 1,
     SSCREDeduction = 2
 }
-interface GaslessConfig {
+interface GaslessConfig extends PendingAuthorityFields {
     authority: PublicKey;
     feePayer: PublicKey;
     vcoinMint: PublicKey;
@@ -389,6 +446,7 @@ interface GaslessConfig {
     totalSubsidizedTx: BN;
     totalVcoinCollected: BN;
     paused: boolean;
+    maxSlippageBps?: number;
 }
 interface SessionKey {
     user: PublicKey;
@@ -473,6 +531,75 @@ interface UserEnergy {
     maxEnergy: number;
     lastRegenTime: BN;
     tier: number;
+}
+interface RegistryConfig extends PendingAuthorityFields {
+    authority: PublicKey;
+    paused: boolean;
+    totalContent: BN;
+}
+interface IdentityConfig extends PendingAuthorityFields {
+    authority: PublicKey;
+    paused: boolean;
+    totalIdentities: BN;
+}
+interface FiveAConfig extends PendingAuthorityFields {
+    authority: PublicKey;
+    paused: boolean;
+    oracleConsensusRequired: number;
+}
+interface GovernanceConfig extends PendingAuthorityFields {
+    authority: PublicKey;
+    vevcoinMint: PublicKey;
+    paused: boolean;
+    proposalCount: BN;
+    zkVotingEnabled: boolean;
+}
+/** ZK voting decryption share storage (C-02) */
+interface DecryptionShare {
+    proposal: PublicKey;
+    committeeIndex: number;
+    committeeMember: PublicKey;
+    share: Uint8Array;
+    submittedAt: BN;
+}
+/** Private voting config with committee tracking (C-02) */
+interface PrivateVotingConfig {
+    proposal: PublicKey;
+    encryptionPubkey: PublicKey;
+    decryptionThreshold: number;
+    decryptionCommittee: PublicKey[];
+    sharesSubmitted: boolean[];
+    revealCompleted: boolean;
+    aggregatedFor: BN;
+    aggregatedAgainst: BN;
+}
+/** Delegation with expiry (M-07) */
+interface Delegation {
+    delegator: PublicKey;
+    delegate: PublicKey;
+    delegationType: number;
+    delegatedAmount: BN;
+    expiresAt?: BN;
+    revocable: boolean;
+}
+/** Pending score update for oracle consensus */
+interface PendingScoreUpdate {
+    user: PublicKey;
+    authenticity: number;
+    accuracy: number;
+    agility: number;
+    activity: number;
+    approved: number;
+    oracleSubmissions: PublicKey[];
+    submissionCount: number;
+    createdAt: BN;
+    expiresAt: BN;
+}
+interface HookConfig extends PendingAuthorityFields {
+    authority: PublicKey;
+    vcoinMint: PublicKey;
+    blockWashTrading: boolean;
+    paused: boolean;
 }
 
 /**
@@ -1196,4 +1323,4 @@ declare class StakingClient {
     buildExtendLockTransaction(newDuration: number): Promise<Transaction>;
 }
 
-export { ACTION_SCOPES, ActionType, CONTENT_CONSTANTS, type ClaimRewardsParams, type ConnectionConfig, ContentClient, type ContentRecord, ContentState, type CreateActionParams, type CreateProposalParams, type CreateSessionParams, type EpochDistribution, FIVE_A_CONSTANTS, FeeMethod, FiveAClient, type FiveAScore, GASLESS_CONSTANTS, GOVERNANCE_CONSTANTS, GaslessClient, type GaslessConfig, GovernanceClient, type Identity, IdentityClient, LOCK_DURATIONS, PDAs, PROGRAM_IDS, type Proposal, ProposalStatus, RewardsClient, type RewardsPoolConfig, SEEDS, SSCRE_CONSTANTS, STAKING_TIERS, type SessionKey, type StakeParams, StakingClient, type StakingPool, StakingTier, TransactionBuilder, type UserClaim, type UserEnergy, type UserGaslessStats, type UserStake, VCOIN_DECIMALS, VCOIN_INITIAL_CIRCULATING, VCOIN_TOTAL_SUPPLY, type VCoinConfig, VEVCOIN_DECIMALS, VILINK_CONSTANTS, VerificationLevel, type ViLinkAction, ViLinkClient, type ViLinkConfig, ViWoClient, ViWoConnection, type VoteRecord, type VouchRecord, type WalletAdapter, dateToTimestamp, formatVCoin, getCurrentTimestamp, parseVCoin, timestampToDate };
+export { ACTION_SCOPES, ActionType, CONTENT_CONSTANTS, type ClaimRewardsParams, type ConnectionConfig, ContentClient, type ContentRecord, ContentState, type CreateActionParams, type CreateProposalParams, type CreateSessionParams, type DecryptionShare, type Delegation, type EpochDistribution, FIVE_A_CONSTANTS, FeeMethod, FiveAClient, type FiveAConfig, type FiveAScore, GASLESS_CONSTANTS, GOVERNANCE_CONSTANTS, GaslessClient, type GaslessConfig, GovernanceClient, type GovernanceConfig, type HookConfig, type Identity, IdentityClient, type IdentityConfig, LOCK_DURATIONS, MAX_URI_LENGTH, MERKLE_CONSTANTS, PDAs, PROGRAM_IDS, type PendingAuthorityFields, type PendingScoreUpdate, type PrivateVotingConfig, type Proposal, ProposalStatus, type RegistryConfig, RewardsClient, type RewardsPoolConfig, SECURITY_CONSTANTS, SEEDS, SSCRE_CONSTANTS, STAKING_TIERS, type SessionKey, type SlashRequest, SlashStatus, type StakeParams, StakingClient, type StakingPool, StakingTier, TransactionBuilder, type UserClaim, type UserEnergy, type UserGaslessStats, type UserStake, VALID_URI_PREFIXES, VCOIN_DECIMALS, VCOIN_INITIAL_CIRCULATING, VCOIN_TOTAL_SUPPLY, type VCoinConfig, VEVCOIN_DECIMALS, VILINK_CONSTANTS, VerificationLevel, type ViLinkAction, ViLinkClient, type ViLinkConfig, ViWoClient, ViWoConnection, type VoteRecord, type VouchRecord, type WalletAdapter, dateToTimestamp, formatVCoin, getCurrentTimestamp, parseVCoin, timestampToDate };

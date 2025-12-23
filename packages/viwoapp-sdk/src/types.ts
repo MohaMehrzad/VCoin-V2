@@ -1,15 +1,43 @@
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 
+// ============ Common Types (Security - Phase 2) ============
+
+/** Two-step authority transfer fields (H-02) */
+export interface PendingAuthorityFields {
+  pendingAuthority?: PublicKey;
+  pendingAuthorityActivatedAt?: BN;
+}
+
 // ============ VCoin Token Types ============
 
-export interface VCoinConfig {
+export interface VCoinConfig extends PendingAuthorityFields {
   authority: PublicKey;
   mint: PublicKey;
   permanentDelegate: PublicKey;
   paused: boolean;
   totalMinted: BN;
   totalBurned: BN;
+}
+
+/** Governance-controlled slashing request (H-01) */
+export enum SlashStatus {
+  Proposed = 0,
+  Approved = 1,
+  Executed = 2,
+  Cancelled = 3,
+}
+
+export interface SlashRequest {
+  target: PublicKey;
+  amount: BN;
+  reason: Uint8Array;
+  proposer: PublicKey;
+  proposedAt: BN;
+  approvedAt?: BN;
+  executedAt?: BN;
+  status: SlashStatus;
+  governanceProposal?: PublicKey;
 }
 
 // ============ Staking Types ============
@@ -22,13 +50,14 @@ export enum StakingTier {
   Platinum = 4,
 }
 
-export interface StakingPool {
+export interface StakingPool extends PendingAuthorityFields {
   authority: PublicKey;
   vcoinMint: PublicKey;
   vevcoinMint: PublicKey;
   totalStaked: BN;
   totalVevcoinMinted: BN;
   paused: boolean;
+  reentrancyGuard?: boolean; // M-01: Reentrancy protection (optional for backwards compat)
 }
 
 export interface UserStake {
@@ -86,13 +115,15 @@ export interface CreateProposalParams {
 
 // ============ SSCRE Rewards Types ============
 
-export interface RewardsPoolConfig {
+export interface RewardsPoolConfig extends PendingAuthorityFields {
   authority: PublicKey;
   vcoinMint: PublicKey;
   currentEpoch: BN;
   totalDistributed: BN;
   remainingReserves: BN;
   paused: boolean;
+  circuitBreakerActive?: boolean; // M-05: Optional for backwards compat
+  circuitBreakerTriggeredAt?: BN; // M-05: Circuit breaker cooldown
 }
 
 export interface EpochDistribution {
@@ -109,6 +140,9 @@ export interface UserClaim {
   lastClaimedEpoch: BN;
   totalClaimed: BN;
   claimsCount: number;
+  claimedEpochsBitmap?: BN[];      // H-04: Bitmap for epochs 0-255 (optional)
+  claimedEpochsBitmapExt?: BN[];   // H-04: Extended bitmap for epochs 256-511 (optional)
+  highEpochsClaimed?: BN[];        // H-04: Dynamic array for epochs 512+ (optional)
 }
 
 export interface ClaimRewardsParams {
@@ -130,7 +164,7 @@ export enum ActionType {
   Vote = 7,
 }
 
-export interface ViLinkConfig {
+export interface ViLinkConfig extends PendingAuthorityFields {
   authority: PublicKey;
   vcoinMint: PublicKey;
   treasury: PublicKey;
@@ -139,7 +173,7 @@ export interface ViLinkConfig {
   totalActionsExecuted: BN;
   totalTipVolume: BN;
   paused: boolean;
-  platformFeeBps: number;
+  platformFeeBps: number; // M-02: Bounded 10-1000 bps (0.1%-10%)
 }
 
 export interface ViLinkAction {
@@ -173,7 +207,7 @@ export enum FeeMethod {
   SSCREDeduction = 2,
 }
 
-export interface GaslessConfig {
+export interface GaslessConfig extends PendingAuthorityFields {
   authority: PublicKey;
   feePayer: PublicKey;
   vcoinMint: PublicKey;
@@ -183,6 +217,7 @@ export interface GaslessConfig {
   totalSubsidizedTx: BN;
   totalVcoinCollected: BN;
   paused: boolean;
+  maxSlippageBps?: number; // L-03: Slippage protection (default 500 = 5%, optional for backwards compat)
 }
 
 export interface SessionKey {
@@ -283,5 +318,95 @@ export interface UserEnergy {
   maxEnergy: number;
   lastRegenTime: BN;
   tier: number;
+}
+
+// ============ Content Registry Config ============
+
+export interface RegistryConfig extends PendingAuthorityFields {
+  authority: PublicKey;
+  paused: boolean;
+  totalContent: BN;
+}
+
+// ============ Identity Config ============
+
+export interface IdentityConfig extends PendingAuthorityFields {
+  authority: PublicKey;
+  paused: boolean;
+  totalIdentities: BN;
+}
+
+// ============ 5A Config ============
+
+export interface FiveAConfig extends PendingAuthorityFields {
+  authority: PublicKey;
+  paused: boolean;
+  oracleConsensusRequired: number; // H-05: Default 3
+}
+
+// ============ Governance Types (Security Updates) ============
+
+export interface GovernanceConfig extends PendingAuthorityFields {
+  authority: PublicKey;
+  vevcoinMint: PublicKey;
+  paused: boolean;
+  proposalCount: BN;
+  zkVotingEnabled: boolean; // C-01: Currently false
+}
+
+/** ZK voting decryption share storage (C-02) */
+export interface DecryptionShare {
+  proposal: PublicKey;
+  committeeIndex: number;
+  committeeMember: PublicKey;
+  share: Uint8Array;
+  submittedAt: BN;
+}
+
+/** Private voting config with committee tracking (C-02) */
+export interface PrivateVotingConfig {
+  proposal: PublicKey;
+  encryptionPubkey: PublicKey;
+  decryptionThreshold: number;
+  decryptionCommittee: PublicKey[];
+  sharesSubmitted: boolean[];
+  revealCompleted: boolean;
+  aggregatedFor: BN;
+  aggregatedAgainst: BN;
+}
+
+/** Delegation with expiry (M-07) */
+export interface Delegation {
+  delegator: PublicKey;
+  delegate: PublicKey;
+  delegationType: number;
+  delegatedAmount: BN;
+  expiresAt?: BN; // M-07: Optional expiry
+  revocable: boolean;
+}
+
+// ============ 5A Oracle Consensus Types (H-05) ============
+
+/** Pending score update for oracle consensus */
+export interface PendingScoreUpdate {
+  user: PublicKey;
+  authenticity: number;
+  accuracy: number;
+  agility: number;
+  activity: number;
+  approved: number;
+  oracleSubmissions: PublicKey[];
+  submissionCount: number;
+  createdAt: BN;
+  expiresAt: BN;
+}
+
+// ============ Transfer Hook Config ============
+
+export interface HookConfig extends PendingAuthorityFields {
+  authority: PublicKey;
+  vcoinMint: PublicKey;
+  blockWashTrading: boolean; // M-04: When true, blocks detected wash trades
+  paused: boolean;
 }
 

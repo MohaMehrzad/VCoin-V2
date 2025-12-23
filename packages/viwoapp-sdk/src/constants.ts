@@ -66,6 +66,11 @@ export const SEEDS = {
   registryConfig: "registry-config",
   content: "content",
   userEnergy: "user-energy",
+
+  // Security (Phase 2-4)
+  slashRequest: "slash-request",       // H-01: Governance slashing
+  decryptionShare: "decryption-share", // C-02: ZK voting shares
+  pendingScore: "pending-score",       // H-05: Oracle consensus
 };
 
 // ============ Token Constants ============
@@ -103,6 +108,7 @@ export const SSCRE_CONSTANTS = {
   claimWindow: 90 * 24 * 3600, // 90 days
   gaslessFeeBps: 100, // 1%
   minClaimAmount: 1, // 1 VCoin
+  circuitBreakerCooldown: 21600, // M-05: 6 hours before reset
 };
 
 // ============ ViLink Constants ============
@@ -112,6 +118,8 @@ export const VILINK_CONSTANTS = {
   minTipAmount: 0.1, // 0.1 VCoin
   maxTipAmount: 10_000, // 10,000 VCoin
   platformFeeBps: 250, // 2.5%
+  maxPlatformFeeBps: 1000, // M-02: 10% max
+  minPlatformFeeBps: 10, // M-02: 0.1% min
 };
 
 export const ACTION_SCOPES = {
@@ -137,6 +145,7 @@ export const GASLESS_CONSTANTS = {
   sscreDeductionBps: 100, // 1%
   dailySubsidyBudget: 10, // 10 SOL
   maxSubsidizedPerUser: 50,
+  maxSlippageBps: 500, // L-03: 5% max slippage for fee conversion
 };
 
 // ============ 5A Protocol Constants ============
@@ -157,6 +166,11 @@ export const FIVE_A_CONSTANTS = {
     "60-80": 1.0,
     "80-100": 1.2,
   },
+  // H-05: Oracle consensus
+  oracleConsensusRequired: 3, // 3-of-N oracles must agree
+  pendingScoreExpiry: 3600, // 1 hour
+  // L-07: Rate limiting
+  minScoreUpdateInterval: 3600, // 1 hour between updates for same user
 };
 
 // ============ Content Constants ============
@@ -177,5 +191,45 @@ export const GOVERNANCE_CONSTANTS = {
   executionDelay: 2 * 24 * 3600, // 2 days
   vetoWindow: 24 * 3600, // 1 day
   quorumBps: 400, // 4%
+  zkVotingEnabled: false, // C-01: Disabled until proper ZK infrastructure
+};
+
+// ============ Security Constants (Phase 1-4) ============
+
+export const SECURITY_CONSTANTS = {
+  // H-02: Two-step authority transfer
+  authorityTransferTimelock: 24 * 3600, // 24 hours
+
+  // H-01: Governance-controlled slashing
+  slashApprovalTimelock: 48 * 3600, // 48 hours
+  slashExpiry: 7 * 24 * 3600, // 7 days
+
+  // L-03: Slippage protection for gasless fees
+  maxFeeSlippageBps: 500, // 5% max slippage
+
+  // L-07: Oracle rate limiting
+  minScoreUpdateInterval: 3600, // 1 hour between updates for same user
+
+  // M-05: Circuit breaker cooldown
+  circuitBreakerCooldown: 21600, // 6 hours (6 * 3600)
+
+  // H-05: Oracle consensus
+  oracleConsensusRequired: 3, // 3-of-N oracles must agree
+  pendingScoreExpiry: 3600, // 1 hour
+
+  // M-02: Platform fee bounds (ViLink)
+  maxPlatformFeeBps: 1000, // 10% max
+  minPlatformFeeBps: 10, // 0.1% min
+};
+
+// ============ URI Validation Constants (L-04) ============
+
+export const VALID_URI_PREFIXES = ["ipfs://", "https://", "ar://"] as const;
+export const MAX_URI_LENGTH = 128;
+
+// ============ Merkle Constants (M-03) ============
+
+export const MERKLE_CONSTANTS = {
+  leafDomainPrefix: "SSCRE_CLAIM_V1", // Domain separation for merkle leaves
 };
 

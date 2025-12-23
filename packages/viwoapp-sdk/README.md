@@ -1,6 +1,20 @@
 # @viwoapp/sdk
 
+[![npm version](https://img.shields.io/npm/v/@viwoapp/sdk.svg)](https://www.npmjs.com/package/@viwoapp/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 TypeScript SDK for VCoin Protocol Integration on Solana.
+
+**Version:** 0.1.1 (Security Update)
+
+## What's New in v0.1.1
+
+- Added security types for Phase 1-4 audit fixes
+- New types: `SlashRequest`, `DecryptionShare`, `PendingScoreUpdate`
+- All config types now support two-step authority transfer
+- Added `SECURITY_CONSTANTS` for timelocks and limits
+- Added `VALID_URI_PREFIXES` for proposal URI validation
+- New PDA seeds: `slashRequest`, `decryptionShare`, `pendingScore`
 
 ## Installation
 
@@ -229,7 +243,18 @@ import {
   FIVE_A_CONSTANTS,
   GOVERNANCE_CONSTANTS,
   CONTENT_CONSTANTS,
+  // Security constants (v0.1.1)
+  SECURITY_CONSTANTS,
+  VALID_URI_PREFIXES,
+  MERKLE_CONSTANTS,
 } from "@viwoapp/sdk";
+
+// Security constants
+SECURITY_CONSTANTS.authorityTransferTimelock; // 24 hours
+SECURITY_CONSTANTS.slashApprovalTimelock;     // 48 hours
+SECURITY_CONSTANTS.maxFeeSlippageBps;         // 500 (5%)
+SECURITY_CONSTANTS.oracleConsensusRequired;   // 3-of-N
+SECURITY_CONSTANTS.circuitBreakerCooldown;    // 6 hours
 ```
 
 ## Types
@@ -246,6 +271,10 @@ import type {
   Proposal,
   VoteRecord,
   ProposalStatus,
+  GovernanceConfig,
+  Delegation,
+  PrivateVotingConfig,
+  DecryptionShare,       // v0.1.1: ZK voting
   
   // Rewards
   RewardsPoolConfig,
@@ -267,16 +296,26 @@ import type {
   
   // Identity
   Identity,
+  IdentityConfig,
   VerificationLevel,
   
   // 5A
   FiveAScore,
+  FiveAConfig,
   VouchRecord,
+  PendingScoreUpdate,    // v0.1.1: Oracle consensus
   
   // Content
   ContentRecord,
+  RegistryConfig,
   UserEnergy,
   ContentState,
+  
+  // Security (v0.1.1)
+  PendingAuthorityFields,  // Two-step authority transfer
+  SlashRequest,            // Governance slashing
+  SlashStatus,
+  HookConfig,              // Transfer hook config
 } from "@viwoapp/sdk";
 ```
 

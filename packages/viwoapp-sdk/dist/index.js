@@ -35,16 +35,21 @@ __export(index_exports, {
   GovernanceClient: () => GovernanceClient,
   IdentityClient: () => IdentityClient,
   LOCK_DURATIONS: () => LOCK_DURATIONS,
+  MAX_URI_LENGTH: () => MAX_URI_LENGTH,
+  MERKLE_CONSTANTS: () => MERKLE_CONSTANTS,
   PDAs: () => PDAs,
   PROGRAM_IDS: () => PROGRAM_IDS,
   ProposalStatus: () => ProposalStatus,
   RewardsClient: () => RewardsClient,
+  SECURITY_CONSTANTS: () => SECURITY_CONSTANTS,
   SEEDS: () => SEEDS,
   SSCRE_CONSTANTS: () => SSCRE_CONSTANTS,
   STAKING_TIERS: () => STAKING_TIERS,
+  SlashStatus: () => SlashStatus,
   StakingClient: () => StakingClient,
   StakingTier: () => StakingTier,
   TransactionBuilder: () => TransactionBuilder,
+  VALID_URI_PREFIXES: () => VALID_URI_PREFIXES,
   VCOIN_DECIMALS: () => VCOIN_DECIMALS,
   VCOIN_INITIAL_CIRCULATING: () => VCOIN_INITIAL_CIRCULATING,
   VCOIN_TOTAL_SUPPLY: () => VCOIN_TOTAL_SUPPLY,
@@ -119,7 +124,14 @@ var SEEDS = {
   // Content
   registryConfig: "registry-config",
   content: "content",
-  userEnergy: "user-energy"
+  userEnergy: "user-energy",
+  // Security (Phase 2-4)
+  slashRequest: "slash-request",
+  // H-01: Governance slashing
+  decryptionShare: "decryption-share",
+  // C-02: ZK voting shares
+  pendingScore: "pending-score"
+  // H-05: Oracle consensus
 };
 var VCOIN_DECIMALS = 9;
 var VEVCOIN_DECIMALS = 9;
@@ -150,8 +162,10 @@ var SSCRE_CONSTANTS = {
   // 90 days
   gaslessFeeBps: 100,
   // 1%
-  minClaimAmount: 1
+  minClaimAmount: 1,
   // 1 VCoin
+  circuitBreakerCooldown: 21600
+  // M-05: 6 hours before reset
 };
 var VILINK_CONSTANTS = {
   maxActionExpiry: 7 * 24 * 3600,
@@ -160,8 +174,12 @@ var VILINK_CONSTANTS = {
   // 0.1 VCoin
   maxTipAmount: 1e4,
   // 10,000 VCoin
-  platformFeeBps: 250
+  platformFeeBps: 250,
   // 2.5%
+  maxPlatformFeeBps: 1e3,
+  // M-02: 10% max
+  minPlatformFeeBps: 10
+  // M-02: 0.1% min
 };
 var ACTION_SCOPES = {
   tip: 1 << 0,
@@ -187,7 +205,9 @@ var GASLESS_CONSTANTS = {
   // 1%
   dailySubsidyBudget: 10,
   // 10 SOL
-  maxSubsidizedPerUser: 50
+  maxSubsidizedPerUser: 50,
+  maxSlippageBps: 500
+  // L-03: 5% max slippage for fee conversion
 };
 var FIVE_A_CONSTANTS = {
   maxScore: 1e4,
@@ -210,7 +230,15 @@ var FIVE_A_CONSTANTS = {
     "40-60": 0.7,
     "60-80": 1,
     "80-100": 1.2
-  }
+  },
+  // H-05: Oracle consensus
+  oracleConsensusRequired: 3,
+  // 3-of-N oracles must agree
+  pendingScoreExpiry: 3600,
+  // 1 hour
+  // L-07: Rate limiting
+  minScoreUpdateInterval: 3600
+  // 1 hour between updates for same user
 };
 var CONTENT_CONSTANTS = {
   maxEnergy: 100,
@@ -229,8 +257,45 @@ var GOVERNANCE_CONSTANTS = {
   // 2 days
   vetoWindow: 24 * 3600,
   // 1 day
-  quorumBps: 400
+  quorumBps: 400,
   // 4%
+  zkVotingEnabled: false
+  // C-01: Disabled until proper ZK infrastructure
+};
+var SECURITY_CONSTANTS = {
+  // H-02: Two-step authority transfer
+  authorityTransferTimelock: 24 * 3600,
+  // 24 hours
+  // H-01: Governance-controlled slashing
+  slashApprovalTimelock: 48 * 3600,
+  // 48 hours
+  slashExpiry: 7 * 24 * 3600,
+  // 7 days
+  // L-03: Slippage protection for gasless fees
+  maxFeeSlippageBps: 500,
+  // 5% max slippage
+  // L-07: Oracle rate limiting
+  minScoreUpdateInterval: 3600,
+  // 1 hour between updates for same user
+  // M-05: Circuit breaker cooldown
+  circuitBreakerCooldown: 21600,
+  // 6 hours (6 * 3600)
+  // H-05: Oracle consensus
+  oracleConsensusRequired: 3,
+  // 3-of-N oracles must agree
+  pendingScoreExpiry: 3600,
+  // 1 hour
+  // M-02: Platform fee bounds (ViLink)
+  maxPlatformFeeBps: 1e3,
+  // 10% max
+  minPlatformFeeBps: 10
+  // 0.1% min
+};
+var VALID_URI_PREFIXES = ["ipfs://", "https://", "ar://"];
+var MAX_URI_LENGTH = 128;
+var MERKLE_CONSTANTS = {
+  leafDomainPrefix: "SSCRE_CLAIM_V1"
+  // Domain separation for merkle leaves
 };
 
 // src/core/index.ts
@@ -500,6 +565,13 @@ function dateToTimestamp(date) {
 }
 
 // src/types.ts
+var SlashStatus = /* @__PURE__ */ ((SlashStatus2) => {
+  SlashStatus2[SlashStatus2["Proposed"] = 0] = "Proposed";
+  SlashStatus2[SlashStatus2["Approved"] = 1] = "Approved";
+  SlashStatus2[SlashStatus2["Executed"] = 2] = "Executed";
+  SlashStatus2[SlashStatus2["Cancelled"] = 3] = "Cancelled";
+  return SlashStatus2;
+})(SlashStatus || {});
 var StakingTier = /* @__PURE__ */ ((StakingTier2) => {
   StakingTier2[StakingTier2["None"] = 0] = "None";
   StakingTier2[StakingTier2["Bronze"] = 1] = "Bronze";
@@ -2319,16 +2391,21 @@ var ViWoClient = class {
   GovernanceClient,
   IdentityClient,
   LOCK_DURATIONS,
+  MAX_URI_LENGTH,
+  MERKLE_CONSTANTS,
   PDAs,
   PROGRAM_IDS,
   ProposalStatus,
   RewardsClient,
+  SECURITY_CONSTANTS,
   SEEDS,
   SSCRE_CONSTANTS,
   STAKING_TIERS,
+  SlashStatus,
   StakingClient,
   StakingTier,
   TransactionBuilder,
+  VALID_URI_PREFIXES,
   VCOIN_DECIMALS,
   VCOIN_INITIAL_CIRCULATING,
   VCOIN_TOTAL_SUPPLY,
