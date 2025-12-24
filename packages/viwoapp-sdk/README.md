@@ -5,9 +5,9 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 0.1.6 (Bug Fixes)
+**Version:** 0.1.7 (Bug Fixes)
 
-## What's New in v0.1.5
+## What's New in v0.1.7
 
 - **ViLink Nonce-Based PDA:** Action PDAs now use deterministic `nonce` instead of `timestamp`
 - **New Field:** `actionNonce` added to `ViLinkAction` interface
