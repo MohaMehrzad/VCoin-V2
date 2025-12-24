@@ -5,7 +5,29 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 0.1.4 (Phase 5 Security Update)
+**Version:** 0.1.5 (Bug Fixes)
+
+## What's New in v0.1.5
+
+- **ViLink Nonce-Based PDA:** Action PDAs now use deterministic `nonce` instead of `timestamp`
+- **New Field:** `actionNonce` added to `ViLinkAction` interface
+- **New Type:** `UserActionStatsExtended` with `actionNonce` counter
+- **New Method:** `getViLinkActionByNonce()` PDA helper for new derivation
+- **New Method:** `getNextNonce()` utility to get next nonce for action creation
+- **Updated Methods:** `getAction()`, `isActionValid()`, `buildExecuteTipAction()` now use nonce
+- **Deprecated:** `getActionByTimestamp()` - use `getAction()` with nonce instead
+
+### Breaking Change
+
+ViLink action PDA derivation changed from timestamp to nonce:
+```typescript
+// Old (deprecated)
+const action = await client.vilink.getAction(creator, timestamp);
+
+// New (v0.1.5+)
+const nonce = await client.vilink.getNextNonce(creator);
+const action = await client.vilink.getAction(creator, nonce);
+```
 
 ## What's New in v0.1.4
 
@@ -14,7 +36,6 @@ TypeScript SDK for VCoin Protocol Integration on Solana.
 - **Updated Types:** `SlashRequest` (added `requestId`), `UserClaim` (bitmap storage)
 - **Updated Docs:** `buildVoteTransaction` - voting power now verified on-chain
 - **SECURITY_CONSTANTS:** Added `merkleProofMaxSize`, `maxEpochBitmap`, `votingPowerVerifiedOnChain`
-- **Full README:** Complete usage documentation for all modules
 
 ## What's New in v0.1.1
 
@@ -156,8 +177,14 @@ const uri = client.vilink.generateUri(actionId);
 // Generate QR code data
 const qrData = client.vilink.generateQRData(actionId);
 
-// Check action validity
-const { valid, reason } = await client.vilink.isActionValid(creator, timestamp);
+// Get next nonce for action creation (v0.1.5+)
+const nonce = await client.vilink.getNextNonce();
+
+// Get action by creator + nonce (v0.1.5+)
+const action = await client.vilink.getAction(creator, nonce);
+
+// Check action validity (uses nonce, not timestamp)
+const { valid, reason } = await client.vilink.isActionValid(creator, nonce);
 ```
 
 ### Gasless (`client.gasless`)
@@ -301,9 +328,10 @@ import type {
   
   // ViLink
   ViLinkConfig,
-  ViLinkAction,
+  ViLinkAction,              // v0.1.5: includes actionNonce
   ActionType,
   CreateActionParams,
+  UserActionStatsExtended,   // v0.1.5: includes actionNonce counter
   
   // Gasless
   GaslessConfig,
