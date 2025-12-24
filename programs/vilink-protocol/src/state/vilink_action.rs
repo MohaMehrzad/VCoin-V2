@@ -36,6 +36,9 @@ pub struct ViLinkAction {
     pub execution_count: u32,
     /// Max executions (0 = unlimited)
     pub max_executions: u32,
+    /// M-04 Security Fix: Nonce used for deterministic PDA derivation
+    /// Replaces timestamp-based derivation to prevent collisions
+    pub action_nonce: u64,
     /// PDA bump
     pub bump: u8,
 }
@@ -58,6 +61,7 @@ impl ViLinkAction {
         1 +  // one_time
         4 +  // execution_count
         4 +  // max_executions
+        8 +  // action_nonce (M-04)
         1;   // bump
 }
 

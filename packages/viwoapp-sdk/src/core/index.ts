@@ -158,12 +158,27 @@ export class PDAs {
     return pda;
   }
   
-  getViLinkAction(creator: PublicKey, timestamp: BN): PublicKey {
+  /**
+   * Get ViLink action PDA
+   * @param creator - The action creator's public key
+   * @param nonce - M-04: The action nonce (deterministic counter, NOT timestamp)
+   * @deprecated Use getViLinkActionByNonce for clarity
+   */
+  getViLinkAction(creator: PublicKey, nonce: BN): PublicKey {
+    return this.getViLinkActionByNonce(creator, nonce);
+  }
+
+  /**
+   * Get ViLink action PDA using nonce (M-04 fix)
+   * @param creator - The action creator's public key
+   * @param nonce - The action nonce from UserActionStats.actionNonce
+   */
+  getViLinkActionByNonce(creator: PublicKey, nonce: BN): PublicKey {
     const [pda] = PublicKey.findProgramAddressSync(
       [
         Buffer.from(SEEDS.action),
         creator.toBuffer(),
-        timestamp.toArrayLike(Buffer, "le", 8),
+        nonce.toArrayLike(Buffer, "le", 8),
       ],
       this.programIds.vilinkProtocol
     );

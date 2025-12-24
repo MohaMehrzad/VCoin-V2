@@ -66,5 +66,13 @@ pub enum VCoinError {
     // H-NEW-01: Authority transfer timelock
     #[msg("Authority transfer timelock not elapsed - must wait 24 hours after proposal")]
     AuthorityTransferTimelock,
+    
+    // C-01: Slash PDA seed validation
+    #[msg("Invalid request_id: must equal current timestamp for PDA consistency")]
+    InvalidRequestId,
+    
+    // H-04: Slash target binding
+    #[msg("Target account does not match the specified target address")]
+    InvalidTarget,
 }
 

@@ -71,6 +71,7 @@ pub mod vilink_protocol {
     }
     
     /// Create a new action link
+    /// M-04 Security Fix: Added nonce parameter for deterministic PDA derivation
     pub fn create_action(
         ctx: Context<CreateAction>,
         action_type: u8,
@@ -81,6 +82,7 @@ pub mod vilink_protocol {
         one_time: bool,
         max_executions: u32,
         content_id: Option<[u8; 32]>,
+        nonce: u64,
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         let action = &mut ctx.accounts.action;
@@ -89,6 +91,13 @@ pub mod vilink_protocol {
         require!(!config.paused, ViLinkError::ProtocolPaused);
         require!(action_type < 8, ViLinkError::InvalidActionType);
         require!(config.is_action_enabled(action_type), ViLinkError::ActionTypeDisabled);
+        
+        // M-04 Security Fix: Validate nonce matches expected value
+        // For new users, action_nonce will be 0 (default)
+        require!(
+            nonce == user_stats.action_nonce,
+            ViLinkError::InvalidNonce
+        );
         
         if action_type == ACTION_TIP {
             require!(amount >= MIN_TIP_AMOUNT, ViLinkError::InvalidAmount);
@@ -127,6 +136,7 @@ pub mod vilink_protocol {
         action.one_time = one_time;
         action.execution_count = 0;
         action.max_executions = max_executions;
+        action.action_nonce = nonce;  // M-04: Store nonce for PDA verification
         action.bump = ctx.bumps.action;
         
         config.total_actions_created = config.total_actions_created.saturating_add(1);
@@ -137,6 +147,8 @@ pub mod vilink_protocol {
             user_stats.first_action_at = clock.unix_timestamp;
         }
         user_stats.last_action_at = clock.unix_timestamp;
+        // M-04 Security Fix: Increment nonce for next action
+        user_stats.action_nonce = user_stats.action_nonce.saturating_add(1);
         user_stats.bump = ctx.bumps.user_stats;
         
         emit!(ActionCreated {
@@ -148,7 +160,7 @@ pub mod vilink_protocol {
             expires_at: action.expires_at,
         });
         
-        msg!("Action created: type={}, target={}", action_type_name(action_type), target);
+        msg!("Action created: type={}, target={}, nonce={}", action_type_name(action_type), target, nonce);
         Ok(())
     }
     
@@ -541,11 +553,13 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// M-04 Security Fix: Use nonce instead of timestamp for deterministic PDA derivation
 #[derive(Accounts)]
+#[instruction(action_type: u8, amount: u64, target: Pubkey, metadata_hash: [u8; 32], expiry_seconds: i64, one_time: bool, max_executions: u32, content_id: Option<[u8; 32]>, nonce: u64)]
 pub struct CreateAction<'info> {
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump)]
     pub config: Account<'info, ViLinkConfig>,
-    #[account(init, payer = creator, space = ViLinkAction::LEN, seeds = [ACTION_SEED, creator.key().as_ref(), &Clock::get()?.unix_timestamp.to_le_bytes()], bump)]
+    #[account(init, payer = creator, space = ViLinkAction::LEN, seeds = [ACTION_SEED, creator.key().as_ref(), &nonce.to_le_bytes()], bump)]
     pub action: Account<'info, ViLinkAction>,
     #[account(init_if_needed, payer = creator, space = UserActionStats::LEN, seeds = [USER_STATS_SEED, creator.key().as_ref()], bump)]
     pub user_stats: Account<'info, UserActionStats>,
@@ -554,11 +568,12 @@ pub struct CreateAction<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// M-04 Security Fix: Use action_nonce instead of created_at for PDA derivation
 #[derive(Accounts)]
 pub struct ExecuteTipAction<'info> {
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump)]
     pub config: Account<'info, ViLinkConfig>,
-    #[account(mut, seeds = [ACTION_SEED, action.creator.as_ref(), &action.created_at.to_le_bytes()], bump = action.bump)]
+    #[account(mut, seeds = [ACTION_SEED, action.creator.as_ref(), &action.action_nonce.to_le_bytes()], bump = action.bump)]
     pub action: Account<'info, ViLinkAction>,
     #[account(init_if_needed, payer = executor, space = UserActionStats::LEN, seeds = [USER_STATS_SEED, executor.key().as_ref()], bump)]
     pub executor_stats: Account<'info, UserActionStats>,
@@ -578,11 +593,12 @@ pub struct ExecuteTipAction<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// M-04 Security Fix: Use action_nonce instead of created_at for PDA derivation
 #[derive(Accounts)]
 pub struct ExecuteGenericAction<'info> {
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump)]
     pub config: Account<'info, ViLinkConfig>,
-    #[account(mut, seeds = [ACTION_SEED, action.creator.as_ref(), &action.created_at.to_le_bytes()], bump = action.bump)]
+    #[account(mut, seeds = [ACTION_SEED, action.creator.as_ref(), &action.action_nonce.to_le_bytes()], bump = action.bump)]
     pub action: Account<'info, ViLinkAction>,
     #[account(init_if_needed, payer = executor, space = UserActionStats::LEN, seeds = [USER_STATS_SEED, executor.key().as_ref()], bump)]
     pub executor_stats: Account<'info, UserActionStats>,
@@ -643,9 +659,10 @@ pub struct AcceptAuthority<'info> {
     pub new_authority: Signer<'info>,
 }
 
+/// M-04 Security Fix: Use action_nonce instead of created_at for PDA derivation
 #[derive(Accounts)]
 pub struct GetAction<'info> {
-    #[account(seeds = [ACTION_SEED, action.creator.as_ref(), &action.created_at.to_le_bytes()], bump = action.bump)]
+    #[account(seeds = [ACTION_SEED, action.creator.as_ref(), &action.action_nonce.to_le_bytes()], bump = action.bump)]
     pub action: Account<'info, ViLinkAction>,
 }
 

@@ -53,5 +53,9 @@ pub enum ViLinkError {
     // M-02: Platform fee bounds validation
     #[msg("Platform fee must be between 0.1% and 10%")]
     InvalidFeeRange,
+    
+    // M-04: Nonce validation for deterministic PDA derivation
+    #[msg("Invalid nonce: must match expected action_nonce from user stats")]
+    InvalidNonce,
 }
 

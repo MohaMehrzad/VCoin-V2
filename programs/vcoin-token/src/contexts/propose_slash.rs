@@ -27,8 +27,10 @@ pub struct ProposeSlash<'info> {
     pub slash_request: Account<'info, SlashRequest>,
     
     /// The target token account to slash (for validation)
+    /// H-04 Security Fix: Verify target_account matches the target parameter
     #[account(
-        constraint = target_account.mint == config.mint @ VCoinError::InvalidMint
+        constraint = target_account.mint == config.mint @ VCoinError::InvalidMint,
+        constraint = target_account.key() == target @ VCoinError::InvalidTarget
     )]
     pub target_account: InterfaceAccount<'info, TokenAccount>,
     

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{MIN_LOCK_DURATION, MAX_LOCK_DURATION};
+use crate::constants::{MIN_LOCK_DURATION, MAX_LOCK_DURATION, STAKING_POOL_SEED};
 use crate::contexts::ExtendLock;
 use crate::errors::StakingError;
 use crate::events::LockExtended;
@@ -8,6 +8,7 @@ use crate::state::StakingTier;
 use crate::utils::calculate_vevcoin;
 
 /// Extend lock duration to increase veVCoin
+/// C-04 Security Fix: Added veVCoin CPI minting
 pub fn handler(ctx: Context<ExtendLock>, new_lock_duration: i64) -> Result<()> {
     let user_stake = &mut ctx.accounts.user_stake;
     
@@ -33,7 +34,37 @@ pub fn handler(ctx: Context<ExtendLock>, new_lock_duration: i64) -> Result<()> {
     // Capture old_lock_end before updating
     let old_lock_end = user_stake.lock_end;
     
+    // Capture pool bump before CPI
+    let pool_bump = ctx.bumps.pool;
+    
+    // === CRITICAL FIX C-04: Mint veVCoin via CPI ===
+    if vevcoin_to_mint > 0 {
+        let seeds = &[STAKING_POOL_SEED, &[pool_bump]];
+        let signer_seeds = &[&seeds[..]];
+        
+        vevcoin_token::cpi::mint_vevcoin(
+            CpiContext::new_with_signer(
+                ctx.accounts.vevcoin_program.to_account_info(),
+                vevcoin_token::cpi::accounts::MintVeVCoin {
+                    staking_protocol: ctx.accounts.pool.to_account_info(),
+                    user: ctx.accounts.user.to_account_info(),
+                    config: ctx.accounts.vevcoin_config.to_account_info(),
+                    user_account: ctx.accounts.user_vevcoin.to_account_info(),
+                    mint: ctx.accounts.vevcoin_mint.to_account_info(),
+                    user_token_account: ctx.accounts.user_vevcoin_account.to_account_info(),
+                    payer: ctx.accounts.user.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            vevcoin_to_mint,
+        )?;
+    }
+    // === END CRITICAL FIX ===
+    
     // Update stake
+    let user_stake = &mut ctx.accounts.user_stake;
     user_stake.lock_duration = new_lock_duration;
     user_stake.lock_end = new_lock_end;
     user_stake.ve_vcoin_amount = new_vevcoin;
@@ -54,4 +85,3 @@ pub fn handler(ctx: Context<ExtendLock>, new_lock_duration: i64) -> Result<()> {
     
     Ok(())
 }
-

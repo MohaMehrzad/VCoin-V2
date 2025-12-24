@@ -15,8 +15,15 @@ pub fn handler(
     amount: u64,
     reason_hash: [u8; 32],
 ) -> Result<()> {
-    // request_id is used for PDA derivation - typically the current timestamp or a counter
-    let _ = request_id;
+    let clock = Clock::get()?;
+    
+    // C-01 Security Fix: Validate request_id matches current timestamp
+    // This ensures PDA seeds are consistent between propose/approve/execute
+    // since approve_slash and execute_slash use created_at (which equals clock.unix_timestamp)
+    require!(
+        request_id == clock.unix_timestamp as u64,
+        VCoinError::InvalidRequestId
+    );
     
     require!(amount > 0, VCoinError::ZeroSlashAmount);
     
@@ -26,7 +33,6 @@ pub fn handler(
         VCoinError::SlashingExceedsBalance
     );
     
-    let clock = Clock::get()?;
     let slash_request = &mut ctx.accounts.slash_request;
     
     slash_request.target = target;

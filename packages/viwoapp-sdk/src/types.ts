@@ -197,6 +197,8 @@ export interface ViLinkAction {
   executed: boolean;
   executionCount: number;
   maxExecutions: number;
+  /** M-04: Nonce used for deterministic PDA derivation (replaces timestamp) */
+  actionNonce: BN;
 }
 
 export interface CreateActionParams {
@@ -208,6 +210,28 @@ export interface CreateActionParams {
   maxExecutions?: number;
   contentId?: Uint8Array;
   metadata?: string;
+  /**
+   * M-04: Nonce for deterministic PDA derivation.
+   * If not provided, fetched from user's action_nonce in UserActionStats.
+   */
+  nonce?: BN;
+}
+
+/** M-04: User action statistics with nonce tracking */
+export interface UserActionStatsExtended {
+  user: PublicKey;
+  actionsCreated: BN;
+  actionsExecuted: BN;
+  tipsSent: BN;
+  tipsReceived: BN;
+  vcoinSent: BN;
+  vcoinReceived: BN;
+  vouchesGiven: BN;
+  followsGiven: BN;
+  firstActionAt: BN;
+  lastActionAt: BN;
+  /** M-04: Next nonce to use when creating an action */
+  actionNonce: BN;
 }
 
 // ============ Gasless Types ============

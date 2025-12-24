@@ -60,11 +60,13 @@ export class ViLinkClient {
   }
   
   /**
-   * Get action by ID
+   * Get action by nonce (M-04: deterministic PDA derivation)
+   * @param creator - The action creator's public key
+   * @param nonce - The action nonce (from UserActionStats.actionNonce at creation time)
    */
-  async getAction(creator: PublicKey, timestamp: BN): Promise<ViLinkAction | null> {
+  async getAction(creator: PublicKey, nonce: BN): Promise<ViLinkAction | null> {
     try {
-      const actionPda = this.client.pdas.getViLinkAction(creator, timestamp);
+      const actionPda = this.client.pdas.getViLinkActionByNonce(creator, nonce);
       const accountInfo = await this.client.connection.connection.getAccountInfo(actionPda);
       
       if (!accountInfo) {
@@ -82,10 +84,20 @@ export class ViLinkClient {
         executed: data[153] !== 0,
         executionCount: data.readUInt32LE(193),
         maxExecutions: data.readUInt32LE(197),
+        actionNonce: nonce, // M-04: Store nonce for reference
       };
     } catch {
       return null;
     }
+  }
+
+  /**
+   * @deprecated Use getAction with nonce parameter instead
+   */
+  async getActionByTimestamp(creator: PublicKey, timestamp: BN): Promise<ViLinkAction | null> {
+    // For backwards compatibility during migration
+    // New actions use nonce, not timestamp
+    return this.getAction(creator, timestamp);
   }
   
   /**
@@ -148,12 +160,14 @@ export class ViLinkClient {
   
   /**
    * Check if action is valid for execution
+   * @param creator - The action creator's public key
+   * @param nonce - M-04: The action nonce (NOT timestamp)
    */
-  async isActionValid(creator: PublicKey, timestamp: BN): Promise<{
+  async isActionValid(creator: PublicKey, nonce: BN): Promise<{
     valid: boolean;
     reason?: string;
   }> {
-    const action = await this.getAction(creator, timestamp);
+    const action = await this.getAction(creator, nonce);
     
     if (!action) {
       return { valid: false, reason: "Action not found" };
@@ -307,21 +321,23 @@ export class ViLinkClient {
   
   /**
    * Build execute tip action transaction
+   * @param creator - The action creator's public key
+   * @param nonce - M-04: The action nonce (NOT timestamp)
    */
   async buildExecuteTipAction(
     creator: PublicKey,
-    timestamp: BN
+    nonce: BN
   ): Promise<Transaction> {
     if (!this.client.publicKey) {
       throw new Error("Wallet not connected");
     }
     
-    const { valid, reason } = await this.isActionValid(creator, timestamp);
+    const { valid, reason } = await this.isActionValid(creator, nonce);
     if (!valid) {
       throw new Error(reason);
     }
     
-    const action = await this.getAction(creator, timestamp);
+    const action = await this.getAction(creator, nonce);
     if (action?.creator.equals(this.client.publicKey)) {
       throw new Error("Cannot execute own action");
     }
@@ -332,6 +348,21 @@ export class ViLinkClient {
     // tx.add(await this.program.methods.executeTipAction()...);
     
     return tx;
+  }
+
+  /**
+   * Get the next nonce for creating an action (M-04)
+   * Fetches from UserActionStats.actionNonce on-chain
+   */
+  async getNextNonce(user?: PublicKey): Promise<BN> {
+    const stats = await this.getUserStats(user);
+    if (!stats) {
+      // First action for this user - nonce starts at 0
+      return new BN(0);
+    }
+    // The nonce in stats is the NEXT nonce to use
+    // This matches the on-chain action_nonce field
+    return new BN(stats.actionsCreated.toNumber());
   }
 }
 

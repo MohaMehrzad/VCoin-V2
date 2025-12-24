@@ -241,7 +241,19 @@ declare class PDAs {
     getEpochDistribution(epoch: BN): PublicKey;
     getUserClaim(user: PublicKey): PublicKey;
     getViLinkConfig(): PublicKey;
-    getViLinkAction(creator: PublicKey, timestamp: BN): PublicKey;
+    /**
+     * Get ViLink action PDA
+     * @param creator - The action creator's public key
+     * @param nonce - M-04: The action nonce (deterministic counter, NOT timestamp)
+     * @deprecated Use getViLinkActionByNonce for clarity
+     */
+    getViLinkAction(creator: PublicKey, nonce: BN): PublicKey;
+    /**
+     * Get ViLink action PDA using nonce (M-04 fix)
+     * @param creator - The action creator's public key
+     * @param nonce - The action nonce from UserActionStats.actionNonce
+     */
+    getViLinkActionByNonce(creator: PublicKey, nonce: BN): PublicKey;
     getUserActionStats(user: PublicKey): PublicKey;
     getGaslessConfig(): PublicKey;
     getSessionKey(user: PublicKey, sessionPubkey: PublicKey): PublicKey;
@@ -442,6 +454,8 @@ interface ViLinkAction {
     executed: boolean;
     executionCount: number;
     maxExecutions: number;
+    /** M-04: Nonce used for deterministic PDA derivation (replaces timestamp) */
+    actionNonce: BN;
 }
 interface CreateActionParams {
     actionType: ActionType;
@@ -452,6 +466,27 @@ interface CreateActionParams {
     maxExecutions?: number;
     contentId?: Uint8Array;
     metadata?: string;
+    /**
+     * M-04: Nonce for deterministic PDA derivation.
+     * If not provided, fetched from user's action_nonce in UserActionStats.
+     */
+    nonce?: BN;
+}
+/** M-04: User action statistics with nonce tracking */
+interface UserActionStatsExtended {
+    user: PublicKey;
+    actionsCreated: BN;
+    actionsExecuted: BN;
+    tipsSent: BN;
+    tipsReceived: BN;
+    vcoinSent: BN;
+    vcoinReceived: BN;
+    vouchesGiven: BN;
+    followsGiven: BN;
+    firstActionAt: BN;
+    lastActionAt: BN;
+    /** M-04: Next nonce to use when creating an action */
+    actionNonce: BN;
 }
 declare enum FeeMethod {
     PlatformSubsidized = 0,
@@ -824,9 +859,15 @@ declare class ViLinkClient {
      */
     getConfig(): Promise<ViLinkConfig | null>;
     /**
-     * Get action by ID
+     * Get action by nonce (M-04: deterministic PDA derivation)
+     * @param creator - The action creator's public key
+     * @param nonce - The action nonce (from UserActionStats.actionNonce at creation time)
      */
-    getAction(creator: PublicKey, timestamp: BN): Promise<ViLinkAction | null>;
+    getAction(creator: PublicKey, nonce: BN): Promise<ViLinkAction | null>;
+    /**
+     * @deprecated Use getAction with nonce parameter instead
+     */
+    getActionByTimestamp(creator: PublicKey, timestamp: BN): Promise<ViLinkAction | null>;
     /**
      * Get user action statistics
      */
@@ -841,8 +882,10 @@ declare class ViLinkClient {
     isActionTypeEnabled(actionType: ActionType): Promise<boolean>;
     /**
      * Check if action is valid for execution
+     * @param creator - The action creator's public key
+     * @param nonce - M-04: The action nonce (NOT timestamp)
      */
-    isActionValid(creator: PublicKey, timestamp: BN): Promise<{
+    isActionValid(creator: PublicKey, nonce: BN): Promise<{
         valid: boolean;
         reason?: string;
     }>;
@@ -899,8 +942,15 @@ declare class ViLinkClient {
     }): Promise<Transaction>;
     /**
      * Build execute tip action transaction
+     * @param creator - The action creator's public key
+     * @param nonce - M-04: The action nonce (NOT timestamp)
      */
-    buildExecuteTipAction(creator: PublicKey, timestamp: BN): Promise<Transaction>;
+    buildExecuteTipAction(creator: PublicKey, nonce: BN): Promise<Transaction>;
+    /**
+     * Get the next nonce for creating an action (M-04)
+     * Fetches from UserActionStats.actionNonce on-chain
+     */
+    getNextNonce(user?: PublicKey): Promise<BN>;
 }
 
 /**
@@ -1352,4 +1402,4 @@ declare class StakingClient {
     buildExtendLockTransaction(newDuration: number): Promise<Transaction>;
 }
 
-export { ACTION_SCOPES, ActionType, CONTENT_CONSTANTS, type ClaimRewardsParams, type ConnectionConfig, ContentClient, type ContentRecord, ContentState, type CreateActionParams, type CreateProposalParams, type CreateSessionParams, type DecryptionShare, type Delegation, type EpochDistribution, FIVE_A_CONSTANTS, FeeMethod, FiveAClient, type FiveAConfig, type FiveAScore, GASLESS_CONSTANTS, GOVERNANCE_CONSTANTS, GaslessClient, type GaslessConfig, GovernanceClient, type GovernanceConfig, type HookConfig, type Identity, IdentityClient, type IdentityConfig, LEGACY_SLASH_DEPRECATED, LOCK_DURATIONS, MAX_EPOCH_BITMAP, MAX_URI_LENGTH, MERKLE_CONSTANTS, MERKLE_PROOF_MAX_SIZE, PDAs, PROGRAM_IDS, type PendingAuthorityFields, type PendingScoreUpdate, type PrivateVotingConfig, type Proposal, ProposalStatus, type RegistryConfig, RewardsClient, type RewardsPoolConfig, SECURITY_CONSTANTS, SEEDS, SSCRE_CONSTANTS, STAKING_TIERS, type SessionKey, type SlashRequest, SlashStatus, type StakeParams, StakingClient, type StakingPool, StakingTier, TransactionBuilder, type UserClaim, type UserEnergy, type UserGaslessStats, type UserStake, VALID_URI_PREFIXES, VCOIN_DECIMALS, VCOIN_INITIAL_CIRCULATING, VCOIN_TOTAL_SUPPLY, type VCoinConfig, VEVCOIN_DECIMALS, VILINK_CONSTANTS, VerificationLevel, type ViLinkAction, ViLinkClient, type ViLinkConfig, ViWoClient, ViWoConnection, VoteChoice, type VoteRecord, type VouchRecord, type WalletAdapter, dateToTimestamp, formatVCoin, getCurrentTimestamp, parseVCoin, timestampToDate };
+export { ACTION_SCOPES, ActionType, CONTENT_CONSTANTS, type ClaimRewardsParams, type ConnectionConfig, ContentClient, type ContentRecord, ContentState, type CreateActionParams, type CreateProposalParams, type CreateSessionParams, type DecryptionShare, type Delegation, type EpochDistribution, FIVE_A_CONSTANTS, FeeMethod, FiveAClient, type FiveAConfig, type FiveAScore, GASLESS_CONSTANTS, GOVERNANCE_CONSTANTS, GaslessClient, type GaslessConfig, GovernanceClient, type GovernanceConfig, type HookConfig, type Identity, IdentityClient, type IdentityConfig, LEGACY_SLASH_DEPRECATED, LOCK_DURATIONS, MAX_EPOCH_BITMAP, MAX_URI_LENGTH, MERKLE_CONSTANTS, MERKLE_PROOF_MAX_SIZE, PDAs, PROGRAM_IDS, type PendingAuthorityFields, type PendingScoreUpdate, type PrivateVotingConfig, type Proposal, ProposalStatus, type RegistryConfig, RewardsClient, type RewardsPoolConfig, SECURITY_CONSTANTS, SEEDS, SSCRE_CONSTANTS, STAKING_TIERS, type SessionKey, type SlashRequest, SlashStatus, type StakeParams, StakingClient, type StakingPool, StakingTier, TransactionBuilder, type UserActionStatsExtended, type UserClaim, type UserEnergy, type UserGaslessStats, type UserStake, VALID_URI_PREFIXES, VCOIN_DECIMALS, VCOIN_INITIAL_CIRCULATING, VCOIN_TOTAL_SUPPLY, type VCoinConfig, VEVCOIN_DECIMALS, VILINK_CONSTANTS, VerificationLevel, type ViLinkAction, ViLinkClient, type ViLinkConfig, ViWoClient, ViWoConnection, VoteChoice, type VoteRecord, type VouchRecord, type WalletAdapter, dateToTimestamp, formatVCoin, getCurrentTimestamp, parseVCoin, timestampToDate };

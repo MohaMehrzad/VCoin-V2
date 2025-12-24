@@ -26,6 +26,9 @@ pub struct UserActionStats {
     pub first_action_at: i64,
     /// Last action timestamp
     pub last_action_at: i64,
+    /// M-04 Security Fix: Nonce for deterministic action PDA derivation
+    /// Incremented each time a new action is created
+    pub action_nonce: u64,
     /// PDA bump
     pub bump: u8,
 }
@@ -43,6 +46,7 @@ impl UserActionStats {
         8 +  // follows_given
         8 +  // first_action_at
         8 +  // last_action_at
+        8 +  // action_nonce (M-04)
         1;   // bump
 }
 
