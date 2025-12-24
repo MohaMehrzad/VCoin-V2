@@ -560,5 +560,5 @@ This infrastructure is designed for **ecosystem adoption**, not platform lock-in
 **Framework:** Anchor 0.32.0 | Solana Program 2.0 | Token-2022 6.0  
 **Architecture:** Modular (2025-2026 Best Practices)  
 **Network:** Solana Devnet (11/11 Upgraded v2.8.3)  
-**SDK:** @viwoapp/sdk v0.1.5  
+**SDK:** @viwoapp/sdk v0.1.7  
 **Token:** VCoin (VIWO) • Launch: Q1 2026
