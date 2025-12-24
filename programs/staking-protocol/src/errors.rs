@@ -64,5 +64,9 @@ pub enum StakingError {
     // M-01: Reentrancy protection
     #[msg("Reentrancy detected - operation already in progress")]
     ReentrancyDetected,
+    
+    // H-NEW-01: Authority transfer timelock
+    #[msg("Authority transfer timelock not elapsed - must wait 24 hours after proposal")]
+    AuthorityTransferTimelock,
 }
 

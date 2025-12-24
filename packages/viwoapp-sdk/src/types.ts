@@ -30,6 +30,7 @@ export enum SlashStatus {
 
 export interface SlashRequest {
   target: PublicKey;
+  requestId: BN; // v2.8.0: Used for PDA derivation
   amount: BN;
   reason: Uint8Array;
   proposer: PublicKey;
@@ -82,6 +83,16 @@ export enum ProposalStatus {
   Rejected = 2,
   Executed = 3,
   Cancelled = 4,
+}
+
+/**
+ * Vote choice for governance voting (v2.8.0 C-NEW-01)
+ * Voting power params are now read from on-chain state, not passed as parameters
+ */
+export enum VoteChoice {
+  Against = 0,
+  For = 1,
+  Abstain = 2,
 }
 
 export interface Proposal {
@@ -142,7 +153,7 @@ export interface UserClaim {
   claimsCount: number;
   claimedEpochsBitmap?: BN[];      // H-04: Bitmap for epochs 0-255 (optional)
   claimedEpochsBitmapExt?: BN[];   // H-04: Extended bitmap for epochs 256-511 (optional)
-  highEpochsClaimed?: BN[];        // H-04: Dynamic array for epochs 512+ (optional)
+  highEpochsBitmap?: BN[];         // H-NEW-04: Bitmap for epochs 512-1023 (replaces array)
 }
 
 export interface ClaimRewardsParams {

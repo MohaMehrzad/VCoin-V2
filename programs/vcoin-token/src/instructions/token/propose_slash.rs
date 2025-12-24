@@ -11,9 +11,13 @@ use crate::events::SlashProposed;
 pub fn handler(
     ctx: Context<ProposeSlash>,
     target: Pubkey,
+    request_id: u64,
     amount: u64,
     reason_hash: [u8; 32],
 ) -> Result<()> {
+    // request_id is used for PDA derivation - typically the current timestamp or a counter
+    let _ = request_id;
+    
     require!(amount > 0, VCoinError::ZeroSlashAmount);
     
     // Verify target has sufficient balance

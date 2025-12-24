@@ -58,5 +58,13 @@ pub enum VCoinError {
     
     #[msg("Only governance can approve slash requests")]
     GovernanceApprovalRequired,
+    
+    // C-NEW-02: Legacy slash function deprecated
+    #[msg("This function is deprecated. Use propose_slash -> approve_slash -> execute_slash flow")]
+    DeprecatedSlashFunction,
+    
+    // H-NEW-01: Authority transfer timelock
+    #[msg("Authority transfer timelock not elapsed - must wait 24 hours after proposal")]
+    AuthorityTransferTimelock,
 }
 

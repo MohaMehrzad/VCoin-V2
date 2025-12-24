@@ -9,6 +9,8 @@ pub struct VCoinConfig {
     pub authority: Pubkey,
     /// Pending authority for two-step transfer (H-02 security fix)
     pub pending_authority: Pubkey,
+    /// H-NEW-01: Timestamp when pending authority was proposed (for timelock)
+    pub pending_authority_activated_at: i64,
     /// The VCoin mint address
     pub mint: Pubkey,
     /// The treasury token account that receives initial minted tokens
@@ -26,7 +28,8 @@ pub struct VCoinConfig {
 impl VCoinConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
-        32 + // pending_authority (NEW - H-02)
+        32 + // pending_authority (H-02)
+        8 +  // pending_authority_activated_at (H-NEW-01)
         32 + // mint
         32 + // treasury
         32 + // permanent_delegate

@@ -34,10 +34,12 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
     let new_tier = StakingTier::from_amount(new_staked_amount);
     
     // Calculate new veVCoin (0 if fully unstaking)
+    // M-NEW-01 Fix: Multiply before divide to minimize precision loss
     let new_vevcoin = if new_staked_amount > 0 {
         // Maintain proportional veVCoin for remaining stake
-        let remaining_ratio = (new_staked_amount as u128) * 1000 / (staked_amount as u128);
-        (ve_vcoin_amount as u128 * remaining_ratio / 1000) as u64
+        // Formula: new_vevcoin = ve_vcoin_amount * new_staked_amount / staked_amount
+        // This is more precise than dividing first to get a ratio
+        ((ve_vcoin_amount as u128) * (new_staked_amount as u128) / (staked_amount as u128)) as u64
     } else {
         0
     };

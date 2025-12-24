@@ -23,6 +23,11 @@ pub struct CreateProposal<'info> {
     #[account(mut)]
     pub proposer: Signer<'info>,
     
+    /// H-NEW-05: UserStake account from staking-protocol for proposal threshold verification
+    /// CHECK: Verified in handler via PDA derivation from staking_program
+    #[account()]
+    pub proposer_stake: AccountInfo<'info>,
+    
     pub system_program: Program<'info, System>,
 }
 

@@ -69,3 +69,8 @@ pub const VALID_URI_PREFIX_HTTPS: &[u8] = b"https://";
 pub const VALID_URI_PREFIX_AR: &[u8] = b"ar://";
 pub const MAX_URI_LENGTH: usize = 128;
 
+/// C-NEW-01: External program PDA seeds for on-chain voting power verification
+/// These must match the seeds used by staking-protocol and five-a-protocol
+pub const USER_STAKE_SEED: &[u8] = b"user-stake";
+pub const USER_SCORE_SEED: &[u8] = b"user-score";
+

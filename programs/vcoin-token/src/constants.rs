@@ -27,3 +27,6 @@ pub const SLASH_STATUS_EXECUTED: u8 = 2;
 pub const SLASH_STATUS_REJECTED: u8 = 3;
 pub const SLASH_STATUS_CANCELLED: u8 = 4;
 
+/// H-NEW-01: Authority transfer timelock (24 hours in seconds)
+pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 24 * 60 * 60;
+

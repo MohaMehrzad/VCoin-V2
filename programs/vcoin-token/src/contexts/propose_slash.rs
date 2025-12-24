@@ -8,7 +8,7 @@ use crate::state::{VCoinConfig, SlashRequest};
 /// Context for proposing a slash (H-01 Security Fix)
 /// Only the permanent delegate can propose slashes
 #[derive(Accounts)]
-#[instruction(target: Pubkey)]
+#[instruction(target: Pubkey, request_id: u64)]
 pub struct ProposeSlash<'info> {
     #[account(
         seeds = [VCOIN_CONFIG_SEED],
@@ -21,7 +21,7 @@ pub struct ProposeSlash<'info> {
         init,
         payer = authority,
         space = SlashRequest::LEN,
-        seeds = [SLASH_REQUEST_SEED, target.as_ref(), &Clock::get()?.unix_timestamp.to_le_bytes()],
+        seeds = [SLASH_REQUEST_SEED, target.as_ref(), &request_id.to_le_bytes()],
         bump
     )]
     pub slash_request: Account<'info, SlashRequest>,

@@ -56,14 +56,15 @@ pub mod governance_protocol {
     }
     
     /// Cast a public vote
+    /// 
+    /// C-NEW-01 Security Fix: veVCoin balance, 5A score, and tier are now
+    /// read directly from on-chain accounts instead of being passed as parameters.
+    /// This prevents vote manipulation attacks.
     pub fn cast_vote(
         ctx: Context<CastVote>,
         choice: u8,
-        vevcoin_balance: u64,
-        five_a_score: u16,
-        tier: u8,
     ) -> Result<()> {
-        vote::cast::handler(ctx, choice, vevcoin_balance, five_a_score, tier)
+        vote::cast::handler(ctx, choice)
     }
     
     /// Cast a ZK private vote

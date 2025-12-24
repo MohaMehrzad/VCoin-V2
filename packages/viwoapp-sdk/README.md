@@ -5,11 +5,20 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 0.1.1 (Security Update)
+**Version:** 0.1.4 (Phase 5 Security Update)
+
+## What's New in v0.1.4
+
+- **New Constants:** `MERKLE_PROOF_MAX_SIZE`, `MAX_EPOCH_BITMAP`, `LEGACY_SLASH_DEPRECATED`
+- **New Enum:** `VoteChoice` for typed governance voting (Against, For, Abstain)
+- **Updated Types:** `SlashRequest` (added `requestId`), `UserClaim` (bitmap storage)
+- **Updated Docs:** `buildVoteTransaction` - voting power now verified on-chain
+- **SECURITY_CONSTANTS:** Added `merkleProofMaxSize`, `maxEpochBitmap`, `votingPowerVerifiedOnChain`
+- **Full README:** Complete usage documentation for all modules
 
 ## What's New in v0.1.1
 
-- Added security types for Phase 1-4 audit fixes
+- Added security types for Phase 1-4 fixes
 - New types: `SlashRequest`, `DecryptionShare`, `PendingScoreUpdate`
 - All config types now support two-step authority transfer
 - Added `SECURITY_CONSTANTS` for timelocks and limits
@@ -243,18 +252,25 @@ import {
   FIVE_A_CONSTANTS,
   GOVERNANCE_CONSTANTS,
   CONTENT_CONSTANTS,
-  // Security constants (v0.1.1)
+  // Security constants
   SECURITY_CONSTANTS,
   VALID_URI_PREFIXES,
   MERKLE_CONSTANTS,
+  // v0.1.4 additions
+  MERKLE_PROOF_MAX_SIZE,    // 32 - prevents DoS
+  MAX_EPOCH_BITMAP,         // 1023 - max epoch with bitmap
+  LEGACY_SLASH_DEPRECATED,  // true - use propose_slash flow
 } from "@viwoapp/sdk";
 
 // Security constants
-SECURITY_CONSTANTS.authorityTransferTimelock; // 24 hours
-SECURITY_CONSTANTS.slashApprovalTimelock;     // 48 hours
-SECURITY_CONSTANTS.maxFeeSlippageBps;         // 500 (5%)
-SECURITY_CONSTANTS.oracleConsensusRequired;   // 3-of-N
-SECURITY_CONSTANTS.circuitBreakerCooldown;    // 6 hours
+SECURITY_CONSTANTS.authorityTransferTimelock;    // 24 hours
+SECURITY_CONSTANTS.slashApprovalTimelock;        // 48 hours
+SECURITY_CONSTANTS.maxFeeSlippageBps;            // 500 (5%)
+SECURITY_CONSTANTS.oracleConsensusRequired;      // 3-of-N
+SECURITY_CONSTANTS.circuitBreakerCooldown;       // 6 hours
+SECURITY_CONSTANTS.merkleProofMaxSize;           // 32 (v0.1.4)
+SECURITY_CONSTANTS.maxEpochBitmap;               // 1023 (v0.1.4)
+SECURITY_CONSTANTS.votingPowerVerifiedOnChain;   // true (v0.1.4)
 ```
 
 ## Types
@@ -271,6 +287,7 @@ import type {
   Proposal,
   VoteRecord,
   ProposalStatus,
+  VoteChoice,            // v0.1.4: Against, For, Abstain
   GovernanceConfig,
   Delegation,
   PrivateVotingConfig,

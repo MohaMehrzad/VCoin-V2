@@ -55,3 +55,7 @@ pub const USER_STAKE_SEED: &[u8] = b"user-stake";
 /// for multi-pool support. See stake.rs context for migration notes.
 pub const POOL_VAULT_SEED: &[u8] = b"pool-vault";
 
+/// H-NEW-01: Authority transfer timelock (24 hours in seconds)
+/// After proposing a new authority, this timelock must elapse before acceptance
+pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 24 * 60 * 60;
+

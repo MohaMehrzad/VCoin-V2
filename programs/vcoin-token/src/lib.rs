@@ -48,13 +48,15 @@ pub mod vcoin_token {
 
     /// Propose a slash request (H-01 Security Fix - Step 1)
     /// Only permanent delegate can propose; requires governance approval
+    /// request_id should be unique (e.g., current timestamp) to derive unique PDA
     pub fn propose_slash(
         ctx: Context<ProposeSlash>,
         target: Pubkey,
+        request_id: u64,
         amount: u64,
         reason_hash: [u8; 32],
     ) -> Result<()> {
-        instructions::token::propose_slash::handler(ctx, target, amount, reason_hash)
+        instructions::token::propose_slash::handler(ctx, target, request_id, amount, reason_hash)
     }
 
     /// Approve a slash request (H-01 Security Fix - Step 2)

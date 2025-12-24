@@ -57,5 +57,9 @@ pub enum SSCREError {
     // M-05: Circuit breaker cooldown
     #[msg("Circuit breaker cooldown not elapsed - wait 6 hours after trigger")]
     CircuitBreakerCooldown,
+    
+    // H-NEW-02: Merkle proof size limit
+    #[msg("Merkle proof too large - maximum 32 levels (supports 4 billion users)")]
+    MerkleProofTooLarge,
 }
 

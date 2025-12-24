@@ -8,6 +8,8 @@ pub struct StakingPool {
     pub authority: Pubkey,
     /// Pending authority for two-step transfer (H-02 security fix)
     pub pending_authority: Pubkey,
+    /// H-NEW-01: Timestamp when pending authority was proposed (for timelock)
+    pub pending_authority_activated_at: i64,
     /// VCoin mint address
     pub vcoin_mint: Pubkey,
     /// veVCoin mint address
@@ -34,7 +36,8 @@ pub struct StakingPool {
 impl StakingPool {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
-        32 + // pending_authority (NEW - H-02)
+        32 + // pending_authority (H-02)
+        8 +  // pending_authority_activated_at (H-NEW-01)
         32 + // vcoin_mint
         32 + // vevcoin_mint
         32 + // vevcoin_program

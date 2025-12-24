@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::constants::{VALID_URI_PREFIX_IPFS, VALID_URI_PREFIX_HTTPS, VALID_URI_PREFIX_AR, MAX_URI_LENGTH};
+use crate::constants::{VALID_URI_PREFIX_IPFS, VALID_URI_PREFIX_HTTPS, VALID_URI_PREFIX_AR, MAX_URI_LENGTH, USER_STAKE_SEED};
 use crate::contexts::CreateProposal;
 use crate::errors::GovernanceError;
 use crate::events::ProposalCreated;
@@ -21,11 +21,48 @@ pub fn handler(
     enable_private_voting: bool,
 ) -> Result<()> {
     let config = &mut ctx.accounts.governance_config;
+    let proposer_key = ctx.accounts.proposer.key();
+    
     require!(!config.paused, GovernanceError::GovernancePaused);
     require!(description_uri.len() <= MAX_URI_LENGTH, GovernanceError::Overflow);
     
     // L-04: Validate URI format
     require!(is_valid_uri(&description_uri), GovernanceError::InvalidDescriptionUri);
+    
+    // =========================================================================
+    // H-NEW-05: Enforce proposal threshold - verify proposer has enough veVCoin
+    // =========================================================================
+    
+    // Verify UserStake PDA derivation from staking program
+    let (expected_proposer_stake_pda, _) = Pubkey::find_program_address(
+        &[USER_STAKE_SEED, proposer_key.as_ref()],
+        &config.staking_program
+    );
+    require!(
+        ctx.accounts.proposer_stake.key() == expected_proposer_stake_pda,
+        GovernanceError::InvalidUserStakePDA
+    );
+    
+    // Read veVCoin balance from UserStake account
+    // UserStake layout: discriminator(8) + owner(32) + staked_amount(8) + lock_duration(8) 
+    //                   + lock_end(8) + stake_start(8) + tier(1) + ve_vcoin_amount(8) + bump(1)
+    let proposer_vevcoin = if ctx.accounts.proposer_stake.data_is_empty() {
+        0u64
+    } else {
+        let stake_data = ctx.accounts.proposer_stake.try_borrow_data()?;
+        require!(stake_data.len() >= 82, GovernanceError::InvalidUserStakeData);
+        
+        // ve_vcoin_amount is at offset 73-80 (u64 little-endian)
+        u64::from_le_bytes(
+            stake_data[73..81].try_into().map_err(|_| GovernanceError::InvalidUserStakeData)?
+        )
+    };
+    
+    // Verify proposer meets the threshold
+    require!(
+        proposer_vevcoin >= config.proposal_threshold,
+        GovernanceError::InsufficientVeVCoin
+    );
     
     let clock = Clock::get()?;
     

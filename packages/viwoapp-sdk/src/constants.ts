@@ -220,6 +220,11 @@ export const SECURITY_CONSTANTS = {
   // M-02: Platform fee bounds (ViLink)
   maxPlatformFeeBps: 1000, // 10% max
   minPlatformFeeBps: 10, // 0.1% min
+
+  // v2.8.0 Phase 5 additions
+  merkleProofMaxSize: 32, // H-NEW-02: Max proof levels (supports 4B+ users)
+  maxEpochBitmap: 1023, // H-NEW-04: Max epoch with bitmap storage (85+ years)
+  votingPowerVerifiedOnChain: true, // C-NEW-01: Params read from chain, not passed
 };
 
 // ============ URI Validation Constants (L-04) ============
@@ -232,4 +237,18 @@ export const MAX_URI_LENGTH = 128;
 export const MERKLE_CONSTANTS = {
   leafDomainPrefix: "SSCRE_CLAIM_V1", // Domain separation for merkle leaves
 };
+
+// ============ v2.8.0 Security Constants ============
+
+/** Maximum Merkle proof size (H-NEW-02) - prevents DoS attacks */
+export const MERKLE_PROOF_MAX_SIZE = 32;
+
+/** Maximum supported epoch number with bitmap storage (H-NEW-04) */
+export const MAX_EPOCH_BITMAP = 1023; // Epochs 0-1023 (85+ years)
+
+/**
+ * @deprecated The legacy slash_tokens function is disabled (C-NEW-02).
+ * Use propose_slash -> approve_slash -> execute_slash flow instead.
+ */
+export const LEGACY_SLASH_DEPRECATED = true;
 

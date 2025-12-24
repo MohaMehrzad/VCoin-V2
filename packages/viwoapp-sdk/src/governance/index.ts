@@ -3,7 +3,7 @@ import { BN } from "@coral-xyz/anchor";
 
 import type { ViWoClient } from "../client";
 import type { Proposal, VoteRecord, CreateProposalParams } from "../types";
-import { ProposalStatus } from "../types";
+import { ProposalStatus, VoteChoice } from "../types";
 import { GOVERNANCE_CONSTANTS } from "../constants";
 import { formatVCoin } from "../core";
 
@@ -273,6 +273,13 @@ export class GovernanceClient {
   
   /**
    * Build vote transaction
+   * 
+   * @note v2.8.0 (C-NEW-01): Voting power parameters (vevcoin_balance, five_a_score, tier) 
+   * are now read from on-chain state, not passed as parameters. This prevents vote manipulation.
+   * The transaction only needs: proposal_id and choice (VoteChoice enum)
+   * 
+   * @param proposalId - The proposal to vote on
+   * @param support - true = For, false = Against (use VoteChoice for more options)
    */
   async buildVoteTransaction(proposalId: BN, support: boolean): Promise<Transaction> {
     if (!this.client.publicKey) {
@@ -287,8 +294,9 @@ export class GovernanceClient {
     
     const tx = new Transaction();
     
-    // Add vote instruction
-    // tx.add(await this.program.methods.castVote(proposalId, support)...);
+    // v2.8.0: cast_vote now only takes (ctx, choice) - voting power is read on-chain
+    const choice = support ? VoteChoice.For : VoteChoice.Against;
+    // tx.add(await this.program.methods.castVote(choice)...);
     
     return tx;
   }
@@ -315,5 +323,5 @@ export class GovernanceClient {
   }
 }
 
-export { GOVERNANCE_CONSTANTS };
+export { GOVERNANCE_CONSTANTS, VoteChoice };
 

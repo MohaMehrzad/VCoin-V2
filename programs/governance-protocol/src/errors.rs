@@ -72,5 +72,22 @@ pub enum GovernanceError {
     // L-04: URI validation
     #[msg("Invalid description URI format (must start with ipfs://, https://, or ar://)")]
     InvalidDescriptionUri,
+    
+    // C-NEW-01: On-chain voting power verification errors
+    #[msg("Invalid UserStake PDA - must be derived from staking program")]
+    InvalidUserStakePDA,
+    
+    #[msg("Invalid UserScore PDA - must be derived from five-a program")]
+    InvalidUserScorePDA,
+    
+    #[msg("UserStake account data is invalid or uninitialized")]
+    InvalidUserStakeData,
+    
+    #[msg("UserScore account data is invalid or uninitialized")]
+    InvalidUserScoreData,
+    
+    // H-NEW-03: Delegation amount validation
+    #[msg("Claimed veVCoin balance exceeds delegated amount")]
+    ExceedsDelegatedAmount,
 }
 

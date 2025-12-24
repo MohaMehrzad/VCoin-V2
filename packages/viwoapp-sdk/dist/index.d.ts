@@ -176,12 +176,24 @@ declare const SECURITY_CONSTANTS: {
     pendingScoreExpiry: number;
     maxPlatformFeeBps: number;
     minPlatformFeeBps: number;
+    merkleProofMaxSize: number;
+    maxEpochBitmap: number;
+    votingPowerVerifiedOnChain: boolean;
 };
 declare const VALID_URI_PREFIXES: readonly ["ipfs://", "https://", "ar://"];
 declare const MAX_URI_LENGTH = 128;
 declare const MERKLE_CONSTANTS: {
     leafDomainPrefix: string;
 };
+/** Maximum Merkle proof size (H-NEW-02) - prevents DoS attacks */
+declare const MERKLE_PROOF_MAX_SIZE = 32;
+/** Maximum supported epoch number with bitmap storage (H-NEW-04) */
+declare const MAX_EPOCH_BITMAP = 1023;
+/**
+ * @deprecated The legacy slash_tokens function is disabled (C-NEW-02).
+ * Use propose_slash -> approve_slash -> execute_slash flow instead.
+ */
+declare const LEGACY_SLASH_DEPRECATED = true;
 
 interface ConnectionConfig {
     endpoint: string;
@@ -287,6 +299,7 @@ declare enum SlashStatus {
 }
 interface SlashRequest {
     target: PublicKey;
+    requestId: BN;
     amount: BN;
     reason: Uint8Array;
     proposer: PublicKey;
@@ -330,6 +343,15 @@ declare enum ProposalStatus {
     Rejected = 2,
     Executed = 3,
     Cancelled = 4
+}
+/**
+ * Vote choice for governance voting (v2.8.0 C-NEW-01)
+ * Voting power params are now read from on-chain state, not passed as parameters
+ */
+declare enum VoteChoice {
+    Against = 0,
+    For = 1,
+    Abstain = 2
 }
 interface Proposal {
     id: BN;
@@ -382,7 +404,7 @@ interface UserClaim {
     claimsCount: number;
     claimedEpochsBitmap?: BN[];
     claimedEpochsBitmapExt?: BN[];
-    highEpochsClaimed?: BN[];
+    highEpochsBitmap?: BN[];
 }
 interface ClaimRewardsParams {
     epoch: BN;
@@ -677,6 +699,13 @@ declare class GovernanceClient {
     buildCreateProposalTransaction(params: CreateProposalParams): Promise<Transaction>;
     /**
      * Build vote transaction
+     *
+     * @note v2.8.0 (C-NEW-01): Voting power parameters (vevcoin_balance, five_a_score, tier)
+     * are now read from on-chain state, not passed as parameters. This prevents vote manipulation.
+     * The transaction only needs: proposal_id and choice (VoteChoice enum)
+     *
+     * @param proposalId - The proposal to vote on
+     * @param support - true = For, false = Against (use VoteChoice for more options)
      */
     buildVoteTransaction(proposalId: BN, support: boolean): Promise<Transaction>;
     /**
@@ -1323,4 +1352,4 @@ declare class StakingClient {
     buildExtendLockTransaction(newDuration: number): Promise<Transaction>;
 }
 
-export { ACTION_SCOPES, ActionType, CONTENT_CONSTANTS, type ClaimRewardsParams, type ConnectionConfig, ContentClient, type ContentRecord, ContentState, type CreateActionParams, type CreateProposalParams, type CreateSessionParams, type DecryptionShare, type Delegation, type EpochDistribution, FIVE_A_CONSTANTS, FeeMethod, FiveAClient, type FiveAConfig, type FiveAScore, GASLESS_CONSTANTS, GOVERNANCE_CONSTANTS, GaslessClient, type GaslessConfig, GovernanceClient, type GovernanceConfig, type HookConfig, type Identity, IdentityClient, type IdentityConfig, LOCK_DURATIONS, MAX_URI_LENGTH, MERKLE_CONSTANTS, PDAs, PROGRAM_IDS, type PendingAuthorityFields, type PendingScoreUpdate, type PrivateVotingConfig, type Proposal, ProposalStatus, type RegistryConfig, RewardsClient, type RewardsPoolConfig, SECURITY_CONSTANTS, SEEDS, SSCRE_CONSTANTS, STAKING_TIERS, type SessionKey, type SlashRequest, SlashStatus, type StakeParams, StakingClient, type StakingPool, StakingTier, TransactionBuilder, type UserClaim, type UserEnergy, type UserGaslessStats, type UserStake, VALID_URI_PREFIXES, VCOIN_DECIMALS, VCOIN_INITIAL_CIRCULATING, VCOIN_TOTAL_SUPPLY, type VCoinConfig, VEVCOIN_DECIMALS, VILINK_CONSTANTS, VerificationLevel, type ViLinkAction, ViLinkClient, type ViLinkConfig, ViWoClient, ViWoConnection, type VoteRecord, type VouchRecord, type WalletAdapter, dateToTimestamp, formatVCoin, getCurrentTimestamp, parseVCoin, timestampToDate };
+export { ACTION_SCOPES, ActionType, CONTENT_CONSTANTS, type ClaimRewardsParams, type ConnectionConfig, ContentClient, type ContentRecord, ContentState, type CreateActionParams, type CreateProposalParams, type CreateSessionParams, type DecryptionShare, type Delegation, type EpochDistribution, FIVE_A_CONSTANTS, FeeMethod, FiveAClient, type FiveAConfig, type FiveAScore, GASLESS_CONSTANTS, GOVERNANCE_CONSTANTS, GaslessClient, type GaslessConfig, GovernanceClient, type GovernanceConfig, type HookConfig, type Identity, IdentityClient, type IdentityConfig, LEGACY_SLASH_DEPRECATED, LOCK_DURATIONS, MAX_EPOCH_BITMAP, MAX_URI_LENGTH, MERKLE_CONSTANTS, MERKLE_PROOF_MAX_SIZE, PDAs, PROGRAM_IDS, type PendingAuthorityFields, type PendingScoreUpdate, type PrivateVotingConfig, type Proposal, ProposalStatus, type RegistryConfig, RewardsClient, type RewardsPoolConfig, SECURITY_CONSTANTS, SEEDS, SSCRE_CONSTANTS, STAKING_TIERS, type SessionKey, type SlashRequest, SlashStatus, type StakeParams, StakingClient, type StakingPool, StakingTier, TransactionBuilder, type UserClaim, type UserEnergy, type UserGaslessStats, type UserStake, VALID_URI_PREFIXES, VCOIN_DECIMALS, VCOIN_INITIAL_CIRCULATING, VCOIN_TOTAL_SUPPLY, type VCoinConfig, VEVCOIN_DECIMALS, VILINK_CONSTANTS, VerificationLevel, type ViLinkAction, ViLinkClient, type ViLinkConfig, ViWoClient, ViWoConnection, VoteChoice, type VoteRecord, type VouchRecord, type WalletAdapter, dateToTimestamp, formatVCoin, getCurrentTimestamp, parseVCoin, timestampToDate };

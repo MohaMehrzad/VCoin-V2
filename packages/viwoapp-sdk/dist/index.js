@@ -34,9 +34,12 @@ __export(index_exports, {
   GaslessClient: () => GaslessClient,
   GovernanceClient: () => GovernanceClient,
   IdentityClient: () => IdentityClient,
+  LEGACY_SLASH_DEPRECATED: () => LEGACY_SLASH_DEPRECATED,
   LOCK_DURATIONS: () => LOCK_DURATIONS,
+  MAX_EPOCH_BITMAP: () => MAX_EPOCH_BITMAP,
   MAX_URI_LENGTH: () => MAX_URI_LENGTH,
   MERKLE_CONSTANTS: () => MERKLE_CONSTANTS,
+  MERKLE_PROOF_MAX_SIZE: () => MERKLE_PROOF_MAX_SIZE,
   PDAs: () => PDAs,
   PROGRAM_IDS: () => PROGRAM_IDS,
   ProposalStatus: () => ProposalStatus,
@@ -59,6 +62,7 @@ __export(index_exports, {
   ViLinkClient: () => ViLinkClient,
   ViWoClient: () => ViWoClient,
   ViWoConnection: () => ViWoConnection,
+  VoteChoice: () => VoteChoice,
   dateToTimestamp: () => dateToTimestamp,
   formatVCoin: () => formatVCoin,
   getCurrentTimestamp: () => getCurrentTimestamp,
@@ -288,8 +292,15 @@ var SECURITY_CONSTANTS = {
   // M-02: Platform fee bounds (ViLink)
   maxPlatformFeeBps: 1e3,
   // 10% max
-  minPlatformFeeBps: 10
+  minPlatformFeeBps: 10,
   // 0.1% min
+  // v2.8.0 Phase 5 additions
+  merkleProofMaxSize: 32,
+  // H-NEW-02: Max proof levels (supports 4B+ users)
+  maxEpochBitmap: 1023,
+  // H-NEW-04: Max epoch with bitmap storage (85+ years)
+  votingPowerVerifiedOnChain: true
+  // C-NEW-01: Params read from chain, not passed
 };
 var VALID_URI_PREFIXES = ["ipfs://", "https://", "ar://"];
 var MAX_URI_LENGTH = 128;
@@ -297,6 +308,9 @@ var MERKLE_CONSTANTS = {
   leafDomainPrefix: "SSCRE_CLAIM_V1"
   // Domain separation for merkle leaves
 };
+var MERKLE_PROOF_MAX_SIZE = 32;
+var MAX_EPOCH_BITMAP = 1023;
+var LEGACY_SLASH_DEPRECATED = true;
 
 // src/core/index.ts
 var ViWoConnection = class {
@@ -588,6 +602,12 @@ var ProposalStatus = /* @__PURE__ */ ((ProposalStatus2) => {
   ProposalStatus2[ProposalStatus2["Cancelled"] = 4] = "Cancelled";
   return ProposalStatus2;
 })(ProposalStatus || {});
+var VoteChoice = /* @__PURE__ */ ((VoteChoice2) => {
+  VoteChoice2[VoteChoice2["Against"] = 0] = "Against";
+  VoteChoice2[VoteChoice2["For"] = 1] = "For";
+  VoteChoice2[VoteChoice2["Abstain"] = 2] = "Abstain";
+  return VoteChoice2;
+})(VoteChoice || {});
 var ActionType = /* @__PURE__ */ ((ActionType2) => {
   ActionType2[ActionType2["Tip"] = 0] = "Tip";
   ActionType2[ActionType2["Vouch"] = 1] = "Vouch";
@@ -988,6 +1008,13 @@ var GovernanceClient = class {
   }
   /**
    * Build vote transaction
+   * 
+   * @note v2.8.0 (C-NEW-01): Voting power parameters (vevcoin_balance, five_a_score, tier) 
+   * are now read from on-chain state, not passed as parameters. This prevents vote manipulation.
+   * The transaction only needs: proposal_id and choice (VoteChoice enum)
+   * 
+   * @param proposalId - The proposal to vote on
+   * @param support - true = For, false = Against (use VoteChoice for more options)
    */
   async buildVoteTransaction(proposalId, support) {
     if (!this.client.publicKey) {
@@ -998,6 +1025,7 @@ var GovernanceClient = class {
       throw new Error("Already voted on this proposal");
     }
     const tx = new import_web34.Transaction();
+    const choice = support ? 1 /* For */ : 0 /* Against */;
     return tx;
   }
   /**
@@ -2390,9 +2418,12 @@ var ViWoClient = class {
   GaslessClient,
   GovernanceClient,
   IdentityClient,
+  LEGACY_SLASH_DEPRECATED,
   LOCK_DURATIONS,
+  MAX_EPOCH_BITMAP,
   MAX_URI_LENGTH,
   MERKLE_CONSTANTS,
+  MERKLE_PROOF_MAX_SIZE,
   PDAs,
   PROGRAM_IDS,
   ProposalStatus,
@@ -2415,6 +2446,7 @@ var ViWoClient = class {
   ViLinkClient,
   ViWoClient,
   ViWoConnection,
+  VoteChoice,
   dateToTimestamp,
   formatVCoin,
   getCurrentTimestamp,

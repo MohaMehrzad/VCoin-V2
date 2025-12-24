@@ -213,6 +213,10 @@ pub mod sscre_protocol {
         require!(amount >= MIN_CLAIM_AMOUNT, SSCREError::ClaimBelowMinimum);
         require!(amount <= MAX_SINGLE_CLAIM, SSCREError::CircuitBreakerClaimMax);
         
+        // H-NEW-02: Limit merkle proof size to prevent DoS attacks
+        // 32 levels supports 2^32 = 4+ billion users, which is more than enough
+        require!(merkle_proof.len() <= 32, SSCREError::MerkleProofTooLarge);
+        
         let clock = Clock::get()?;
         
         require!(clock.unix_timestamp <= epoch_dist.claim_expiry, SSCREError::ClaimWindowExpired);
