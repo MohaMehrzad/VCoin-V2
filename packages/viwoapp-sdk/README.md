@@ -5,7 +5,7 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 0.1.5 (Bug Fixes)
+**Version:** 0.1.6 (Bug Fixes)
 
 ## What's New in v0.1.5
 
