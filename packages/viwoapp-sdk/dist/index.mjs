@@ -19,7 +19,18 @@ var PROGRAM_IDS = {
   governanceProtocol: new PublicKey("3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe"),
   sscreProtocol: new PublicKey("6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"),
   vilinkProtocol: new PublicKey("CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7"),
-  gaslessProtocol: new PublicKey("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3")
+  gaslessProtocol: new PublicKey("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"),
+  /**
+   * VCoin Token Mint Address (Token-2022)
+   * 
+   * NOTE: This is a placeholder. Override via ViWoClient config.programIds.vcoinMint
+   * after deploying your VCoin mint on devnet/mainnet.
+   * 
+   * Finding #2 Fix: SDK now filters token accounts by mint address to prevent
+   * summing balances from other Token-2022 tokens.
+   */
+  vcoinMint: new PublicKey("11111111111111111111111111111111")
+  // Placeholder - override in config
 };
 var SEEDS = {
   // VCoin
@@ -1211,6 +1222,9 @@ var ViLinkClient = class {
   }
   /**
    * Get ViLink configuration
+   * 
+   * Finding #8 (related): Corrected byte offsets to match on-chain ViLinkConfig struct.
+   * Added pending_authority field that was missing after H-02 security fix.
    */
   async getConfig() {
     try {
@@ -1222,16 +1236,18 @@ var ViLinkClient = class {
       const data = accountInfo.data;
       return {
         authority: new PublicKey6(data.slice(8, 40)),
-        vcoinMint: new PublicKey6(data.slice(40, 72)),
-        treasury: new PublicKey6(data.slice(72, 104)),
-        enabledActions: data[200],
-        totalActionsCreated: new BN5(data.slice(201, 209), "le"),
-        totalActionsExecuted: new BN5(data.slice(209, 217), "le"),
-        totalTipVolume: new BN5(data.slice(217, 225), "le"),
-        paused: data[225] !== 0,
-        platformFeeBps: data.readUInt16LE(226)
+        pendingAuthority: new PublicKey6(data.slice(40, 72)),
+        vcoinMint: new PublicKey6(data.slice(72, 104)),
+        treasury: new PublicKey6(data.slice(104, 136)),
+        enabledActions: data[296],
+        totalActionsCreated: new BN5(data.slice(297, 305), "le"),
+        totalActionsExecuted: new BN5(data.slice(305, 313), "le"),
+        totalTipVolume: new BN5(data.slice(313, 321), "le"),
+        paused: data[321] !== 0,
+        platformFeeBps: data.readUInt16LE(322)
       };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] vilink.getConfig failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -1261,7 +1277,8 @@ var ViLinkClient = class {
         actionNonce: nonce
         // M-04: Store nonce for reference
       };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] vilink.getAction failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -1295,7 +1312,8 @@ var ViLinkClient = class {
         vcoinSent: new BN5(data.slice(72, 80), "le"),
         vcoinReceived: new BN5(data.slice(80, 88), "le")
       };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] vilink.getUserStats failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -1469,6 +1487,10 @@ var GaslessClient = class {
   }
   /**
    * Get gasless configuration
+   * 
+   * Finding #8 Fix: Corrected byte offsets to match on-chain GaslessConfig struct.
+   * Added missing fields: pendingAuthority, feeVault, sscreProgram, sscreDeductionBps,
+   * maxSubsidizedPerUser, totalSolSpent, currentDay, daySpent, maxSlippageBps.
    */
   async getConfig() {
     try {
@@ -1480,16 +1502,26 @@ var GaslessClient = class {
       const data = accountInfo.data;
       return {
         authority: new PublicKey7(data.slice(8, 40)),
-        feePayer: new PublicKey7(data.slice(40, 72)),
-        vcoinMint: new PublicKey7(data.slice(72, 104)),
-        dailySubsidyBudget: new BN6(data.slice(136, 144), "le"),
-        solFeePerTx: new BN6(data.slice(144, 152), "le"),
-        vcoinFeeMultiplier: new BN6(data.slice(152, 160), "le"),
-        totalSubsidizedTx: new BN6(data.slice(168, 176), "le"),
-        totalVcoinCollected: new BN6(data.slice(184, 192), "le"),
-        paused: data[192] !== 0
+        pendingAuthority: new PublicKey7(data.slice(40, 72)),
+        feePayer: new PublicKey7(data.slice(72, 104)),
+        vcoinMint: new PublicKey7(data.slice(104, 136)),
+        feeVault: new PublicKey7(data.slice(136, 168)),
+        sscreProgram: new PublicKey7(data.slice(168, 200)),
+        dailySubsidyBudget: new BN6(data.slice(200, 208), "le"),
+        solFeePerTx: new BN6(data.slice(208, 216), "le"),
+        vcoinFeeMultiplier: new BN6(data.slice(216, 224), "le"),
+        sscreDeductionBps: data.readUInt16LE(224),
+        maxSubsidizedPerUser: data.readUInt32LE(226),
+        totalSubsidizedTx: new BN6(data.slice(230, 238), "le"),
+        totalSolSpent: new BN6(data.slice(238, 246), "le"),
+        totalVcoinCollected: new BN6(data.slice(246, 254), "le"),
+        paused: data[254] !== 0,
+        currentDay: data.readUInt32LE(255),
+        daySpent: new BN6(data.slice(259, 267), "le"),
+        maxSlippageBps: data.readUInt16LE(267)
       };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] gasless.getConfig failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -1517,7 +1549,8 @@ var GaslessClient = class {
         isRevoked: data[114] !== 0,
         feeMethod: data[123]
       };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] gasless.getSessionKey failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -1544,7 +1577,8 @@ var GaslessClient = class {
         sessionsCreated: data.readUInt32LE(72),
         activeSession: new PublicKey7(data.slice(76, 108))
       };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] gasless.getUserStats failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -2319,6 +2353,9 @@ var ViWoClient = class {
   }
   /**
    * Get VCoin balance
+   * 
+   * Finding #2 Fix: Now filters by VCoin mint address instead of summing all Token-2022 accounts.
+   * Make sure to set programIds.vcoinMint in your ViWoClient config.
    */
   async getVCoinBalance(user) {
     const target = user || this.publicKey;
@@ -2328,7 +2365,7 @@ var ViWoClient = class {
     try {
       const tokenAccounts = await this.connection.connection.getTokenAccountsByOwner(
         target,
-        { programId: TOKEN_2022_PROGRAM_ID }
+        { mint: this.programIds.vcoinMint, programId: TOKEN_2022_PROGRAM_ID }
       );
       let balance = new BN10(0);
       for (const { account } of tokenAccounts.value) {
@@ -2337,7 +2374,8 @@ var ViWoClient = class {
         balance = balance.add(new BN10(amount, "le"));
       }
       return balance;
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] getVCoinBalance failed:", error instanceof Error ? error.message : error);
       return new BN10(0);
     }
   }
@@ -2352,7 +2390,8 @@ var ViWoClient = class {
     try {
       const stakeData = await this.staking.getUserStake(target);
       return stakeData?.vevcoinBalance || new BN10(0);
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] getVeVCoinBalance failed:", error instanceof Error ? error.message : error);
       return new BN10(0);
     }
   }
@@ -2367,7 +2406,8 @@ var ViWoClient = class {
       ]);
       const blockTime = await this.connection.getBlockTime();
       return { connected, slot, blockTime };
-    } catch {
+    } catch (error) {
+      console.warn("[ViWoSDK] healthCheck failed:", error instanceof Error ? error.message : error);
       return { connected: false, slot: null, blockTime: null };
     }
   }

@@ -14,6 +14,16 @@ declare const PROGRAM_IDS: {
     sscreProtocol: PublicKey;
     vilinkProtocol: PublicKey;
     gaslessProtocol: PublicKey;
+    /**
+     * VCoin Token Mint Address (Token-2022)
+     *
+     * NOTE: This is a placeholder. Override via ViWoClient config.programIds.vcoinMint
+     * after deploying your VCoin mint on devnet/mainnet.
+     *
+     * Finding #2 Fix: SDK now filters token accounts by mint address to prevent
+     * summing balances from other Token-2022 tokens.
+     */
+    vcoinMint: PublicKey;
 };
 declare const SEEDS: {
     vcoinConfig: string;
@@ -433,8 +443,13 @@ declare enum ActionType {
     Delegate = 6,
     Vote = 7
 }
+/**
+ * ViLinkConfig - Updated with H-02 pending authority field
+ */
 interface ViLinkConfig extends PendingAuthorityFields {
     authority: PublicKey;
+    /** H-02: Pending authority for two-step transfer */
+    pendingAuthority?: PublicKey;
     vcoinMint: PublicKey;
     treasury: PublicKey;
     enabledActions: number;
@@ -442,6 +457,7 @@ interface ViLinkConfig extends PendingAuthorityFields {
     totalActionsExecuted: BN;
     totalTipVolume: BN;
     paused: boolean;
+    /** M-02: Platform fee in basis points, bounded 10-1000 (0.1%-10%) */
     platformFeeBps: number;
 }
 interface ViLinkAction {
@@ -472,7 +488,7 @@ interface CreateActionParams {
      */
     nonce?: BN;
 }
-/** M-04: User action statistics with nonce tracking */
+/** M-04 + Finding #5: User action statistics with nonce tracking */
 interface UserActionStatsExtended {
     user: PublicKey;
     actionsCreated: BN;
@@ -487,22 +503,47 @@ interface UserActionStatsExtended {
     lastActionAt: BN;
     /** M-04: Next nonce to use when creating an action */
     actionNonce: BN;
+    /** Finding #5: Next nonce to use when creating a batch (prevents timestamp collisions) */
+    batchNonce: BN;
 }
 declare enum FeeMethod {
     PlatformSubsidized = 0,
     VCoinDeduction = 1,
     SSCREDeduction = 2
 }
+/**
+ * GaslessConfig - Finding #8 Fix
+ *
+ * Updated to include all fields from on-chain GaslessConfig struct.
+ * Previous version was missing fields added after H-02 security fix.
+ */
 interface GaslessConfig extends PendingAuthorityFields {
     authority: PublicKey;
+    /** H-02: Pending authority for two-step transfer */
+    pendingAuthority?: PublicKey;
     feePayer: PublicKey;
     vcoinMint: PublicKey;
+    /** Fee vault for VCoin fee collection */
+    feeVault?: PublicKey;
+    /** SSCRE program for reward deduction integration */
+    sscreProgram?: PublicKey;
     dailySubsidyBudget: BN;
     solFeePerTx: BN;
     vcoinFeeMultiplier: BN;
+    /** SSCRE deduction rate in basis points */
+    sscreDeductionBps?: number;
+    /** Maximum subsidized transactions per user per day */
+    maxSubsidizedPerUser?: number;
     totalSubsidizedTx: BN;
+    /** Total SOL spent on subsidies */
+    totalSolSpent?: BN;
     totalVcoinCollected: BN;
     paused: boolean;
+    /** Current day number for daily budget reset */
+    currentDay?: number;
+    /** Today's spent budget */
+    daySpent?: BN;
+    /** L-03: Maximum fee slippage in basis points (default 500 = 5%) */
     maxSlippageBps?: number;
 }
 interface SessionKey {
@@ -856,6 +897,9 @@ declare class ViLinkClient {
     constructor(client: ViWoClient);
     /**
      * Get ViLink configuration
+     *
+     * Finding #8 (related): Corrected byte offsets to match on-chain ViLinkConfig struct.
+     * Added pending_authority field that was missing after H-02 security fix.
      */
     getConfig(): Promise<ViLinkConfig | null>;
     /**
@@ -977,6 +1021,10 @@ declare class GaslessClient {
     constructor(client: ViWoClient);
     /**
      * Get gasless configuration
+     *
+     * Finding #8 Fix: Corrected byte offsets to match on-chain GaslessConfig struct.
+     * Added missing fields: pendingAuthority, feeVault, sscreProgram, sscreDeductionBps,
+     * maxSubsidizedPerUser, totalSolSpent, currentDay, daySpent, maxSlippageBps.
      */
     getConfig(): Promise<GaslessConfig | null>;
     /**
@@ -1304,6 +1352,9 @@ declare class ViWoClient {
     sendTransaction(tx: Transaction): Promise<string>;
     /**
      * Get VCoin balance
+     *
+     * Finding #2 Fix: Now filters by VCoin mint address instead of summing all Token-2022 accounts.
+     * Make sure to set programIds.vcoinMint in your ViWoClient config.
      */
     getVCoinBalance(user?: PublicKey): Promise<BN>;
     /**
