@@ -388,9 +388,11 @@ pub mod vilink_protocol {
     }
     
     /// Create a batch of actions
+    /// Finding #5 Security Fix: Now uses batch_nonce for deterministic PDA derivation
     pub fn create_batch(ctx: Context<CreateBatch>, action_ids: Vec<[u8; 32]>) -> Result<()> {
         let config = &ctx.accounts.config;
         let batch = &mut ctx.accounts.batch;
+        let user_stats = &mut ctx.accounts.user_stats;
         
         require!(!config.paused, ViLinkError::ProtocolPaused);
         require!(action_ids.len() <= MAX_ACTIONS_PER_BATCH, ViLinkError::BatchTooLarge);
@@ -407,13 +409,16 @@ pub mod vilink_protocol {
         batch.executed_count = 0;
         batch.bump = ctx.bumps.batch;
         
+        // Finding #5: Increment batch_nonce for next batch PDA derivation
+        user_stats.batch_nonce = user_stats.batch_nonce.saturating_add(1);
+        
         emit!(BatchCreated {
             batch_id,
             creator: batch.creator,
             action_count: batch.total_actions,
         });
         
-        msg!("Batch created with {} actions", action_ids.len());
+        msg!("Batch created with {} actions (nonce: {})", action_ids.len(), user_stats.batch_nonce - 1);
         Ok(())
     }
     
@@ -620,11 +625,28 @@ pub struct RegisterDApp<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Finding #5 Security Fix: Use batch_nonce instead of timestamp for deterministic PDA derivation
+/// This prevents PDA collisions when multiple batches are created in the same second
 #[derive(Accounts)]
+#[instruction(action_ids: Vec<[u8; 32]>)]
 pub struct CreateBatch<'info> {
     #[account(seeds = [CONFIG_SEED], bump = config.bump)]
     pub config: Account<'info, ViLinkConfig>,
-    #[account(init, payer = creator, space = ActionBatch::LEN, seeds = [BATCH_SEED, creator.key().as_ref(), &Clock::get()?.unix_timestamp.to_le_bytes()], bump)]
+    /// User action stats - contains batch_nonce for deterministic PDA
+    #[account(
+        mut,
+        seeds = [USER_STATS_SEED, creator.key().as_ref()],
+        bump = user_stats.bump
+    )]
+    pub user_stats: Account<'info, UserActionStats>,
+    /// Finding #5: Use batch_nonce instead of timestamp to prevent PDA collisions
+    #[account(
+        init, 
+        payer = creator, 
+        space = ActionBatch::LEN, 
+        seeds = [BATCH_SEED, creator.key().as_ref(), &user_stats.batch_nonce.to_le_bytes()], 
+        bump
+    )]
     pub batch: Account<'info, ActionBatch>,
     #[account(mut)]
     pub creator: Signer<'info>,

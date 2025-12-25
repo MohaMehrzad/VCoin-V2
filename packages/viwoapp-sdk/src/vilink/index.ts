@@ -32,6 +32,9 @@ export class ViLinkClient {
   
   /**
    * Get ViLink configuration
+   * 
+   * Finding #8 (related): Corrected byte offsets to match on-chain ViLinkConfig struct.
+   * Added pending_authority field that was missing after H-02 security fix.
    */
   async getConfig(): Promise<ViLinkConfig | null> {
     try {
@@ -43,18 +46,40 @@ export class ViLinkClient {
       }
       
       const data = accountInfo.data;
+      
+      // Corrected byte offsets matching vilink_config.rs:
+      // Offset 8:   authority (32)
+      // Offset 40:  pending_authority (32) <- was missing
+      // Offset 72:  vcoin_mint (32)
+      // Offset 104: treasury (32)
+      // Offset 136: five_a_program (32)
+      // Offset 168: staking_program (32)
+      // Offset 200: content_registry (32)
+      // Offset 232: governance_program (32)
+      // Offset 264: gasless_program (32)
+      // Offset 296: enabled_actions (1)
+      // Offset 297: total_actions_created (8)
+      // Offset 305: total_actions_executed (8)
+      // Offset 313: total_tip_volume (8)
+      // Offset 321: paused (1)
+      // Offset 322: platform_fee_bps (2)
+      // Offset 324: bump (1)
+      
       return {
         authority: new PublicKey(data.slice(8, 40)),
-        vcoinMint: new PublicKey(data.slice(40, 72)),
-        treasury: new PublicKey(data.slice(72, 104)),
-        enabledActions: data[200],
-        totalActionsCreated: new BN(data.slice(201, 209), "le"),
-        totalActionsExecuted: new BN(data.slice(209, 217), "le"),
-        totalTipVolume: new BN(data.slice(217, 225), "le"),
-        paused: data[225] !== 0,
-        platformFeeBps: data.readUInt16LE(226),
+        pendingAuthority: new PublicKey(data.slice(40, 72)),
+        vcoinMint: new PublicKey(data.slice(72, 104)),
+        treasury: new PublicKey(data.slice(104, 136)),
+        enabledActions: data[296],
+        totalActionsCreated: new BN(data.slice(297, 305), "le"),
+        totalActionsExecuted: new BN(data.slice(305, 313), "le"),
+        totalTipVolume: new BN(data.slice(313, 321), "le"),
+        paused: data[321] !== 0,
+        platformFeeBps: data.readUInt16LE(322),
       };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning null
+      console.warn("[ViWoSDK] vilink.getConfig failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -86,7 +111,9 @@ export class ViLinkClient {
         maxExecutions: data.readUInt32LE(197),
         actionNonce: nonce, // M-04: Store nonce for reference
       };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning null
+      console.warn("[ViWoSDK] vilink.getAction failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -127,7 +154,9 @@ export class ViLinkClient {
         vcoinSent: new BN(data.slice(72, 80), "le"),
         vcoinReceived: new BN(data.slice(80, 88), "le"),
       };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning null
+      console.warn("[ViWoSDK] vilink.getUserStats failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }

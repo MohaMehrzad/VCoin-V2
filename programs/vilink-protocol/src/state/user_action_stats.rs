@@ -29,6 +29,10 @@ pub struct UserActionStats {
     /// M-04 Security Fix: Nonce for deterministic action PDA derivation
     /// Incremented each time a new action is created
     pub action_nonce: u64,
+    /// Finding #5 Security Fix: Nonce for deterministic batch PDA derivation
+    /// Incremented each time a new batch is created
+    /// Prevents PDA collisions when multiple batches created in same second
+    pub batch_nonce: u64,
     /// PDA bump
     pub bump: u8,
 }
@@ -47,6 +51,7 @@ impl UserActionStats {
         8 +  // first_action_at
         8 +  // last_action_at
         8 +  // action_nonce (M-04)
+        8 +  // batch_nonce (Finding #5)
         1;   // bump
 }
 

@@ -36,6 +36,10 @@ export class GaslessClient {
   
   /**
    * Get gasless configuration
+   * 
+   * Finding #8 Fix: Corrected byte offsets to match on-chain GaslessConfig struct.
+   * Added missing fields: pendingAuthority, feeVault, sscreProgram, sscreDeductionBps,
+   * maxSubsidizedPerUser, totalSolSpent, currentDay, daySpent, maxSlippageBps.
    */
   async getConfig(): Promise<GaslessConfig | null> {
     try {
@@ -47,18 +51,51 @@ export class GaslessClient {
       }
       
       const data = accountInfo.data;
+      
+      // Finding #8 Fix: Corrected byte offsets matching gasless_config.rs
+      // Offset 8:   authority (32)
+      // Offset 40:  pending_authority (32)
+      // Offset 72:  fee_payer (32)
+      // Offset 104: vcoin_mint (32)
+      // Offset 136: fee_vault (32)
+      // Offset 168: sscre_program (32)
+      // Offset 200: daily_subsidy_budget (8)
+      // Offset 208: sol_fee_per_tx (8)
+      // Offset 216: vcoin_fee_multiplier (8)
+      // Offset 224: sscre_deduction_bps (2)
+      // Offset 226: max_subsidized_per_user (4)
+      // Offset 230: total_subsidized_tx (8)
+      // Offset 238: total_sol_spent (8)
+      // Offset 246: total_vcoin_collected (8)
+      // Offset 254: paused (1)
+      // Offset 255: current_day (4)
+      // Offset 259: day_spent (8)
+      // Offset 267: max_slippage_bps (2)
+      // Offset 269: bump (1)
+      
       return {
         authority: new PublicKey(data.slice(8, 40)),
-        feePayer: new PublicKey(data.slice(40, 72)),
-        vcoinMint: new PublicKey(data.slice(72, 104)),
-        dailySubsidyBudget: new BN(data.slice(136, 144), "le"),
-        solFeePerTx: new BN(data.slice(144, 152), "le"),
-        vcoinFeeMultiplier: new BN(data.slice(152, 160), "le"),
-        totalSubsidizedTx: new BN(data.slice(168, 176), "le"),
-        totalVcoinCollected: new BN(data.slice(184, 192), "le"),
-        paused: data[192] !== 0,
+        pendingAuthority: new PublicKey(data.slice(40, 72)),
+        feePayer: new PublicKey(data.slice(72, 104)),
+        vcoinMint: new PublicKey(data.slice(104, 136)),
+        feeVault: new PublicKey(data.slice(136, 168)),
+        sscreProgram: new PublicKey(data.slice(168, 200)),
+        dailySubsidyBudget: new BN(data.slice(200, 208), "le"),
+        solFeePerTx: new BN(data.slice(208, 216), "le"),
+        vcoinFeeMultiplier: new BN(data.slice(216, 224), "le"),
+        sscreDeductionBps: data.readUInt16LE(224),
+        maxSubsidizedPerUser: data.readUInt32LE(226),
+        totalSubsidizedTx: new BN(data.slice(230, 238), "le"),
+        totalSolSpent: new BN(data.slice(238, 246), "le"),
+        totalVcoinCollected: new BN(data.slice(246, 254), "le"),
+        paused: data[254] !== 0,
+        currentDay: data.readUInt32LE(255),
+        daySpent: new BN(data.slice(259, 267), "le"),
+        maxSlippageBps: data.readUInt16LE(267),
       };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning null
+      console.warn("[ViWoSDK] gasless.getConfig failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -89,7 +126,9 @@ export class GaslessClient {
         isRevoked: data[114] !== 0,
         feeMethod: data[123] as FeeMethod,
       };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning null
+      console.warn("[ViWoSDK] gasless.getSessionKey failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -120,7 +159,9 @@ export class GaslessClient {
         sessionsCreated: data.readUInt32LE(72),
         activeSession: new PublicKey(data.slice(76, 108)),
       };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning null
+      console.warn("[ViWoSDK] gasless.getUserStats failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }

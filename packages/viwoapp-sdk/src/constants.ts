@@ -14,6 +14,16 @@ export const PROGRAM_IDS = {
   sscreProtocol: new PublicKey("6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"),
   vilinkProtocol: new PublicKey("CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7"),
   gaslessProtocol: new PublicKey("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"),
+  /**
+   * VCoin Token Mint Address (Token-2022)
+   * 
+   * NOTE: This is a placeholder. Override via ViWoClient config.programIds.vcoinMint
+   * after deploying your VCoin mint on devnet/mainnet.
+   * 
+   * Finding #2 Fix: SDK now filters token accounts by mint address to prevent
+   * summing balances from other Token-2022 tokens.
+   */
+  vcoinMint: new PublicKey("11111111111111111111111111111111"), // Placeholder - override in config
 };
 
 // ============ PDA Seeds ============

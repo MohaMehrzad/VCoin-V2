@@ -170,6 +170,9 @@ export class ViWoClient {
   
   /**
    * Get VCoin balance
+   * 
+   * Finding #2 Fix: Now filters by VCoin mint address instead of summing all Token-2022 accounts.
+   * Make sure to set programIds.vcoinMint in your ViWoClient config.
    */
   async getVCoinBalance(user?: PublicKey): Promise<BN> {
     const target = user || this.publicKey;
@@ -178,23 +181,24 @@ export class ViWoClient {
     }
     
     try {
+      // Finding #2 Fix: Filter by VCoin mint to avoid summing other Token-2022 tokens
       const tokenAccounts = await this.connection.connection.getTokenAccountsByOwner(
         target,
-        { programId: TOKEN_2022_PROGRAM_ID }
+        { mint: this.programIds.vcoinMint, programId: TOKEN_2022_PROGRAM_ID }
       );
       
-      // Find VCoin token account
-      // In production, filter by mint address
       let balance = new BN(0);
       for (const { account } of tokenAccounts.value) {
         const data = account.data;
-        // Parse balance from account data
+        // Parse balance from account data (offset 64-72 for amount in Token-2022)
         const amount = data.slice(64, 72);
         balance = balance.add(new BN(amount, "le"));
       }
       
       return balance;
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning 0
+      console.warn("[ViWoSDK] getVCoinBalance failed:", error instanceof Error ? error.message : error);
       return new BN(0);
     }
   }
@@ -211,7 +215,9 @@ export class ViWoClient {
     try {
       const stakeData = await this.staking.getUserStake(target);
       return stakeData?.vevcoinBalance || new BN(0);
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently returning 0
+      console.warn("[ViWoSDK] getVeVCoinBalance failed:", error instanceof Error ? error.message : error);
       return new BN(0);
     }
   }
@@ -233,7 +239,9 @@ export class ViWoClient {
       const blockTime = await this.connection.getBlockTime();
       
       return { connected, slot, blockTime };
-    } catch {
+    } catch (error) {
+      // Finding #9 Fix: Log errors instead of silently failing
+      console.warn("[ViWoSDK] healthCheck failed:", error instanceof Error ? error.message : error);
       return { connected: false, slot: null, blockTime: null };
     }
   }

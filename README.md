@@ -499,7 +499,14 @@ vcoin_workspace/
 | High | 10 | 10 | ✅ Complete |
 | Medium | 9 | 9 | ✅ Complete |
 | Low | 8 | 8 | ✅ Complete |
-| **Total** | **33** | **33** | **100%** |
+| **On-Chain Total** | **33** | **33** | **100%** |
+| **SDK Bug Fixes** | **4** | **4** | **✅ Complete** |
+
+**v2.8.4 SDK Bug Fixes:**
+- VCoin mint filter added to balance queries
+- ViLink batch nonce PDA (on-chain + SDK)
+- Gasless config byte offsets corrected
+- Error logging added (no more silent failures)
 
 ---
 
@@ -556,9 +563,9 @@ This infrastructure is designed for **ecosystem adoption**, not platform lock-in
 
 ---
 
-**Version:** 2.8.3  
+**Version:** 2.8.4  
 **Framework:** Anchor 0.32.0 | Solana Program 2.0 | Token-2022 6.0  
 **Architecture:** Modular (2025-2026 Best Practices)  
-**Network:** Solana Devnet (11/11 Upgraded v2.8.3)  
-**SDK:** @viwoapp/sdk v0.1.7  
+**Network:** Solana Devnet (11/11 Upgraded v2.8.4)  
+**SDK:** @viwoapp/sdk v0.1.8 (Bug Fixes)  
 **Token:** VCoin (VIWO) • Launch: Q1 2026

@@ -175,8 +175,13 @@ export enum ActionType {
   Vote = 7,
 }
 
+/**
+ * ViLinkConfig - Updated with H-02 pending authority field
+ */
 export interface ViLinkConfig extends PendingAuthorityFields {
   authority: PublicKey;
+  /** H-02: Pending authority for two-step transfer */
+  pendingAuthority?: PublicKey;
   vcoinMint: PublicKey;
   treasury: PublicKey;
   enabledActions: number;
@@ -184,7 +189,8 @@ export interface ViLinkConfig extends PendingAuthorityFields {
   totalActionsExecuted: BN;
   totalTipVolume: BN;
   paused: boolean;
-  platformFeeBps: number; // M-02: Bounded 10-1000 bps (0.1%-10%)
+  /** M-02: Platform fee in basis points, bounded 10-1000 (0.1%-10%) */
+  platformFeeBps: number;
 }
 
 export interface ViLinkAction {
@@ -217,7 +223,7 @@ export interface CreateActionParams {
   nonce?: BN;
 }
 
-/** M-04: User action statistics with nonce tracking */
+/** M-04 + Finding #5: User action statistics with nonce tracking */
 export interface UserActionStatsExtended {
   user: PublicKey;
   actionsCreated: BN;
@@ -232,6 +238,8 @@ export interface UserActionStatsExtended {
   lastActionAt: BN;
   /** M-04: Next nonce to use when creating an action */
   actionNonce: BN;
+  /** Finding #5: Next nonce to use when creating a batch (prevents timestamp collisions) */
+  batchNonce: BN;
 }
 
 // ============ Gasless Types ============
@@ -242,17 +250,40 @@ export enum FeeMethod {
   SSCREDeduction = 2,
 }
 
+/**
+ * GaslessConfig - Finding #8 Fix
+ * 
+ * Updated to include all fields from on-chain GaslessConfig struct.
+ * Previous version was missing fields added after H-02 security fix.
+ */
 export interface GaslessConfig extends PendingAuthorityFields {
   authority: PublicKey;
+  /** H-02: Pending authority for two-step transfer */
+  pendingAuthority?: PublicKey;
   feePayer: PublicKey;
   vcoinMint: PublicKey;
+  /** Fee vault for VCoin fee collection */
+  feeVault?: PublicKey;
+  /** SSCRE program for reward deduction integration */
+  sscreProgram?: PublicKey;
   dailySubsidyBudget: BN;
   solFeePerTx: BN;
   vcoinFeeMultiplier: BN;
+  /** SSCRE deduction rate in basis points */
+  sscreDeductionBps?: number;
+  /** Maximum subsidized transactions per user per day */
+  maxSubsidizedPerUser?: number;
   totalSubsidizedTx: BN;
+  /** Total SOL spent on subsidies */
+  totalSolSpent?: BN;
   totalVcoinCollected: BN;
   paused: boolean;
-  maxSlippageBps?: number; // L-03: Slippage protection (default 500 = 5%, optional for backwards compat)
+  /** Current day number for daily budget reset */
+  currentDay?: number;
+  /** Today's spent budget */
+  daySpent?: BN;
+  /** L-03: Maximum fee slippage in basis points (default 500 = 5%) */
+  maxSlippageBps?: number;
 }
 
 export interface SessionKey {

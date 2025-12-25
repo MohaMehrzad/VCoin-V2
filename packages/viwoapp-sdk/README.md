@@ -5,7 +5,40 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 0.1.7 (Bug Fixes)
+**Version:** 0.1.8 (Bug Fixes)
+
+## What's New in v0.1.8 (Bug Fixes)
+
+This release addresses 4 SDK issues identified during code review:
+
+| Finding | Severity | Fix |
+|---------|----------|-----|
+| #2 | Medium | VCoin balance now correctly filters by mint address |
+| #5 | Medium | ViLink batch now uses deterministic nonce PDA |
+| #8 | High | Gasless config byte offsets corrected |
+| #9 | Low | Error handling improved with console warnings |
+
+### Changes
+
+- **VCoin Mint Filter (Finding #2):** `getVCoinBalance()` now filters by VCoin mint address instead of summing all Token-2022 accounts. Set `programIds.vcoinMint` in your config.
+- **Gasless Config Fix (Finding #8):** All byte offsets in `gasless.getConfig()` corrected to match on-chain struct after H-02 security fix added `pending_authority`.
+- **ViLink Config Fix:** ViLink config byte offsets also corrected for H-02 compatibility.
+- **Error Logging (Finding #9):** Silent `catch { return null }` blocks replaced with `console.warn('[ViWoSDK] ...')` for easier debugging.
+- **Batch Nonce (Finding #5):** Added `batchNonce` to `UserActionStatsExtended` for deterministic batch PDA derivation.
+- **New Fields:** `GaslessConfig` now includes `feeVault`, `sscreProgram`, `sscreDeductionBps`, `maxSubsidizedPerUser`, `totalSolSpent`, `currentDay`, `daySpent`.
+
+### Configuration Update Required
+
+```typescript
+const client = new ViWoClient({
+  connection: { endpoint: "https://api.devnet.solana.com" },
+  wallet: walletAdapter,
+  programIds: {
+    // IMPORTANT: Set your VCoin mint address for accurate balance queries
+    vcoinMint: new PublicKey("YOUR_VCOIN_MINT_ADDRESS"),
+  },
+});
+```
 
 ## What's New in v0.1.7
 
@@ -17,7 +50,7 @@ TypeScript SDK for VCoin Protocol Integration on Solana.
 - **Updated Methods:** `getAction()`, `isActionValid()`, `buildExecuteTipAction()` now use nonce
 - **Deprecated:** `getActionByTimestamp()` - use `getAction()` with nonce instead
 
-### Breaking Change
+### Breaking Change (v0.1.7)
 
 ViLink action PDA derivation changed from timestamp to nonce:
 ```typescript
