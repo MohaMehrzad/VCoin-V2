@@ -41,15 +41,13 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
       
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: VCoinContract/vcoin_workspace
       
       - name: Install Solana
         run: |
@@ -63,17 +61,14 @@ jobs:
           avm use ${{ env.ANCHOR_VERSION }}
       
       - name: Build Programs
-        working-directory: VCoinContract/vcoin_workspace
         run: |
           anchor build
       
       - name: Check Formatting
-        working-directory: VCoinContract/vcoin_workspace
         run: |
           cargo fmt --all -- --check
       
       - name: Clippy Lints
-        working-directory: VCoinContract/vcoin_workspace
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
       
@@ -81,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: program-builds
-          path: VCoinContract/vcoin_workspace/target/deploy/*.so
+          path: target/deploy/*.so
           retention-days: 7
 
   # ============================================================================
@@ -96,39 +91,31 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
       
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: VCoinContract/vcoin_workspace
       
       - name: Install Solana
         run: |
           sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       
-      - name: Run Unit Tests
-        working-directory: VCoinContract/vcoin_workspace
+      - name: Install Anchor
         run: |
-          cargo test -p tests-rust --test unit_tests -- --nocapture
+          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
       
-      - name: Run Property Tests
-        working-directory: VCoinContract/vcoin_workspace
+      - name: Run Workspace Tests
         run: |
-          cargo test -p tests-rust --test property_tests -- --nocapture
+          cargo test --workspace --lib -- --nocapture
       
-      - name: Run Security Tests
-        working-directory: VCoinContract/vcoin_workspace
+      - name: Run Program Tests
         run: |
-          cargo test -p tests-rust --test security_tests -- --nocapture
-      
-      - name: Run Invariant Tests
-        working-directory: VCoinContract/vcoin_workspace
-        run: |
-          cargo test -p tests-rust --test invariant_tests -- --nocapture
+          cargo test --workspace --test "*" -- --nocapture
 
   # ============================================================================
   # TypeScript Integration Tests
@@ -146,10 +133,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: yarn
-          cache-dependency-path: VCoinContract/vcoin_workspace/yarn.lock
       
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
       
@@ -165,15 +151,12 @@ jobs:
           avm use ${{ env.ANCHOR_VERSION }}
       
       - name: Install Dependencies
-        working-directory: VCoinContract/vcoin_workspace
         run: yarn install
       
       - name: Build Programs
-        working-directory: VCoinContract/vcoin_workspace
         run: anchor build
       
       - name: Run Anchor Tests
-        working-directory: VCoinContract/vcoin_workspace
         run: |
           solana-keygen new --no-bip39-passphrase --silent
           anchor test
@@ -190,39 +173,37 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
           components: llvm-tools-preview
       
-      - name: Install grcov
-        run: cargo install grcov
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
       
       - name: Install Solana
         run: |
           sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       
-      - name: Run Tests with Coverage
-        working-directory: VCoinContract/vcoin_workspace
-        env:
-          CARGO_INCREMENTAL: 0
-          RUSTFLAGS: "-Cinstrument-coverage"
-          LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+      - name: Install Anchor
         run: |
-          cargo +nightly test -p tests-rust
+          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
       
-      - name: Generate Coverage Report
-        working-directory: VCoinContract/vcoin_workspace
+      - name: Run Tests with Coverage
         run: |
-          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o coverage.lcov
+          cargo tarpaulin --workspace --timeout 300 --out Lcov --output-dir ./coverage
+        continue-on-error: true
       
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: VCoinContract/vcoin_workspace/coverage.lcov
+          files: ./coverage/lcov.info
           fail_ci_if_error: false
           verbose: true
+        continue-on-error: true
 
   # ============================================================================
   # Security Audit
@@ -235,7 +216,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
       
@@ -243,7 +224,6 @@ jobs:
         run: cargo install cargo-audit
       
       - name: Run Security Audit
-        working-directory: VCoinContract/vcoin_workspace
         run: cargo audit
         continue-on-error: true
       
@@ -251,7 +231,6 @@ jobs:
         run: cargo install cargo-deny
       
       - name: Check Dependencies
-        working-directory: VCoinContract/vcoin_workspace
         run: cargo deny check
         continue-on-error: true
 
