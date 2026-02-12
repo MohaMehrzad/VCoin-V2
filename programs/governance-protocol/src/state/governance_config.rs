@@ -24,6 +24,8 @@ pub struct GovernanceConfig {
     pub proposal_count: u64,
     /// Treasury balance (200M VCoin)
     pub treasury_balance: u64,
+    /// Timestamp when pending authority was proposed (H-02/C-03: timelock enforcement)
+    pub pending_authority_activated_at: i64,
     /// Whether governance is paused
     pub paused: bool,
     /// PDA bump
@@ -42,6 +44,7 @@ impl GovernanceConfig {
         8 +  // timelock_delay
         8 +  // proposal_count
         8 +  // treasury_balance
+        8 +  // pending_authority_activated_at (H-02)
         1 +  // paused
         1;   // bump
 }

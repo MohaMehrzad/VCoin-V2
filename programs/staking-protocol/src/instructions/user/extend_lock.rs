@@ -22,7 +22,9 @@ pub fn handler(ctx: Context<ExtendLock>, new_lock_duration: i64) -> Result<()> {
     // Calculate new lock end
     let new_lock_end = now.checked_add(new_lock_duration).ok_or(StakingError::Overflow)?;
     
-    // New lock end must be after current lock end
+    // M-04: Despite the name "extend_lock", this check (`>` not `>=`) prevents
+    // both shortening AND no-op extensions. The new lock_end must be strictly
+    // greater than the current lock_end.
     require!(new_lock_end > user_stake.lock_end, StakingError::CannotShortenLock);
     
     // Calculate new veVCoin

@@ -200,8 +200,21 @@ export const GOVERNANCE_CONSTANTS = {
   votingDuration: 7 * 24 * 3600, // 7 days
   executionDelay: 2 * 24 * 3600, // 2 days
   vetoWindow: 24 * 3600, // 1 day
-  quorumBps: 400, // 4%
-  zkVotingEnabled: false, // C-01: Disabled until proper ZK infrastructure
+  quorumBps: 400, // 4% (C-03: abstains no longer count toward quorum)
+  /** Authority transfer timelock (H-02) */
+  authorityTransferTimelock: 24 * 3600, // 24 hours
+  /** ZK private voting constants */
+  zk: {
+    /** Vote validity proof size (3 OR proofs + 1 sum proof) */
+    voteProofSize: 352,
+    /** ElGamal ciphertext size (R || C) */
+    ciphertextSize: 64,
+    /** Max committee members */
+    maxCommitteeSize: 5,
+    /** Account sizes */
+    privateVotingConfigSize: 680,
+    decryptionShareSize: 242,
+  },
 };
 
 // ============ Security Constants (Phase 1-4) ============
@@ -235,6 +248,20 @@ export const SECURITY_CONSTANTS = {
   merkleProofMaxSize: 32, // H-NEW-02: Max proof levels (supports 4B+ users)
   maxEpochBitmap: 1023, // H-NEW-04: Max epoch with bitmap storage (85+ years)
   votingPowerVerifiedOnChain: true, // C-NEW-01: Params read from chain, not passed
+
+  // Audit remediation additions
+  /** H-AUDIT-12: Maximum concurrent sessions per user */
+  maxSessionsPerUser: 5,
+  /** C-AUDIT-15: Maximum day delta for daily budget reset (clock skew protection) */
+  maxDayDelta: 2,
+  /** H-AUDIT-09: Maximum daily activity score for transfer hook */
+  maxDailyActivityScore: 5000,
+  /** M-AUDIT-10: Wash flag decay period (7 days) */
+  washFlagDecayPeriod: 7 * 24 * 3600,
+  /** M-18: Maximum vouch age before expiry (1 year) */
+  maxVouchAge: 365 * 24 * 3600,
+  /** C-AUDIT-11: Valid content energy tiers (1-4) */
+  maxContentTier: 4,
 };
 
 // ============ URI Validation Constants (L-04) ============

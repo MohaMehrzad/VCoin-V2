@@ -41,4 +41,12 @@ pub enum ContentError {
     
     #[msg("Invalid authority address (zero)")]
     InvalidAuthority,
+
+    // C-AUDIT-10: Engagement count must be monotonically increasing
+    #[msg("Engagement count cannot decrease")]
+    EngagementCannotDecrease,
+
+    // C-AUDIT-11: Tier must be within valid range (1-4)
+    #[msg("Invalid tier: must be between 1 and 4")]
+    InvalidTier,
 }

@@ -94,5 +94,44 @@ describe("Staking Protocol - Bankrun Tests", () => {
     expect(getDiscount(0)).to.equal(0);
     expect(getDiscount(4)).to.equal(5000);
   });
+
+  it("should reject no-op tier updates (M-05 TierUnchanged)", () => {
+    const getTier = (amount: number) => {
+      if (amount >= PLATINUM_THRESHOLD) return 4;
+      if (amount >= GOLD_THRESHOLD) return 3;
+      if (amount >= SILVER_THRESHOLD) return 2;
+      if (amount >= BRONZE_THRESHOLD) return 1;
+      return 0;
+    };
+
+    // Increase stake within same tier (Bronze: 1000 -> 3000)
+    const currentTier = getTier(BRONZE_THRESHOLD);
+    const newTier = getTier(3_000 * ONE_VCOIN);
+
+    // Both are Bronze (tier 1), so update_tier should be rejected
+    expect(currentTier).to.equal(newTier);
+
+    // This would trigger TierUnchanged error on-chain
+    const wouldChangeTier = currentTier !== newTier;
+    expect(wouldChangeTier).to.be.false;
+  });
+
+  it("should allow tier updates that actually change tier", () => {
+    const getTier = (amount: number) => {
+      if (amount >= PLATINUM_THRESHOLD) return 4;
+      if (amount >= GOLD_THRESHOLD) return 3;
+      if (amount >= SILVER_THRESHOLD) return 2;
+      if (amount >= BRONZE_THRESHOLD) return 1;
+      return 0;
+    };
+
+    // Increase from Bronze to Silver
+    const currentTier = getTier(BRONZE_THRESHOLD);
+    const newTier = getTier(SILVER_THRESHOLD);
+
+    expect(currentTier).to.equal(1); // Bronze
+    expect(newTier).to.equal(2);     // Silver
+    expect(currentTier).to.not.equal(newTier);
+  });
 });
 

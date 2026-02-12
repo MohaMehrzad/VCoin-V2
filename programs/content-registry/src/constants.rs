@@ -29,11 +29,20 @@ pub const MAX_ENERGY_GOLD: u16 = 1200;
 pub const MAX_ENERGY_PLATINUM: u16 = 2000;
 
 /// Engagement thresholds for refunds
+///
+/// M-AUDIT-23: These thresholds are compile-time constants. Changing them requires
+/// a program upgrade and redeployment. They are intentionally hardcoded rather than
+/// stored in on-chain state to avoid governance overhead for values that are part of
+/// the core economic model. If dynamic tuning is needed in the future, consider
+/// migrating them to a governance-controlled on-chain config account.
 pub const REFUND_THRESHOLD_10: u32 = 10;    // 25% refund
 pub const REFUND_THRESHOLD_50: u32 = 50;    // 50% refund
 pub const REFUND_THRESHOLD_100: u32 = 100;  // 100% refund
 pub const REFUND_THRESHOLD_1000: u32 = 1000; // 150% refund (viral)
 
 /// Timing
+///
+/// M-AUDIT-23: These timing constants are also compile-time values requiring a
+/// program upgrade to change.
 pub const ENGAGEMENT_CHECK_DELAY: i64 = 24 * 60 * 60; // 24 hours
 pub const FREE_EDIT_WINDOW: i64 = 60 * 60; // 1 hour

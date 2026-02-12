@@ -24,8 +24,11 @@ pub fn handler(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> 
     );
     
     config.pending_authority = new_authority;
-    
+
     let clock = Clock::get()?;
+
+    // C-01: Record activation timestamp for timelock enforcement
+    config.pending_authority_activated_at = clock.unix_timestamp;
     
     // L-01: Emit authority transfer proposed event
     emit!(AuthorityTransferProposed {

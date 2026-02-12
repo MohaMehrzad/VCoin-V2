@@ -221,9 +221,18 @@ export class ViLinkClient {
   
   /**
    * Calculate platform fee for tip
+   *
+   * C-06: Uses ceiling division to prevent fee rounding to zero on small amounts.
+   * Formula: fee = ceil(amount * feeBps / 10000)
    */
   calculateFee(amount: BN): { fee: BN; net: BN } {
-    const fee = amount.muln(VILINK_CONSTANTS.platformFeeBps).divn(10000);
+    // C-06: Ceiling division: (amount * bps + 9999) / 10000
+    const numerator = amount.muln(VILINK_CONSTANTS.platformFeeBps).addn(9999);
+    let fee = numerator.divn(10000);
+    // Cap fee at amount to prevent overflow
+    if (fee.gt(amount)) {
+      fee = amount;
+    }
     return {
       fee,
       net: amount.sub(fee),
@@ -352,6 +361,13 @@ export class ViLinkClient {
    * Build execute tip action transaction
    * @param creator - The action creator's public key
    * @param nonce - M-04: The action nonce (NOT timestamp)
+   *
+   * H-05: The on-chain handler validates that the executor's token account has
+   * no active delegation (delegate is None or delegated_amount is 0).
+   * This prevents delegated tokens from being spent without explicit approval.
+   *
+   * C-06: Platform fee uses ceiling division to prevent zero-fee exploitation on
+   * small amounts.
    */
   async buildExecuteTipAction(
     creator: PublicKey,
@@ -360,22 +376,23 @@ export class ViLinkClient {
     if (!this.client.publicKey) {
       throw new Error("Wallet not connected");
     }
-    
+
     const { valid, reason } = await this.isActionValid(creator, nonce);
     if (!valid) {
       throw new Error(reason);
     }
-    
+
     const action = await this.getAction(creator, nonce);
     if (action?.creator.equals(this.client.publicKey)) {
       throw new Error("Cannot execute own action");
     }
-    
+
     const tx = new Transaction();
-    
+
     // Add execute tip action instruction
+    // Note: H-05 requires executor token account to have no active delegation
     // tx.add(await this.program.methods.executeTipAction()...);
-    
+
     return tx;
   }
 

@@ -35,6 +35,9 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
     
     // Calculate new veVCoin (0 if fully unstaking)
     // M-NEW-01 Fix: Multiply before divide to minimize precision loss
+    // H-04: Integer division truncation means users may lose fractional veVCoin
+    // on partial unstakes. The loss is at most 1 unit per unstake operation.
+    // For higher precision, consider basis-point scaling for veVCoin tracking.
     let new_vevcoin = if new_staked_amount > 0 {
         // Maintain proportional veVCoin for remaining stake
         // Formula: new_vevcoin = ve_vcoin_amount * new_staked_amount / staked_amount

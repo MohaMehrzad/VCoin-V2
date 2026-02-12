@@ -23,6 +23,8 @@ pub fn handler(
     require!(is_trusted, IdentityError::UntrustedAttester);
     
     let clock = Clock::get()?;
+    require!(expires_at > clock.unix_timestamp, IdentityError::SASAttestationExpired);
+
     let sas = &mut ctx.accounts.sas_attestation;
     
     sas.user = ctx.accounts.user.key();

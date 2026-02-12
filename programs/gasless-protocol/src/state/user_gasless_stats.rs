@@ -17,6 +17,8 @@ pub struct UserGaslessStats {
     pub total_sscre_deductions: u64,
     /// Sessions created
     pub sessions_created: u32,
+    /// H-AUDIT-12: Number of currently active sessions
+    pub active_sessions: u8,
     /// Active session (if any)
     pub active_session: Pubkey,
     /// Current day for daily limits
@@ -39,6 +41,7 @@ impl UserGaslessStats {
         8 +  // total_vcoin_fees
         8 +  // total_sscre_deductions
         4 +  // sessions_created
+        1 +  // active_sessions (H-AUDIT-12)
         32 + // active_session
         4 +  // current_day
         4 +  // today_subsidized

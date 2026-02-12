@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_vote_record_size() {
-        let expected = 8 + 32 + 32 + 8 + 1 + 8 + 1 + 32 + 32 + 128 + 1 + 1;
+        let expected = 8 + 32 + 32 + 8 + 1 + 8 + 1 + 64 + 64 + 64 + 1 + 1;
         assert_eq!(VoteRecord::LEN, expected, "VoteRecord size mismatch");
     }
 

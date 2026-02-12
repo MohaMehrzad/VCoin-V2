@@ -16,6 +16,10 @@ pub fn handler(ctx: Context<UpdateTier>) -> Result<()> {
     
     let new_tier = StakingTier::from_amount(user_stake.staked_amount);
     let old_tier = user_stake.tier;
+
+    // M-05: Prevent no-op tier updates
+    require!(new_tier.as_u8() != old_tier, StakingError::TierUnchanged);
+
     let old_vevcoin = user_stake.ve_vcoin_amount;
     
     // Recalculate veVCoin with new tier

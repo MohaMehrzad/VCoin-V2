@@ -27,6 +27,8 @@ pub fn handler(
         clock.unix_timestamp >= proposal.start_time,
         GovernanceError::VotingNotStarted
     );
+    // L-08: Inclusive boundary (<=) is intentional - voters can cast on the last
+    // second of the voting period. This is consistent with start_time being inclusive.
     require!(
         clock.unix_timestamp <= proposal.end_time,
         GovernanceError::VotingEnded
@@ -60,8 +62,11 @@ pub fn handler(
         GovernanceError::InvalidUserScorePDA
     );
     
-    // Read veVCoin balance and tier from UserStake account data
-    // UserStake layout: discriminator(8) + owner(32) + staked_amount(8) + lock_duration(8) 
+    // M-02: Read veVCoin balance and tier from UserStake account data
+    // IMPORTANT: These byte offsets are tightly coupled to staking-protocol's UserStake struct.
+    // If UserStake fields are reordered or new fields inserted before these offsets,
+    // this code MUST be updated. Verified against staking-protocol v2.8.4.
+    // UserStake layout: discriminator(8) + owner(32) + staked_amount(8) + lock_duration(8)
     //                   + lock_end(8) + stake_start(8) + tier(1) + ve_vcoin_amount(8) + bump(1)
     let (vevcoin_balance, tier) = if ctx.accounts.user_stake.data_is_empty() {
         // No stake account = 0 veVCoin, tier 0
@@ -79,7 +84,10 @@ pub fn handler(
         (ve_vcoin_amount, tier)
     };
     
-    // Read 5A composite score from UserScore account data
+    // M-02: Read 5A composite score from UserScore account data
+    // IMPORTANT: These byte offsets are tightly coupled to five-a-protocol's UserScore struct.
+    // If UserScore fields are reordered or new fields inserted before these offsets,
+    // this code MUST be updated. Verified against five-a-protocol v2.8.4.
     // UserScore layout: discriminator(8) + user(32) + authenticity(2) + accuracy(2) + agility(2)
     //                   + activity(2) + approved(2) + composite_score(2) + ...
     let five_a_score = if ctx.accounts.user_score.data_is_empty() {
@@ -97,8 +105,10 @@ pub fn handler(
     
     // M-07 Security Fix: Validate delegation expiry if voting with delegated power
     // H-NEW-03: Also validate that veVCoin balance doesn't exceed delegated amount
+    // H-19: Design note - expires_at == 0 means permanent delegation. This is an
+    // intentional design choice for long-term governance delegates, not a bug.
     if let Some(delegation) = &ctx.accounts.delegation {
-        // Check that delegation hasn't expired (0 = never expires)
+        // Check that delegation hasn't expired (0 = permanent delegation by design)
         if delegation.expires_at > 0 {
             require!(
                 clock.unix_timestamp < delegation.expires_at,

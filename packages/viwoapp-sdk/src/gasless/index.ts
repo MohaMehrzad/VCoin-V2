@@ -135,21 +135,38 @@ export class GaslessClient {
   
   /**
    * Get user gasless statistics
+   *
+   * H-AUDIT-12: Now includes active_sessions field for per-user session limit tracking.
+   * The protocol enforces a maximum of 5 concurrent active sessions per user.
    */
   async getUserStats(user?: PublicKey): Promise<UserGaslessStats | null> {
     const target = user || this.client.publicKey;
     if (!target) {
       throw new Error("No user specified and wallet not connected");
     }
-    
+
     try {
       const statsPda = this.client.pdas.getUserGaslessStats(target);
       const accountInfo = await this.client.connection.connection.getAccountInfo(statsPda);
-      
+
       if (!accountInfo) {
         return null;
       }
-      
+
+      // Byte offsets matching on-chain UserGaslessStats struct:
+      // Offset 8:   user (32)
+      // Offset 40:  total_gasless_tx (8)
+      // Offset 48:  total_subsidized (8)
+      // Offset 56:  total_vcoin_fees (8)
+      // Offset 64:  total_sscre_deductions (8)
+      // Offset 72:  sessions_created (4)
+      // Offset 76:  active_sessions (1) — H-AUDIT-12
+      // Offset 77:  active_session (32)
+      // Offset 109: current_day (4)
+      // Offset 113: today_subsidized (4)
+      // Offset 117: first_gasless_at (8)
+      // Offset 125: last_gasless_at (8)
+      // Offset 133: bump (1)
       const data = accountInfo.data;
       return {
         user: new PublicKey(data.slice(8, 40)),
@@ -157,7 +174,8 @@ export class GaslessClient {
         totalSubsidized: new BN(data.slice(48, 56), "le"),
         totalVcoinFees: new BN(data.slice(56, 64), "le"),
         sessionsCreated: data.readUInt32LE(72),
-        activeSession: new PublicKey(data.slice(76, 108)),
+        activeSessions: data[76],
+        activeSession: new PublicKey(data.slice(77, 109)),
       };
     } catch (error) {
       // Finding #9 Fix: Log errors instead of silently returning null
@@ -332,20 +350,29 @@ export class GaslessClient {
   
   /**
    * Build create session key transaction
+   *
+   * H-AUDIT-12: The protocol enforces a maximum of 5 concurrent active sessions per user.
+   * Creating a session when the limit is reached will fail with MaxSessionsReached error.
    */
   async buildCreateSessionTransaction(params: CreateSessionParams): Promise<Transaction> {
     if (!this.client.publicKey) {
       throw new Error("Wallet not connected");
     }
-    
+
     // Validate session pubkey
     if (!params.sessionPubkey) {
       throw new Error("Session public key required");
     }
-    
+
     // Validate scope
     if (!params.scope || params.scope === 0) {
       throw new Error("At least one scope required");
+    }
+
+    // H-AUDIT-12: Check active session limit before creating
+    const stats = await this.getUserStats();
+    if (stats && stats.activeSessions >= 5) {
+      throw new Error("Maximum active sessions reached (5). Revoke an existing session first.");
     }
     
     // Apply defaults

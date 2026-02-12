@@ -42,6 +42,9 @@ pub mod sscre_protocol {
     ) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
         
+        // L-03: Validate fee_recipient is not zero address
+        require!(fee_recipient != Pubkey::default(), SSCREError::InvalidAddress);
+
         config.authority = ctx.accounts.authority.key();
         config.vcoin_mint = ctx.accounts.vcoin_mint.key();
         config.pool_vault = ctx.accounts.pool_vault.key();
@@ -111,7 +114,12 @@ pub mod sscre_protocol {
         let config = &mut ctx.accounts.pool_config;
         
         require!(config.oracle_count < 5, SSCREError::Overflow);
-        
+
+        // C-12: Check for duplicate oracle registration
+        for i in 0..config.oracle_count as usize {
+            require!(config.oracles[i] != oracle, SSCREError::OracleAlreadyRegistered);
+        }
+
         let idx = config.oracle_count as usize;
         config.oracles[idx] = oracle;
         config.oracle_count += 1;
@@ -128,6 +136,8 @@ pub mod sscre_protocol {
         
         require!(!config.paused, SSCREError::ProtocolPaused);
         require!(!cb.is_active, SSCREError::CircuitBreakerEpochMax);
+        // M-09: Prevent zero-allocation epochs
+        require!(total_allocation > 0, SSCREError::ZeroAllocation);
         require!(total_allocation <= MAX_EPOCH_EMISSION, SSCREError::CircuitBreakerEpochMax);
         require!(total_allocation <= config.remaining_reserves, SSCREError::InsufficientPoolBalance);
         
@@ -174,7 +184,10 @@ pub mod sscre_protocol {
         
         require!(!config.paused, SSCREError::ProtocolPaused);
         require!(!epoch_dist.is_finalized, SSCREError::EpochAlreadyExists);
-        
+
+        // M-08: Validate 5A score bounds
+        require!(avg_five_a_score <= 10000, SSCREError::InvalidScore);
+
         let oracle_key = ctx.accounts.oracle.key();
         let is_oracle = config.oracles[..config.oracle_count as usize].contains(&oracle_key);
         require!(is_oracle, SSCREError::OracleNotRegistered);
@@ -226,7 +239,9 @@ pub mod sscre_protocol {
         let leaf = compute_leaf(&user_key, amount, epoch_dist.epoch);
         require!(verify_merkle_proof(&merkle_proof, &epoch_dist.merkle_root, &leaf), SSCREError::InvalidMerkleProof);
         
-        let fee = (amount as u128 * GASLESS_FEE_BPS as u128 / 10000) as u64;
+        // C-05: Use ceiling division to prevent fee rounding to zero on small amounts
+        let fee = ((amount as u128 * GASLESS_FEE_BPS as u128 + 9999) / 10000) as u64;
+        let fee = fee.min(amount);
         let net_amount = amount.saturating_sub(fee);
         
         let pool_bump = config.bump;
@@ -365,7 +380,13 @@ pub mod sscre_protocol {
         );
         
         config.pending_authority = new_authority;
-        
+
+        // L-01: Emit authority transfer proposed event
+        emit!(AuthorityTransferProposed {
+            current_authority: config.authority,
+            proposed_authority: new_authority,
+        });
+
         msg!("Authority transfer proposed to: {}", new_authority);
         Ok(())
     }
@@ -379,7 +400,13 @@ pub mod sscre_protocol {
         
         config.authority = new_authority;
         config.pending_authority = Pubkey::default();
-        
+
+        // L-01: Emit authority transfer accepted event
+        emit!(AuthorityTransferAccepted {
+            old_authority,
+            new_authority,
+        });
+
         msg!("Authority transferred from {} to {}", old_authority, new_authority);
         Ok(())
     }
@@ -395,7 +422,13 @@ pub mod sscre_protocol {
         
         let cancelled = config.pending_authority;
         config.pending_authority = Pubkey::default();
-        
+
+        // L-01: Emit authority transfer cancelled event
+        emit!(AuthorityTransferCancelled {
+            authority: config.authority,
+            cancelled_pending: cancelled,
+        });
+
         msg!("Authority transfer to {} cancelled", cancelled);
         Ok(())
     }

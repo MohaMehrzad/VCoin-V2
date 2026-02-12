@@ -38,9 +38,10 @@ pub fn handler(
     
     let clock = Clock::get()?;
     
-    // L-07: Rate limiting check - prevent too frequent updates for same user
+    // H-18: Rate limiting applies to all users except truly uninitialized accounts.
+    // For first-time users (last_updated == 0), skip interval check but still track.
     let user_score = &ctx.accounts.user_score;
-    if user_score.last_updated > 0 && user_score.user != Pubkey::default() {
+    if user_score.last_updated > 0 {
         require!(
             clock.unix_timestamp >= user_score.last_updated + MIN_SCORE_UPDATE_INTERVAL,
             FiveAError::ScoreUpdateTooFrequent
@@ -69,6 +70,8 @@ pub fn handler(
         pending_score.initiated_at = clock.unix_timestamp;
         pending_score.expires_at = clock.unix_timestamp + SCORE_UPDATE_EXPIRY;
         pending_score.is_applied = false;
+        // C-07: Store consensus requirement immutably at creation time
+        pending_score.required_consensus = required_consensus;
         pending_score.bump = ctx.bumps.pending_score;
         
         msg!("New pending score update initiated by oracle: {}", oracle_key);
@@ -96,8 +99,15 @@ pub fn handler(
     oracle_account.total_submissions = oracle_account.total_submissions.saturating_add(1);
     oracle_account.last_submission = clock.unix_timestamp;
     
-    // Check if consensus reached - apply score
-    if pending_score.confirmation_count >= required_consensus {
+    // C-07: Use the immutably stored consensus requirement, not the current config value
+    // This prevents an admin from lowering the consensus requirement mid-vote
+    if pending_score.confirmation_count >= pending_score.required_consensus {
+        // H-21: Re-check expiry at application time to prevent stale scores
+        require!(
+            clock.unix_timestamp <= pending_score.expires_at,
+            FiveAError::ScoreUpdateExpired
+        );
+
         let user_score = &mut ctx.accounts.user_score;
         
         // Initialize user score if new

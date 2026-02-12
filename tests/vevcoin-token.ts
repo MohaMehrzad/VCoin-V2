@@ -221,5 +221,42 @@ describe("vevcoin-token", () => {
 
     console.log("Staking protocol update working correctly");
   });
+
+  it("Proposes authority transfer (H-02 two-step)", async () => {
+    const newAuthority = Keypair.generate();
+
+    // Step 1: Propose new authority
+    await program.methods
+      .proposeAuthority(newAuthority.publicKey)
+      .accounts({
+        authority: authority.publicKey,
+        config: configPda,
+      })
+      .signers([authority])
+      .rpc();
+
+    let config = await program.account.veVCoinConfig.fetch(configPda);
+    expect(config.pendingAuthority.toBase58()).to.equal(newAuthority.publicKey.toBase58());
+    expect(config.authority.toBase58()).to.equal(authority.publicKey.toBase58());
+    // H-02: pendingAuthorityActivatedAt should be set for timelock
+    expect(config.pendingAuthorityActivatedAt.toNumber()).to.be.greaterThan(0);
+
+    console.log("veVCoin authority transfer proposed (H-02)");
+
+    // Cancel to keep authority for other tests
+    await program.methods
+      .cancelAuthorityTransfer()
+      .accounts({
+        authority: authority.publicKey,
+        config: configPda,
+      })
+      .signers([authority])
+      .rpc();
+
+    config = await program.account.veVCoinConfig.fetch(configPda);
+    expect(config.pendingAuthority.toBase58()).to.equal(PublicKey.default.toBase58());
+
+    console.log("veVCoin authority transfer cancelled");
+  });
 });
 

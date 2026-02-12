@@ -19,7 +19,17 @@ pub fn handler(
     let user_stats = &mut ctx.accounts.user_stats;
     
     require!(!config.paused, GaslessError::ProtocolPaused);
-    
+
+    // H-AUDIT-11: Validate scope is within valid range
+    require!(scope <= SCOPE_ALL, GaslessError::InvalidScope);
+    require!(scope > 0, GaslessError::InvalidScope);
+
+    // H-AUDIT-12: Enforce per-user session count limit
+    require!(
+        user_stats.active_sessions < MAX_SESSIONS_PER_USER,
+        GaslessError::MaxSessionsReached
+    );
+
     let clock = Clock::get()?;
     
     // Limit session duration
@@ -68,6 +78,7 @@ pub fn handler(
     // Update user stats
     user_stats.user = ctx.accounts.user.key();
     user_stats.sessions_created = user_stats.sessions_created.saturating_add(1);
+    user_stats.active_sessions = user_stats.active_sessions.saturating_add(1);
     user_stats.active_session = session_pubkey;
     user_stats.bump = ctx.bumps.user_stats;
     

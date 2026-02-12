@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::contexts::Initialize;
+use crate::errors::GaslessError;
 use crate::events::GaslessConfigInitialized;
 use crate::state::GaslessConfig;
 
@@ -9,8 +10,11 @@ pub fn handler(
     fee_payer: Pubkey,
     daily_budget: u64,
 ) -> Result<()> {
+    // M-AUDIT-22: Validate fee_payer is not the default/zero pubkey
+    require!(fee_payer != Pubkey::default(), GaslessError::InvalidAddress);
+
     let config = &mut ctx.accounts.config;
-    
+
     config.authority = ctx.accounts.authority.key();
     config.fee_payer = fee_payer;
     config.vcoin_mint = ctx.accounts.vcoin_mint.key();

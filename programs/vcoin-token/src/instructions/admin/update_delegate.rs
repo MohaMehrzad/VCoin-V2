@@ -12,8 +12,14 @@ pub fn handler(ctx: Context<UpdateConfig>, new_delegate: Pubkey) -> Result<()> {
         VCoinError::Unauthorized
     );
     
+    // M-13: Validate delegate address is not zero
+    require!(
+        new_delegate != Pubkey::default(),
+        VCoinError::InvalidAuthority
+    );
+
     config.permanent_delegate = new_delegate;
-    
+
     msg!("Permanent delegate updated to: {}", new_delegate);
     
     Ok(())

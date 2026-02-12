@@ -21,11 +21,11 @@ pub fn handler(
     require!(is_oracle, FiveAError::NotOracle);
     
     let clock = Clock::get()?;
-    
-    // Increment epoch
+
+    // M-19: Increment epoch AFTER all validation has passed (moved from before snapshot creation)
     config.current_epoch = config.current_epoch.saturating_add(1);
     config.last_snapshot_time = clock.unix_timestamp;
-    
+
     // Create snapshot
     let snapshot = &mut ctx.accounts.snapshot;
     snapshot.epoch = config.current_epoch;

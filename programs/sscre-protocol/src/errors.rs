@@ -61,5 +61,21 @@ pub enum SSCREError {
     // H-NEW-02: Merkle proof size limit
     #[msg("Merkle proof too large - maximum 32 levels (supports 4 billion users)")]
     MerkleProofTooLarge,
+
+    // C-12: Duplicate oracle prevention
+    #[msg("Oracle is already registered")]
+    OracleAlreadyRegistered,
+
+    // M-08: Score bounds validation
+    #[msg("Invalid 5A score value (must be 0-10000)")]
+    InvalidScore,
+
+    // M-09: Zero allocation prevention
+    #[msg("Epoch allocation must be greater than zero")]
+    ZeroAllocation,
+
+    // L-03: Invalid address validation
+    #[msg("Invalid address (zero pubkey not allowed)")]
+    InvalidAddress,
 }
 

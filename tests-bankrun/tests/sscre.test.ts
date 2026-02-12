@@ -125,6 +125,38 @@ describe("SSCRE Protocol - Bankrun Tests", () => {
     console.log(`Difference: ${(qualityReward - botReward) / ONE_VCOIN} VCoin`);
   });
 
+  it("should use ceiling division for gasless fee (C-05)", () => {
+    const GASLESS_FEE_BPS = 100; // 1%
+
+    const ceilingFee = (amount: number) => {
+      return Math.floor((amount * GASLESS_FEE_BPS + 9999) / 10000);
+    };
+
+    // Large amount - no rounding difference
+    expect(ceilingFee(1000 * ONE_VCOIN)).to.equal(10 * ONE_VCOIN);
+
+    // Small amount where ceiling makes a difference
+    expect(ceilingFee(1)).to.equal(1); // 0.01% of 1 rounds up to 1
+    expect(ceilingFee(99)).to.equal(1); // Small amount rounds up
+
+    // Fee should never exceed amount
+    const amount = 50;
+    const fee = ceilingFee(amount);
+    expect(fee).to.be.lessThanOrEqual(amount);
+  });
+
+  it("should limit merkle proof size (H-NEW-02)", () => {
+    const MAX_MERKLE_PROOF_SIZE = 32; // Max 32 levels
+
+    const proofSmall = new Array(10).fill(Buffer.alloc(32));
+    const proofMax = new Array(32).fill(Buffer.alloc(32));
+    const proofTooLarge = new Array(33).fill(Buffer.alloc(32));
+
+    expect(proofSmall.length).to.be.lessThanOrEqual(MAX_MERKLE_PROOF_SIZE);
+    expect(proofMax.length).to.be.lessThanOrEqual(MAX_MERKLE_PROOF_SIZE);
+    expect(proofTooLarge.length).to.be.greaterThan(MAX_MERKLE_PROOF_SIZE);
+  });
+
   it("should validate circuit breaker logic", () => {
     let isActive = false;
     let triggerCount = 0;

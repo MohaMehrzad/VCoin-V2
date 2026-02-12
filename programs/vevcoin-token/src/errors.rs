@@ -39,5 +39,9 @@ pub enum VeVCoinError {
     
     #[msg("Invalid authority address (zero)")]
     InvalidAuthority,
+
+    // C-01: Authority transfer timelock
+    #[msg("Authority transfer timelock has not elapsed (24h required)")]
+    AuthorityTransferTimelock,
 }
 

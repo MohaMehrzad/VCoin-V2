@@ -7,6 +7,14 @@ use crate::events::VCoinInitialized;
 /// This creates the mint with:
 /// - Metadata extension
 /// - Permanent delegate extension (for slashing)
+///
+/// M-14: The mint account is passed as UncheckedAccount (created externally by Token-2022).
+/// Since this instruction uses `init` for the config PDA, it can only ever be called once.
+/// The total_minted counter starts at 0, providing a clean baseline regardless of mint state.
+///
+/// L-05: Authority transfers (propose/accept/cancel) are intentionally NOT blocked by the
+/// paused state. This allows emergency authority rotation even when operations are paused,
+/// which is critical for incident response scenarios.
 pub fn handler(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.config;
     

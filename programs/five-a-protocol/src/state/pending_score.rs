@@ -23,6 +23,8 @@ pub struct PendingScoreUpdate {
     pub confirming_oracles: [Pubkey; 5],
     /// Number of confirming oracles
     pub confirmation_count: u8,
+    /// C-07: Required consensus count at time of creation (immutable per-update)
+    pub required_consensus: u8,
     /// Timestamp when first oracle submitted
     pub initiated_at: i64,
     /// Expiry timestamp (1 hour after initiation)
@@ -43,6 +45,7 @@ impl PendingScoreUpdate {
         2 +  // approved
         (32 * 5) + // confirming_oracles
         1 +  // confirmation_count
+        1 +  // required_consensus (C-07)
         8 +  // initiated_at
         8 +  // expires_at
         1 +  // is_applied

@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "zk-voting-sdk"
+version = "0.1.0"
+description = "Off-chain SDK for VCoin ZK private voting - key generation, vote encryption, decryption, and tally computation"
+edition = "2021"
+
+[dependencies]
+curve25519-dalek = { version = "4", features = ["serde", "rand_core"] }
+sha2 = "0.10"
+rand = "0.8"
+thiserror = "2"

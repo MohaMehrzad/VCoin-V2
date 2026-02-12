@@ -47,3 +47,22 @@ pub struct FundingLayerSwitch {
     pub timestamp: i64,
 }
 
+// L-01: Authority transfer events
+#[event]
+pub struct AuthorityTransferProposed {
+    pub current_authority: Pubkey,
+    pub proposed_authority: Pubkey,
+}
+
+#[event]
+pub struct AuthorityTransferAccepted {
+    pub old_authority: Pubkey,
+    pub new_authority: Pubkey,
+}
+
+#[event]
+pub struct AuthorityTransferCancelled {
+    pub authority: Pubkey,
+    pub cancelled_pending: Pubkey,
+}
+

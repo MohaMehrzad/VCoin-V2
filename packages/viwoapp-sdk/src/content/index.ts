@@ -208,6 +208,9 @@ export class ContentClient {
   
   /**
    * Get content stats
+   *
+   * C-AUDIT-10: Engagement scores can only increase — the on-chain update_engagement
+   * instruction enforces monotonic increase to prevent manipulation.
    */
   async getContentStats(contentId: Uint8Array): Promise<{
     tips: string;
@@ -238,6 +241,9 @@ export class ContentClient {
   
   /**
    * Build create content transaction
+   *
+   * C-AUDIT-11: Energy tiers are validated on-chain (valid range: 1-4).
+   * Tier determines max energy and regen rate.
    */
   async buildCreateContentTransaction(contentHash: Uint8Array): Promise<Transaction> {
     if (!this.client.publicKey) {

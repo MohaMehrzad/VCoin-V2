@@ -103,7 +103,7 @@ describe("veVCoin Token - Bankrun Tests", () => {
     it("should detect active lock", () => {
       const now = Date.now() / 1000;
       const unlockTime = now + 86400; // 1 day from now
-      
+
       const isLocked = now < unlockTime;
       expect(isLocked).to.be.true;
     });
@@ -111,9 +111,41 @@ describe("veVCoin Token - Bankrun Tests", () => {
     it("should detect expired lock", () => {
       const now = Date.now() / 1000;
       const unlockTime = now - 86400; // 1 day ago
-      
+
       const isLocked = now < unlockTime;
       expect(isLocked).to.be.false;
+    });
+  });
+
+  describe("Authority Transfer Timelock (H-02)", () => {
+    const AUTHORITY_TRANSFER_TIMELOCK = 24 * 60 * 60; // 24 hours
+
+    it("should require timelock before accepting authority", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const activatedAt = now;
+
+      // Cannot accept immediately
+      const canAccept = now >= activatedAt + AUTHORITY_TRANSFER_TIMELOCK;
+      expect(canAccept).to.be.false;
+    });
+
+    it("should allow accepting authority after timelock", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const activatedAt = now - AUTHORITY_TRANSFER_TIMELOCK; // Activated 24h ago
+
+      const canAccept = now >= activatedAt + AUTHORITY_TRANSFER_TIMELOCK;
+      expect(canAccept).to.be.true;
+    });
+
+    it("should track pending authority state", () => {
+      const state = {
+        authority: "currentAuthority",
+        pendingAuthority: "newAuthority",
+        pendingAuthorityActivatedAt: Math.floor(Date.now() / 1000),
+      };
+
+      expect(state.pendingAuthority).to.not.equal(state.authority);
+      expect(state.pendingAuthorityActivatedAt).to.be.greaterThan(0);
     });
   });
 });

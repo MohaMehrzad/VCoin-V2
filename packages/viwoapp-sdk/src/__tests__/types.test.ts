@@ -3,275 +3,362 @@
  */
 
 import { PublicKey, Keypair } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
 import {
   StakingTier,
-  UserStakeAccount,
-  StakingPoolAccount,
-  ProposalAccount,
-  VoteRecordAccount,
-  UserClaimAccount,
-  ViLinkActionAccount,
-  SessionKeyAccount,
-  FiveAScoreAccount,
-  ContentRecordAccount,
-  isStakingTier,
-  isValidProposalStatus,
-  isValidVoteChoice,
-  isValidActionType,
-  isValidFeeMethod,
+  ProposalStatus,
+  VoteChoice,
+  ActionType,
+  FeeMethod,
+  VerificationLevel,
+  ContentState,
+  SlashStatus,
+} from '../types';
+import type {
+  UserStake,
+  StakingPool,
+  Proposal,
+  VoteRecord,
+  UserClaim,
+  ViLinkAction,
+  SessionKey,
+  FiveAScore,
+  ContentRecord,
+  GovernanceConfig,
+  DecryptionShare,
+  PrivateVotingConfig,
+  PairTracking,
+  VeVCoinConfig,
+  UserGaslessStats,
+  PendingScoreUpdate,
+  CastPrivateVoteParams,
+  EnablePrivateVotingParams,
+  SubmitDecryptionShareParams,
+  AggregateRevealedVotesParams,
 } from '../types';
 
 describe('Types Module', () => {
-  describe('StakingTier Type Guard', () => {
-    it('should validate valid tiers', () => {
-      expect(isStakingTier('none')).toBe(true);
-      expect(isStakingTier('bronze')).toBe(true);
-      expect(isStakingTier('silver')).toBe(true);
-      expect(isStakingTier('gold')).toBe(true);
-      expect(isStakingTier('platinum')).toBe(true);
-    });
-
-    it('should reject invalid tiers', () => {
-      expect(isStakingTier('diamond')).toBe(false);
-      expect(isStakingTier('invalid')).toBe(false);
-      expect(isStakingTier('')).toBe(false);
-      expect(isStakingTier(null)).toBe(false);
-      expect(isStakingTier(undefined)).toBe(false);
-      expect(isStakingTier(1)).toBe(false);
+  describe('StakingTier Enum', () => {
+    it('should have all tier values', () => {
+      expect(StakingTier.None).toBe(0);
+      expect(StakingTier.Bronze).toBe(1);
+      expect(StakingTier.Silver).toBe(2);
+      expect(StakingTier.Gold).toBe(3);
+      expect(StakingTier.Platinum).toBe(4);
     });
   });
 
-  describe('ProposalStatus Type Guard', () => {
-    it('should validate valid status values', () => {
-      expect(isValidProposalStatus(0)).toBe(true); // Pending
-      expect(isValidProposalStatus(1)).toBe(true); // Active
-      expect(isValidProposalStatus(2)).toBe(true); // Passed
-      expect(isValidProposalStatus(3)).toBe(true); // Rejected
-      expect(isValidProposalStatus(4)).toBe(true); // Executed
-      expect(isValidProposalStatus(5)).toBe(true); // Cancelled
+  describe('ProposalStatus Enum', () => {
+    it('should have all status values', () => {
+      expect(ProposalStatus.Active).toBe(0);
+      expect(ProposalStatus.Passed).toBe(1);
+      expect(ProposalStatus.Rejected).toBe(2);
+      expect(ProposalStatus.Executed).toBe(3);
+      expect(ProposalStatus.Cancelled).toBe(4);
     });
 
     it('should reject invalid status values', () => {
-      expect(isValidProposalStatus(6)).toBe(false);
-      expect(isValidProposalStatus(-1)).toBe(false);
-      expect(isValidProposalStatus(100)).toBe(false);
+      expect(ProposalStatus[5]).toBeUndefined();
     });
   });
 
-  describe('VoteChoice Type Guard', () => {
-    it('should validate valid vote choices', () => {
-      expect(isValidVoteChoice(0)).toBe(true); // For
-      expect(isValidVoteChoice(1)).toBe(true); // Against
-      expect(isValidVoteChoice(2)).toBe(true); // Abstain
-    });
-
-    it('should reject invalid vote choices', () => {
-      expect(isValidVoteChoice(3)).toBe(false);
-      expect(isValidVoteChoice(-1)).toBe(false);
+  describe('VoteChoice Enum', () => {
+    it('should have all vote choices', () => {
+      expect(VoteChoice.Against).toBe(0);
+      expect(VoteChoice.For).toBe(1);
+      expect(VoteChoice.Abstain).toBe(2);
     });
   });
 
-  describe('ActionType Type Guard', () => {
-    it('should validate valid action types', () => {
-      expect(isValidActionType(0)).toBe(true); // Tip
-      expect(isValidActionType(1)).toBe(true); // Vouch
-      expect(isValidActionType(2)).toBe(true); // Follow
-      expect(isValidActionType(3)).toBe(true); // Challenge
-      expect(isValidActionType(4)).toBe(true); // Stake
-      expect(isValidActionType(5)).toBe(true); // ContentReact
-      expect(isValidActionType(6)).toBe(true); // Delegate
-      expect(isValidActionType(7)).toBe(true); // Vote
-    });
-
-    it('should reject invalid action types', () => {
-      expect(isValidActionType(8)).toBe(false);
-      expect(isValidActionType(-1)).toBe(false);
+  describe('ActionType Enum', () => {
+    it('should have all action types', () => {
+      expect(ActionType.Tip).toBe(0);
+      expect(ActionType.Vouch).toBe(1);
+      expect(ActionType.Follow).toBe(2);
+      expect(ActionType.Challenge).toBe(3);
+      expect(ActionType.Stake).toBe(4);
+      expect(ActionType.ContentReact).toBe(5);
+      expect(ActionType.Delegate).toBe(6);
+      expect(ActionType.Vote).toBe(7);
     });
   });
 
-  describe('FeeMethod Type Guard', () => {
-    it('should validate valid fee methods', () => {
-      expect(isValidFeeMethod(0)).toBe(true); // PlatformSubsidized
-      expect(isValidFeeMethod(1)).toBe(true); // VCoinDeduction
-      expect(isValidFeeMethod(2)).toBe(true); // SSCREDeduction
-    });
-
-    it('should reject invalid fee methods', () => {
-      expect(isValidFeeMethod(3)).toBe(false);
-      expect(isValidFeeMethod(-1)).toBe(false);
+  describe('FeeMethod Enum', () => {
+    it('should have all fee methods', () => {
+      expect(FeeMethod.PlatformSubsidized).toBe(0);
+      expect(FeeMethod.VCoinDeduction).toBe(1);
+      expect(FeeMethod.SSCREDeduction).toBe(2);
     });
   });
 
-  describe('UserStakeAccount Interface', () => {
+  describe('VerificationLevel Enum', () => {
+    it('should have all verification levels', () => {
+      expect(VerificationLevel.None).toBe(0);
+      expect(VerificationLevel.Basic).toBe(1);
+      expect(VerificationLevel.KYC).toBe(2);
+      expect(VerificationLevel.Full).toBe(3);
+      expect(VerificationLevel.Enhanced).toBe(4);
+    });
+  });
+
+  describe('ContentState Enum', () => {
+    it('should have all content states', () => {
+      expect(ContentState.Active).toBe(0);
+      expect(ContentState.Hidden).toBe(1);
+      expect(ContentState.Deleted).toBe(2);
+      expect(ContentState.Flagged).toBe(3);
+    });
+  });
+
+  describe('SlashStatus Enum', () => {
+    it('should have all slash statuses', () => {
+      expect(SlashStatus.Proposed).toBe(0);
+      expect(SlashStatus.Approved).toBe(1);
+      expect(SlashStatus.Executed).toBe(2);
+      expect(SlashStatus.Cancelled).toBe(3);
+    });
+  });
+
+  describe('UserStake Interface', () => {
     it('should define correct structure', () => {
-      const account: UserStakeAccount = {
-        owner: Keypair.generate().publicKey,
-        stakedAmount: BigInt(10000),
-        veVCoinAmount: BigInt(15000),
-        lockEndTime: BigInt(Date.now() / 1000 + 86400),
-        tier: 'silver',
-        stakedAt: BigInt(Date.now() / 1000),
-        lastUpdatedAt: BigInt(Date.now() / 1000),
-        bump: 255,
+      const account: UserStake = {
+        user: Keypair.generate().publicKey,
+        stakedAmount: new BN(10000),
+        vevcoinBalance: new BN(15000),
+        tier: StakingTier.Silver,
+        lockEndTime: new BN(Date.now() / 1000 + 86400),
+        lastUpdateTime: new BN(Date.now() / 1000),
       };
 
-      expect(account.owner).toBeInstanceOf(PublicKey);
-      expect(typeof account.stakedAmount).toBe('bigint');
-      expect(typeof account.tier).toBe('string');
+      expect(account.user).toBeInstanceOf(PublicKey);
+      expect(account.tier).toBe(StakingTier.Silver);
     });
   });
 
-  describe('ProposalAccount Interface', () => {
+  describe('Proposal Interface', () => {
     it('should define correct structure', () => {
-      const account: ProposalAccount = {
-        id: BigInt(1),
+      const account: Proposal = {
+        id: new BN(1),
         proposer: Keypair.generate().publicKey,
-        titleHash: new Uint8Array(32),
-        descriptionUri: 'ipfs://...',
-        proposalType: 0,
-        startTime: BigInt(Date.now() / 1000),
-        endTime: BigInt(Date.now() / 1000 + 604800),
-        votesFor: BigInt(0),
-        votesAgainst: BigInt(0),
-        votesAbstain: BigInt(0),
-        status: 1,
-        executionTime: BigInt(0),
+        title: 'Test Proposal',
+        descriptionHash: new Uint8Array(32),
+        startTime: new BN(Date.now() / 1000),
+        endTime: new BN(Date.now() / 1000 + 604800),
+        votesFor: new BN(0),
+        votesAgainst: new BN(0),
+        status: ProposalStatus.Active,
         executed: false,
-        isPrivateVoting: false,
-        bump: 255,
+        category: 0,
       };
 
       expect(account.proposer).toBeInstanceOf(PublicKey);
       expect(account.executed).toBe(false);
+      expect(account.status).toBe(ProposalStatus.Active);
     });
   });
 
-  describe('UserClaimAccount Interface', () => {
-    it('should define correct structure', () => {
-      const account: UserClaimAccount = {
+  describe('VoteRecord Interface', () => {
+    it('should define correct structure with optional ZK fields', () => {
+      const account: VoteRecord = {
         user: Keypair.generate().publicKey,
-        lastClaimedEpoch: BigInt(5),
-        totalClaimed: BigInt(1000000000),
-        claimsCount: 10,
-        firstClaimAt: BigInt(Date.now() / 1000 - 86400 * 30),
-        lastClaimAt: BigInt(Date.now() / 1000),
-        claimedEpochsBitmap: [BigInt(0), BigInt(0), BigInt(0), BigInt(0)],
-        bump: 255,
+        proposal: Keypair.generate().publicKey,
+        votePower: new BN(100),
+        support: true,
+        votedAt: new BN(Date.now() / 1000),
       };
 
       expect(account.user).toBeInstanceOf(PublicKey);
-      expect(account.claimedEpochsBitmap.length).toBe(4);
+      expect(account.support).toBe(true);
+
+      // ZK fields are optional
+      expect(account.ctFor).toBeUndefined();
+      expect(account.ctAgainst).toBeUndefined();
+      expect(account.ctAbstain).toBeUndefined();
     });
-  });
 
-  describe('ViLinkActionAccount Interface', () => {
-    it('should define correct structure', () => {
-      const account: ViLinkActionAccount = {
-        actionId: new Uint8Array(32),
-        creator: Keypair.generate().publicKey,
-        target: Keypair.generate().publicKey,
-        actionType: 0,
-        amount: BigInt(100000000000),
-        metadataHash: new Uint8Array(32),
-        createdAt: BigInt(Date.now() / 1000),
-        expiresAt: BigInt(Date.now() / 1000 + 604800),
-        executed: false,
-        executor: PublicKey.default,
-        executedAt: BigInt(0),
-        contentId: null,
-        sourceDapp: PublicKey.default,
-        oneTime: true,
-        executionCount: 0,
-        maxExecutions: 1,
-        bump: 255,
-      };
-
-      expect(account.creator).toBeInstanceOf(PublicKey);
-      expect(account.oneTime).toBe(true);
-    });
-  });
-
-  describe('SessionKeyAccount Interface', () => {
-    it('should define correct structure', () => {
-      const account: SessionKeyAccount = {
+    it('should support ZK ciphertext fields for private votes', () => {
+      const account: VoteRecord = {
         user: Keypair.generate().publicKey,
-        sessionPubkey: Keypair.generate().publicKey,
-        scope: 0xFFFF,
-        createdAt: BigInt(Date.now() / 1000),
-        expiresAt: BigInt(Date.now() / 1000 + 86400),
-        actionsUsed: 10,
-        maxActions: 1000,
-        vcoinSpent: BigInt(0),
-        maxSpend: BigInt(100000000000000),
-        isRevoked: false,
-        lastActionAt: BigInt(Date.now() / 1000),
-        feeMethod: 0,
-        bump: 255,
+        proposal: Keypair.generate().publicKey,
+        votePower: new BN(100),
+        support: true,
+        votedAt: new BN(Date.now() / 1000),
+        ctFor: new Uint8Array(64),
+        ctAgainst: new Uint8Array(64),
+        ctAbstain: new Uint8Array(64),
       };
 
-      expect(account.sessionPubkey).toBeInstanceOf(PublicKey);
-      expect(account.isRevoked).toBe(false);
+      expect(account.ctFor).toHaveLength(64);
+      expect(account.ctAgainst).toHaveLength(64);
+      expect(account.ctAbstain).toHaveLength(64);
     });
   });
 
-  describe('FiveAScoreAccount Interface', () => {
-    it('should define correct structure', () => {
-      const account: FiveAScoreAccount = {
+  describe('GovernanceConfig Interface', () => {
+    it('should include authority transfer fields (H-02)', () => {
+      const config: GovernanceConfig = {
+        authority: Keypair.generate().publicKey,
+        pendingAuthority: PublicKey.default,
+        pendingAuthorityActivatedAt: new BN(0),
+        vevcoinMint: Keypair.generate().publicKey,
+        paused: false,
+        proposalCount: new BN(0),
+      };
+
+      expect(config.pendingAuthorityActivatedAt).toBeDefined();
+      expect(config.proposalCount.toNumber()).toBe(0);
+    });
+  });
+
+  describe('DecryptionShare Interface', () => {
+    it('should include per-category partials and DLEQ proof', () => {
+      const share: DecryptionShare = {
+        proposal: Keypair.generate().publicKey,
+        committeeIndex: 0,
+        committeeMember: Keypair.generate().publicKey,
+        partialFor: new Uint8Array(32),
+        partialAgainst: new Uint8Array(32),
+        partialAbstain: new Uint8Array(32),
+        dleqChallenge: new Uint8Array(32),
+        dleqResponse: new Uint8Array(32),
+        submittedAt: new BN(Date.now() / 1000),
+        verified: true,
+      };
+
+      expect(share.partialFor).toHaveLength(32);
+      expect(share.dleqChallenge).toHaveLength(32);
+      expect(share.verified).toBe(true);
+    });
+  });
+
+  describe('PrivateVotingConfig Interface', () => {
+    it('should include ZK voting fields', () => {
+      const config: PrivateVotingConfig = {
+        proposal: Keypair.generate().publicKey,
+        encryptionPubkey: new Uint8Array(32),
+        committeeElgamalPubkeys: [new Uint8Array(32)],
+        decryptionCommittee: [Keypair.generate().publicKey],
+        decryptionThreshold: 1,
+        sharesSubmitted: [false],
+        revealCompleted: false,
+        accumulatedCtForR: new Uint8Array(32),
+        accumulatedCtForC: new Uint8Array(32),
+        accumulatedCtAgainstR: new Uint8Array(32),
+        accumulatedCtAgainstC: new Uint8Array(32),
+        accumulatedCtAbstainR: new Uint8Array(32),
+        accumulatedCtAbstainC: new Uint8Array(32),
+        totalPrivateVotes: 0,
+        verificationHash: new Uint8Array(32),
+        aggregatedFor: new BN(0),
+        aggregatedAgainst: new BN(0),
+        aggregatedAbstain: new BN(0),
+      };
+
+      expect(config.encryptionPubkey).toHaveLength(32);
+      expect(config.accumulatedCtForR).toHaveLength(32);
+      expect(config.totalPrivateVotes).toBe(0);
+    });
+  });
+
+  describe('UserGaslessStats Interface', () => {
+    it('should include activeSessions field (H-AUDIT-12)', () => {
+      const stats: UserGaslessStats = {
         user: Keypair.generate().publicKey,
-        authenticity: 2000,
-        accuracy: 1800,
-        agility: 1500,
-        activity: 2500,
-        approved: 1200,
-        totalScore: 9000,
-        lastUpdatedAt: BigInt(Date.now() / 1000),
-        updateCount: 100,
-        bump: 255,
+        totalGaslessTx: new BN(0),
+        totalSubsidized: new BN(0),
+        totalVcoinFees: new BN(0),
+        sessionsCreated: 0,
+        activeSession: Keypair.generate().publicKey,
+        activeSessions: 2,
       };
 
-      expect(account.user).toBeInstanceOf(PublicKey);
-      expect(account.totalScore).toBeLessThanOrEqual(10000);
+      expect(stats.activeSessions).toBe(2);
     });
   });
 
-  describe('ContentRecordAccount Interface', () => {
+  describe('PairTracking Interface', () => {
     it('should define correct structure', () => {
-      const account: ContentRecordAccount = {
-        trackingId: new Uint8Array(32),
-        author: Keypair.generate().publicKey,
-        contentHash: new Uint8Array(32),
-        contentUri: 'ipfs://...',
-        contentType: 0,
-        state: 0,
-        version: 1,
-        createdAt: BigInt(Date.now() / 1000),
-        updatedAt: BigInt(Date.now() / 1000),
-        previousHash: new Uint8Array(32),
-        energySpent: 10,
-        refundClaimed: false,
-        engagementCount: 0,
-        bump: 255,
+      const tracking: PairTracking = {
+        sender: Keypair.generate().publicKey,
+        receiver: Keypair.generate().publicKey,
+        transferCount: 5,
+        lastTransferTime: new BN(Date.now() / 1000),
+        washFlags: 0,
+        lastFlagTime: new BN(0),
       };
 
-      expect(account.author).toBeInstanceOf(PublicKey);
-      expect(account.refundClaimed).toBe(false);
+      expect(tracking.sender).toBeInstanceOf(PublicKey);
+      expect(tracking.washFlags).toBe(0);
+    });
+  });
+
+  describe('ZK Voting Params Interfaces', () => {
+    it('should define CastPrivateVoteParams', () => {
+      const params: CastPrivateVoteParams = {
+        proposalId: new BN(1),
+        ctFor: new Uint8Array(64),
+        ctAgainst: new Uint8Array(64),
+        ctAbstain: new Uint8Array(64),
+        proofData: new Uint8Array(352),
+      };
+
+      expect(params.ctFor).toHaveLength(64);
+      expect(params.proofData).toHaveLength(352);
+    });
+
+    it('should define EnablePrivateVotingParams', () => {
+      const params: EnablePrivateVotingParams = {
+        proposalId: new BN(1),
+        encryptionPubkey: new Uint8Array(32),
+        committeeElgamalPubkeys: Array(5).fill(new Uint8Array(32)),
+        decryptionCommittee: Array(5).fill(Keypair.generate().publicKey),
+        committeeSize: 5,
+        decryptionThreshold: 3,
+      };
+
+      expect(params.decryptionThreshold).toBe(3);
+      expect(params.committeeElgamalPubkeys).toHaveLength(5);
+    });
+
+    it('should define SubmitDecryptionShareParams', () => {
+      const params: SubmitDecryptionShareParams = {
+        proposalId: new BN(1),
+        committeeIndex: 0,
+        partialFor: new Uint8Array(32),
+        partialAgainst: new Uint8Array(32),
+        partialAbstain: new Uint8Array(32),
+        dleqChallenge: new Uint8Array(32),
+        dleqResponse: new Uint8Array(32),
+      };
+
+      expect(params.committeeIndex).toBe(0);
+      expect(params.partialFor).toHaveLength(32);
+    });
+
+    it('should define AggregateRevealedVotesParams', () => {
+      const params: AggregateRevealedVotesParams = {
+        proposalId: new BN(1),
+        tallyFor: new BN(100),
+        tallyAgainst: new BN(50),
+        tallyAbstain: new BN(10),
+        lagrangeCoefficients: [new Uint8Array(32)],
+      };
+
+      expect(params.tallyFor.toNumber()).toBe(100);
+      expect(params.lagrangeCoefficients).toHaveLength(1);
     });
   });
 
   describe('Type Exports', () => {
-    it('should export all required types', () => {
-      // These are type-only checks - they pass if compilation succeeds
-      const _tier: StakingTier = 'bronze';
-      const _userStake: Partial<UserStakeAccount> = {};
-      const _pool: Partial<StakingPoolAccount> = {};
-      const _proposal: Partial<ProposalAccount> = {};
-      const _vote: Partial<VoteRecordAccount> = {};
-      const _claim: Partial<UserClaimAccount> = {};
-      const _action: Partial<ViLinkActionAccount> = {};
-      const _session: Partial<SessionKeyAccount> = {};
-      const _fiveA: Partial<FiveAScoreAccount> = {};
-      const _content: Partial<ContentRecordAccount> = {};
+    it('should export all required enum types', () => {
+      expect(StakingTier).toBeDefined();
+      expect(ProposalStatus).toBeDefined();
+      expect(VoteChoice).toBeDefined();
+      expect(ActionType).toBeDefined();
+      expect(FeeMethod).toBeDefined();
+      expect(VerificationLevel).toBeDefined();
+      expect(ContentState).toBeDefined();
+      expect(SlashStatus).toBeDefined();
     });
   });
 });
-

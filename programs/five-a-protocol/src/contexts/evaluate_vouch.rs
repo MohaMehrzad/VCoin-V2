@@ -12,6 +12,8 @@ pub struct EvaluateVouch<'info> {
     )]
     pub vouch_record: Account<'info, VouchRecord>,
     
+    /// H-17: vouchee_score PDA is derived from vouch_record.vouchee, ensuring
+    /// the score account always corresponds to the correct vouchee user.
     #[account(
         seeds = [USER_SCORE_SEED, vouch_record.vouchee.as_ref()],
         bump = vouchee_score.bump

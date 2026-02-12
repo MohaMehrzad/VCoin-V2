@@ -17,6 +17,7 @@ import {
   CONTENT_CONSTANTS,
   GOVERNANCE_CONSTANTS,
   ACTION_SCOPES,
+  SECURITY_CONSTANTS,
 } from '../constants';
 import { PublicKey } from '@solana/web3.js';
 
@@ -37,9 +38,9 @@ describe('SDK Constants', () => {
       expect(PROGRAM_IDS.stakingProtocol.toBase58()).toBe('6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu');
     });
 
-    it('should have all 11 program IDs defined', () => {
+    it('should have all 12 program IDs defined (11 programs + vcoinMint)', () => {
       const programKeys = Object.keys(PROGRAM_IDS);
-      expect(programKeys.length).toBe(11);
+      expect(programKeys.length).toBe(12);
     });
   });
 
@@ -213,6 +214,17 @@ describe('SDK Constants', () => {
     it('should have correct quorum', () => {
       expect(GOVERNANCE_CONSTANTS.quorumBps).toBe(400); // 4%
     });
+
+    it('should have authority transfer timelock (H-02)', () => {
+      expect(GOVERNANCE_CONSTANTS.authorityTransferTimelock).toBe(24 * 3600);
+    });
+
+    it('should have ZK voting constants', () => {
+      expect(GOVERNANCE_CONSTANTS.zk).toBeDefined();
+      expect(GOVERNANCE_CONSTANTS.zk.voteProofSize).toBe(352);
+      expect(GOVERNANCE_CONSTANTS.zk.ciphertextSize).toBe(64);
+      expect(GOVERNANCE_CONSTANTS.zk.maxCommitteeSize).toBe(5);
+    });
   });
 
   describe('Action Scopes', () => {
@@ -225,6 +237,48 @@ describe('SDK Constants', () => {
 
     it('should have all scope', () => {
       expect(ACTION_SCOPES.all).toBe(0xFFFF);
+    });
+  });
+
+  describe('Security Constants', () => {
+    it('should have authority transfer timelock (H-02)', () => {
+      expect(SECURITY_CONSTANTS.authorityTransferTimelock).toBe(24 * 3600);
+    });
+
+    it('should have slashing parameters (H-01)', () => {
+      expect(SECURITY_CONSTANTS.slashApprovalTimelock).toBe(48 * 3600);
+      expect(SECURITY_CONSTANTS.slashExpiry).toBe(7 * 24 * 3600);
+    });
+
+    it('should have oracle consensus parameters (H-05)', () => {
+      expect(SECURITY_CONSTANTS.oracleConsensusRequired).toBe(3);
+      expect(SECURITY_CONSTANTS.pendingScoreExpiry).toBe(3600);
+    });
+
+    it('should have circuit breaker cooldown (M-05)', () => {
+      expect(SECURITY_CONSTANTS.circuitBreakerCooldown).toBe(21600);
+    });
+
+    it('should have merkle proof max size (H-NEW-02)', () => {
+      expect(SECURITY_CONSTANTS.merkleProofMaxSize).toBe(32);
+    });
+
+    it('should have audit remediation constants', () => {
+      expect(SECURITY_CONSTANTS.maxSessionsPerUser).toBe(5);
+      expect(SECURITY_CONSTANTS.maxDayDelta).toBe(2);
+      expect(SECURITY_CONSTANTS.maxDailyActivityScore).toBe(5000);
+      expect(SECURITY_CONSTANTS.washFlagDecayPeriod).toBe(7 * 24 * 3600);
+      expect(SECURITY_CONSTANTS.maxVouchAge).toBe(365 * 24 * 3600);
+      expect(SECURITY_CONSTANTS.maxContentTier).toBe(4);
+    });
+
+    it('should have platform fee bounds (M-02)', () => {
+      expect(SECURITY_CONSTANTS.maxPlatformFeeBps).toBe(1000);
+      expect(SECURITY_CONSTANTS.minPlatformFeeBps).toBe(10);
+    });
+
+    it('should have fee slippage protection (L-03)', () => {
+      expect(SECURITY_CONSTANTS.maxFeeSlippageBps).toBe(500);
     });
   });
 });

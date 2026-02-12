@@ -92,6 +92,9 @@ pub mod vilink_protocol {
         require!(action_type < 8, ViLinkError::InvalidActionType);
         require!(config.is_action_enabled(action_type), ViLinkError::ActionTypeDisabled);
         
+        // H-07: Sequential creation is enforced by Solana's account locking model.
+        // The user_stats account (mutable PDA) serializes concurrent creates for the
+        // same user, preventing race conditions on the action_nonce.
         // M-04 Security Fix: Validate nonce matches expected value
         // For new users, action_nonce will be 0 (default)
         require!(
@@ -104,11 +107,12 @@ pub mod vilink_protocol {
             require!(amount <= MAX_TIP_AMOUNT, ViLinkError::InvalidAmount);
         }
         
-        let expiry = if expiry_seconds > 0 && expiry_seconds <= MAX_ACTION_EXPIRY {
-            expiry_seconds
-        } else {
-            MAX_ACTION_EXPIRY
-        };
+        // L-04: Return error for invalid expiry instead of silent clamping
+        require!(
+            expiry_seconds > 0 && expiry_seconds <= MAX_ACTION_EXPIRY,
+            ViLinkError::InvalidExpiry
+        );
+        let expiry = expiry_seconds;
         
         let clock = Clock::get()?;
         
@@ -193,7 +197,16 @@ pub mod vilink_protocol {
         let executor_key = ctx.accounts.executor.key();
         require!(executor_key != action.creator, ViLinkError::SelfExecutionNotAllowed);
         
-        let fee = (action.amount as u128 * config.platform_fee_bps as u128 / 10000) as u64;
+        // H-05: Validate executor token account has no active delegation
+        require!(
+            ctx.accounts.executor_token_account.delegate.is_none() ||
+            ctx.accounts.executor_token_account.delegated_amount == 0,
+            ViLinkError::TokenAccountDelegated
+        );
+
+        // C-06: Use ceiling division to prevent fee rounding to zero on small amounts
+        let fee = ((action.amount as u128 * config.platform_fee_bps as u128 + 9999) / 10000) as u64;
+        let fee = fee.min(action.amount);
         let net_amount = action.amount.saturating_sub(fee);
         
         token_2022::transfer_checked(
@@ -399,8 +412,12 @@ pub mod vilink_protocol {
         
         let clock = Clock::get()?;
         
+        // M-07: batch_id is a display identifier generated from creator + timestamp.
+        // batch_nonce (from user_stats) is the PDA seed ensuring uniqueness.
+        // batch_id may collide if two batches are created in the same second (display only),
+        // but batch_nonce always increments guaranteeing unique PDAs.
         let batch_id = generate_batch_id(&ctx.accounts.creator.key(), clock.unix_timestamp);
-        
+
         batch.batch_id = batch_id;
         batch.creator = ctx.accounts.creator.key();
         batch.action_ids = action_ids.clone();
@@ -516,7 +533,13 @@ pub mod vilink_protocol {
         
         let cancelled = config.pending_authority;
         config.pending_authority = Pubkey::default();
-        
+
+        // L-02: Emit authority transfer cancelled event
+        emit!(AuthorityTransferCancelled {
+            authority: config.authority,
+            cancelled_pending: cancelled,
+        });
+
         msg!("Authority transfer to {} cancelled", cancelled);
         Ok(())
     }
@@ -599,6 +622,7 @@ pub struct ExecuteTipAction<'info> {
 }
 
 /// M-04 Security Fix: Use action_nonce instead of created_at for PDA derivation
+/// H-06: Action creator is validated via PDA seed derivation (action.creator in seeds)
 #[derive(Accounts)]
 pub struct ExecuteGenericAction<'info> {
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump)]

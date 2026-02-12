@@ -117,12 +117,12 @@ describe("transfer-hook", () => {
     });
   });
 
-  describe("Authority Transfer", () => {
-    it("should update authority", async () => {
+  describe("Authority Transfer (H-02 Two-Step)", () => {
+    it("should propose authority transfer", async () => {
       const newAuthority = anchor.web3.Keypair.generate();
 
       await program.methods
-        .updateAuthority(newAuthority.publicKey)
+        .proposeAuthority(newAuthority.publicKey)
         .accounts({
           hookConfig: hookConfigPda,
           authority: authority.publicKey,
@@ -130,17 +130,21 @@ describe("transfer-hook", () => {
         .rpc();
 
       const config = await program.account.hookConfig.fetch(hookConfigPda);
-      expect(config.authority.toString()).to.equal(newAuthority.publicKey.toString());
+      expect(config.pendingAuthority.toString()).to.equal(newAuthority.publicKey.toString());
+      // Authority hasn't changed yet
+      expect(config.authority.toString()).to.equal(authority.publicKey.toString());
 
-      // Transfer back for other tests
+      // Cancel the proposal to keep authority for other tests
       await program.methods
-        .updateAuthority(authority.publicKey)
+        .cancelAuthorityTransfer()
         .accounts({
           hookConfig: hookConfigPda,
-          authority: newAuthority.publicKey,
+          authority: authority.publicKey,
         })
-        .signers([newAuthority])
         .rpc();
+
+      const updated = await program.account.hookConfig.fetch(hookConfigPda);
+      expect(updated.authority.toString()).to.equal(authority.publicKey.toString());
     });
   });
 });

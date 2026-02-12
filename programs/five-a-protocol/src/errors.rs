@@ -77,5 +77,13 @@ pub enum FiveAError {
     // L-07: Rate limiting
     #[msg("Score update too frequent - minimum 1 hour between updates for same user")]
     ScoreUpdateTooFrequent,
+
+    // C-08: Mutual vouch prevention
+    #[msg("Mutual vouching not allowed - target has already vouched for you")]
+    MutualVouchNotAllowed,
+
+    // M-18: Vouch expiry
+    #[msg("Vouch has expired (max age exceeded)")]
+    VouchExpired,
 }
 

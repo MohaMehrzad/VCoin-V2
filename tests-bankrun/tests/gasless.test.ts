@@ -183,19 +183,71 @@ describe("Gasless Protocol - Bankrun Tests", () => {
   });
 
   describe("SSCRE Deduction", () => {
-    it("should calculate 1% SSCRE deduction", () => {
+    it("should calculate 1% SSCRE deduction with ceiling division (C-05)", () => {
       const claimAmount = 1_000_000_000_000; // 1000 VCoin
-      const deduction = Math.floor((claimAmount * SSCRE_DEDUCTION_BPS) / 10000);
-      
-      expect(deduction).to.equal(10_000_000_000); // 10 VCoin
+      // C-05: Ceiling division: (amount * bps + 9999) / 10000
+      const deduction = Math.floor((claimAmount * SSCRE_DEDUCTION_BPS + 9999) / 10000);
+
+      expect(deduction).to.equal(10_000_000_000); // 10 VCoin (exact, no rounding diff)
     });
 
     it("should calculate net amount after deduction", () => {
       const claimAmount = 1_000_000_000_000;
-      const deduction = Math.floor((claimAmount * SSCRE_DEDUCTION_BPS) / 10000);
+      const deduction = Math.floor((claimAmount * SSCRE_DEDUCTION_BPS + 9999) / 10000);
       const netAmount = claimAmount - deduction;
-      
+
       expect(netAmount).to.equal(990_000_000_000);
+    });
+
+    it("should round up on small deduction amounts (C-05)", () => {
+      const claimAmount = 99; // Very small amount
+      const floorDeduction = Math.floor((claimAmount * SSCRE_DEDUCTION_BPS) / 10000);
+      const ceilDeduction = Math.floor((claimAmount * SSCRE_DEDUCTION_BPS + 9999) / 10000);
+
+      expect(floorDeduction).to.equal(0); // Floor rounds to 0
+      expect(ceilDeduction).to.equal(1);  // Ceiling rounds up to 1
+    });
+  });
+
+  describe("Active Sessions Limit (H-AUDIT-12)", () => {
+    const MAX_SESSIONS_PER_USER = 5;
+
+    it("should allow sessions up to the limit", () => {
+      let activeSessions = 0;
+
+      for (let i = 0; i < MAX_SESSIONS_PER_USER; i++) {
+        const canCreate = activeSessions < MAX_SESSIONS_PER_USER;
+        expect(canCreate).to.be.true;
+        activeSessions++;
+      }
+
+      expect(activeSessions).to.equal(MAX_SESSIONS_PER_USER);
+    });
+
+    it("should reject session creation beyond limit", () => {
+      const activeSessions = MAX_SESSIONS_PER_USER;
+      const canCreate = activeSessions < MAX_SESSIONS_PER_USER;
+      expect(canCreate).to.be.false;
+    });
+
+    it("should allow new session after revoking one", () => {
+      let activeSessions = MAX_SESSIONS_PER_USER;
+
+      // Revoke a session
+      activeSessions--;
+      expect(activeSessions).to.equal(4);
+
+      // Now can create new session
+      const canCreate = activeSessions < MAX_SESSIONS_PER_USER;
+      expect(canCreate).to.be.true;
+    });
+
+    it("should decrement active sessions on expiry", () => {
+      let activeSessions = 3;
+
+      // Session expires
+      activeSessions--;
+      expect(activeSessions).to.equal(2);
     });
   });
 

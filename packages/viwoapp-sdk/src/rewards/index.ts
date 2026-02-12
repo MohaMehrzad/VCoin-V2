@@ -196,9 +196,18 @@ export class RewardsClient {
   
   /**
    * Calculate gasless fee for claim
+   *
+   * C-05: Uses ceiling division to prevent fee rounding to zero on small amounts.
+   * Formula: fee = ceil(amount * feeBps / 10000)
    */
   calculateGaslessFee(amount: BN): BN {
-    const fee = amount.muln(SSCRE_CONSTANTS.gaslessFeeBps).divn(10000);
+    // C-05: Ceiling division: (amount * bps + 9999) / 10000
+    const numerator = amount.muln(SSCRE_CONSTANTS.gaslessFeeBps).addn(9999);
+    let fee = numerator.divn(10000);
+    // Cap fee at amount to prevent overflow
+    if (fee.gt(amount)) {
+      fee = amount;
+    }
     return fee;
   }
   
@@ -275,28 +284,36 @@ export class RewardsClient {
   
   /**
    * Build claim rewards transaction
+   *
+   * H-NEW-02: Merkle proof size is limited to 32 levels (supports 4B+ users).
+   * Proofs exceeding this limit will be rejected on-chain with MerkleProofTooLarge.
    */
   async buildClaimTransaction(params: ClaimRewardsParams): Promise<Transaction> {
     if (!this.client.publicKey) {
       throw new Error("Wallet not connected");
     }
-    
+
     // Validate minimum claim
     if (params.amount.lt(new BN(SSCRE_CONSTANTS.minClaimAmount * 1e9))) {
       throw new Error(`Claim amount below minimum: ${SSCRE_CONSTANTS.minClaimAmount} VCoin`);
     }
-    
+
+    // H-NEW-02: Validate merkle proof size
+    if (params.merkleProof.length > 32) {
+      throw new Error("Merkle proof exceeds maximum size of 32 levels");
+    }
+
     // Check if already claimed
     const hasClaimed = await this.hasClaimedEpoch(params.epoch);
     if (hasClaimed) {
       throw new Error("Already claimed for this epoch");
     }
-    
+
     const tx = new Transaction();
-    
+
     // Add claim instruction
     // tx.add(await this.program.methods.claimRewards(params.amount, params.merkleProof)...);
-    
+
     return tx;
   }
 }

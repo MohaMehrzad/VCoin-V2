@@ -54,5 +54,19 @@ pub enum IdentityError {
     
     #[msg("Invalid authority address (zero)")]
     InvalidAuthority,
+
+    // C-AUDIT-16: Duplicate attester check
+    #[msg("Attester already exists in trusted list")]
+    DuplicateAttester,
+
+    // C-AUDIT-22: USDC payment enforcement
+    #[msg("Invalid USDC mint")]
+    InvalidUsdcMint,
+
+    #[msg("Invalid token account owner")]
+    InvalidTokenAccountOwner,
+
+    #[msg("Invalid treasury token account")]
+    InvalidTreasury,
 }
 

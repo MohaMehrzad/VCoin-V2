@@ -56,3 +56,6 @@ pub const MAX_CONFIRMING_ORACLES: usize = 5;
 /// Minimum time between score updates for the same user
 pub const MIN_SCORE_UPDATE_INTERVAL: i64 = 60 * 60; // 1 hour minimum between updates
 
+/// M-18: Maximum vouch age before it expires (1 year)
+pub const MAX_VOUCH_AGE: i64 = 365 * 24 * 60 * 60;
+

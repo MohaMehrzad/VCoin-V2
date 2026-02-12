@@ -33,6 +33,9 @@ pub fn handler(
     );
     
     // Check rate limit
+    // C-AUDIT-20: Solana runtime serializes transactions accessing the same mutable
+    // `rate_limit` PDA, preventing true parallel bypass. The TOCTOU issue is prevented
+    // by Solana's account locking model.
     let rate_limit = &mut ctx.accounts.rate_limit;
     check_and_update_rate_limit(rate_limit, user_energy.tier, clock.unix_timestamp)?;
     

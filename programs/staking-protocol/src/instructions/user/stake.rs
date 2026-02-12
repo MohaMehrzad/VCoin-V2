@@ -11,10 +11,15 @@ use crate::utils::calculate_vevcoin;
 /// Stake VCoin with a lock duration
 /// Mints veVCoin proportional to stake amount, lock duration, and tier
 /// M-01 Security Fix: Added reentrancy guard for CPI protection
+///
+/// H-03: The pool-level reentrancy guard is intentional for single-pool design.
+/// Solana's account locking serializes transactions accessing the same mutable pool
+/// PDA, providing the real parallelism protection. The explicit reentrancy_guard
+/// adds defense-in-depth for CPI callback scenarios.
 pub fn handler(ctx: Context<Stake>, amount: u64, lock_duration: i64) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let user_stake = &ctx.accounts.user_stake;
-    
+
     // M-01: Check reentrancy guard before proceeding
     require!(!pool.reentrancy_guard, StakingError::ReentrancyDetected);
     

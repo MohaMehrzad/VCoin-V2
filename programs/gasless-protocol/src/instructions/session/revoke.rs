@@ -10,7 +10,10 @@ pub fn handler(ctx: Context<RevokeSessionKey>) -> Result<()> {
     require!(!session.is_revoked, GaslessError::SessionRevoked);
     
     session.is_revoked = true;
-    
+
+    // H-AUDIT-12: Decrement active session count
+    user_stats.active_sessions = user_stats.active_sessions.saturating_sub(1);
+
     // Clear active session if this was it
     if user_stats.active_session == session.session_pubkey {
         user_stats.active_session = Pubkey::default();

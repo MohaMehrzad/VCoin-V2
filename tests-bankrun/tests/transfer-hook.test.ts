@@ -133,23 +133,51 @@ describe("Transfer Hook - Bankrun Tests", () => {
   describe("Pair Tracking", () => {
     it("should track unique sender-receiver pairs", () => {
       const pairs = new Map<string, number>();
-      
+
       pairs.set("sender1-receiver1", 1);
       pairs.set("sender1-receiver2", 1);
       pairs.set("sender2-receiver1", 1);
-      
+
       expect(pairs.size).to.equal(3);
     });
 
     it("should accumulate transfer counts per pair", () => {
       const pairs = new Map<string, number>();
       const key = "sender1-receiver1";
-      
+
       pairs.set(key, (pairs.get(key) || 0) + 1);
       pairs.set(key, (pairs.get(key) || 0) + 1);
       pairs.set(key, (pairs.get(key) || 0) + 1);
-      
+
       expect(pairs.get(key)).to.equal(3);
+    });
+  });
+
+  describe("Wash Flag Decay", () => {
+    const WASH_FLAG_DECAY_PERIOD = 7 * 24 * 60 * 60; // 7 days
+
+    it("should decay wash flags after decay period", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const lastFlagTime = now - WASH_FLAG_DECAY_PERIOD - 1; // Flagged 7+ days ago
+      let washFlags = 3;
+
+      const shouldDecay = now - lastFlagTime >= WASH_FLAG_DECAY_PERIOD;
+      if (shouldDecay && washFlags > 0) {
+        washFlags--;
+      }
+
+      expect(shouldDecay).to.be.true;
+      expect(washFlags).to.equal(2);
+    });
+
+    it("should not decay flags within decay period", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const lastFlagTime = now - 3 * 24 * 60 * 60; // Flagged 3 days ago
+      let washFlags = 2;
+
+      const shouldDecay = now - lastFlagTime >= WASH_FLAG_DECAY_PERIOD;
+      expect(shouldDecay).to.be.false;
+      expect(washFlags).to.equal(2);
     });
   });
 });

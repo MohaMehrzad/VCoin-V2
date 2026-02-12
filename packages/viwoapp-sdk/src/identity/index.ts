@@ -99,6 +99,31 @@ export class IdentityClient {
   // ============ Transaction Building ============
   
   /**
+   * Build subscribe transaction
+   *
+   * C-AUDIT-22: Non-free subscription tiers require actual USDC payment via SPL
+   * transfer_checked. The transaction must include the user's USDC token account,
+   * the USDC mint, and the treasury token account.
+   */
+  async buildSubscribeTransaction(tier: number): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+
+    if (tier < 0 || tier > 4) {
+      throw new Error("Invalid subscription tier (0-4)");
+    }
+
+    const tx = new Transaction();
+
+    // Add subscribe instruction
+    // C-AUDIT-22: For non-free tiers, USDC payment accounts are required
+    // tx.add(await this.program.methods.subscribe(tier)...);
+
+    return tx;
+  }
+
+  /**
    * Build create identity transaction
    */
   async buildCreateIdentityTransaction(didHash: Uint8Array): Promise<Transaction> {

@@ -99,7 +99,17 @@ pub fn handler(ctx: Context<InitializeExtraAccountMetaList>) -> Result<()> {
         )?;
     }
     
-    // Initialize the extra account meta list
+    // H-AUDIT-20: Initialize the extra account meta list.
+    // ExtraAccountMetaList::init performs the following validations:
+    //   1. Verifies the buffer has sufficient space for all metas plus the header.
+    //   2. Writes the TLV (Type-Length-Value) discriminator so Token-2022 can
+    //      locate and parse the account list at transfer time.
+    //   3. Serializes each ExtraAccountMeta, validating seed configurations and
+    //      account indices are within bounds of the ExecuteInstruction signature.
+    //   4. The resulting on-chain data is deterministic — the same inputs always
+    //      produce the same byte layout, ensuring idempotent initialization.
+    // Any structural mismatch (wrong size, invalid indices) will cause this
+    // call to return an error, preventing a misconfigured hook from deploying.
     let mut data = extra_account_meta_list.try_borrow_mut_data()?;
     ExtraAccountMetaList::init::<ExecuteInstruction>(&mut data, &extra_metas)?;
     

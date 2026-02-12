@@ -39,6 +39,16 @@ pub struct Execute<'info> {
     )]
     pub receiver_activity: Account<'info, UserActivity>,
     
+    // M-AUDIT-12: Pair tracking is directional — the PDA is derived from
+    // [PAIR_TRACKING_SEED, sender_owner, receiver_owner]. This means
+    // transfers from A->B and B->A create *separate* PairTracking accounts.
+    // This is a known design limitation: a wash trading ring where A sends
+    // to B and B sends back to A will be tracked as two independent pairs.
+    // Each direction independently accumulates flags and trust scores.
+    // A bidirectional design (sorting keys to canonicalize) was considered
+    // but rejected because it would conflate legitimate bidirectional
+    // commerce (e.g., payment and refund) with wash trading patterns.
+    // Off-chain analytics can correlate both directions for deeper analysis.
     #[account(
         init_if_needed,
         payer = payer,

@@ -10,13 +10,19 @@ pub fn handler(ctx: Context<DeductVCoinFee>, amount: u64) -> Result<()> {
     let user_stats = &mut ctx.accounts.user_stats;
     
     require!(!config.paused, GaslessError::ProtocolPaused);
-    
+
     let clock = Clock::get()?;
-    
+
     // Calculate expected VCoin fee equivalent
     let expected_vcoin_fee = config.sol_fee_per_tx
         .saturating_mul(config.vcoin_fee_multiplier);
-    
+
+    // M-AUDIT-16: Validate that the resulting fee is non-zero
+    require!(
+        amount > 0 || expected_vcoin_fee > 0,
+        GaslessError::ZeroAmount
+    );
+
     let fee_to_deduct = if amount > 0 { amount } else { expected_vcoin_fee };
     
     // L-03: Slippage protection - ensure fee doesn't deviate too much from expected

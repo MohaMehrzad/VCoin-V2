@@ -153,6 +153,12 @@ export class FiveAClient {
   
   /**
    * Check if user can vouch for another
+   *
+   * C-08: Mutual vouching is prevented — if the target has already vouched for you,
+   * you cannot vouch for them. This is enforced on-chain via reverse_vouch_record check.
+   *
+   * M-18: Vouches expire after 1 year (MAX_VOUCH_AGE = 365 days). Expired vouches
+   * cannot be evaluated and must be re-created.
    */
   async canVouchFor(target: PublicKey): Promise<{
     canVouch: boolean;
@@ -161,23 +167,25 @@ export class FiveAClient {
     if (!this.client.publicKey) {
       return { canVouch: false, reason: "Wallet not connected" };
     }
-    
+
     if (this.client.publicKey.equals(target)) {
       return { canVouch: false, reason: "Cannot vouch for yourself" };
     }
-    
+
     const myScore = await this.getScore();
     if (!myScore) {
       return { canVouch: false, reason: "No 5A score found" };
     }
-    
+
     // Check minimum score to vouch (60% required per report)
     if (myScore.compositeScore < 6000) {
       return { canVouch: false, reason: "Score too low to vouch (min 60%)" };
     }
-    
-    // Would also check vouch limits, existing vouches, etc.
-    
+
+    // C-08: Mutual vouching prevention is enforced on-chain.
+    // The on-chain handler checks that reverse_vouch_record is empty,
+    // meaning the target has not already vouched for the voucher.
+
     return { canVouch: true };
   }
   
@@ -214,22 +222,29 @@ export class FiveAClient {
   
   /**
    * Build vouch transaction
+   *
+   * C-08: On-chain handler requires a reverse_vouch_record account to verify
+   * mutual vouching is not occurring. The transaction must include this PDA.
+   *
+   * M-18: Vouches have a maximum age of 1 year. After that, evaluate_vouch
+   * will reject with VouchExpired error.
    */
   async buildVouchTransaction(target: PublicKey): Promise<Transaction> {
     if (!this.client.publicKey) {
       throw new Error("Wallet not connected");
     }
-    
+
     const { canVouch, reason } = await this.canVouchFor(target);
     if (!canVouch) {
       throw new Error(reason);
     }
-    
+
     const tx = new Transaction();
-    
+
     // Add vouch instruction
+    // Note: Must include reverse_vouch_record PDA (C-08 mutual vouch prevention)
     // tx.add(await this.program.methods.vouchForUser(target)...);
-    
+
     return tx;
   }
 }

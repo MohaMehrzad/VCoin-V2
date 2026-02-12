@@ -57,5 +57,25 @@ pub enum GaslessError {
     // L-03: Slippage protection
     #[msg("Fee slippage exceeded maximum allowed")]
     SlippageExceeded,
+
+    // C-AUDIT-15: Clock skew detection for daily budget reset
+    #[msg("Clock skew detected: day number is too far ahead")]
+    ClockSkewDetected,
+
+    // H-AUDIT-11: Scope bounds validation
+    #[msg("Invalid scope: exceeds valid scope range")]
+    InvalidScope,
+
+    // H-AUDIT-12: Per-user session count limit
+    #[msg("Maximum active sessions per user reached")]
+    MaxSessionsReached,
+
+    // M-AUDIT-16: Zero amount fee deduction
+    #[msg("Fee amount must be greater than zero")]
+    ZeroAmount,
+
+    // M-AUDIT-22: Invalid address during initialization
+    #[msg("Invalid address: cannot use default/zero pubkey")]
+    InvalidAddress,
 }
 

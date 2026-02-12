@@ -1893,8 +1893,11 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "solana-curve25519",
+ "solana-hash",
  "solana-program-test",
  "solana-sdk",
+ "solana-sha256-hasher",
  "tokio",
 ]
 

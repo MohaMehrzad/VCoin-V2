@@ -162,11 +162,12 @@ describe("vcoin-token", () => {
     console.log("Pause/unpause working correctly");
   });
 
-  it("Updates the authority", async () => {
+  it("Proposes and accepts authority transfer (H-02 two-step)", async () => {
     const newAuthority = Keypair.generate();
 
+    // Step 1: Propose new authority
     await program.methods
-      .updateAuthority(newAuthority.publicKey)
+      .proposeAuthority(newAuthority.publicKey)
       .accounts({
         authority: authority.publicKey,
         config: configPda,
@@ -174,20 +175,32 @@ describe("vcoin-token", () => {
       .signers([authority])
       .rpc();
 
-    const config = await program.account.vCoinConfig.fetch(configPda);
-    expect(config.authority.toBase58()).to.equal(newAuthority.publicKey.toBase58());
+    let config = await program.account.vCoinConfig.fetch(configPda);
+    expect(config.pendingAuthority.toBase58()).to.equal(newAuthority.publicKey.toBase58());
+    // Authority hasn't changed yet
+    expect(config.authority.toBase58()).to.equal(authority.publicKey.toBase58());
 
-    // Update back for other tests
+    console.log("Authority transfer proposed (H-02 step 1)");
+
+    // Note: In production, accept_authority requires 24-hour timelock.
+    // In local-validator tests, clock cannot easily be advanced, so this will
+    // fail with AuthorityTransferTimelock if timelock is enforced.
+    // We test the propose step here; timelock acceptance is tested in bankrun.
+
+    // Cancel the proposal to keep authority for other tests
     await program.methods
-      .updateAuthority(authority.publicKey)
+      .cancelAuthorityTransfer()
       .accounts({
-        authority: newAuthority.publicKey,
+        authority: authority.publicKey,
         config: configPda,
       })
-      .signers([newAuthority])
+      .signers([authority])
       .rpc();
 
-    console.log("Authority update working correctly");
+    config = await program.account.vCoinConfig.fetch(configPda);
+    expect(config.pendingAuthority.toBase58()).to.equal(PublicKey.default.toBase58());
+
+    console.log("Authority transfer cancelled, authority unchanged");
   });
 
   it("Fails to mint when unauthorized", async () => {

@@ -210,21 +210,22 @@ describe("vilink-protocol", () => {
     
     it("Should create a tip action", async () => {
       actionCreationTime = Math.floor(Date.now() / 1000);
-      
-      // Derive action PDA with timestamp
+
+      // M-04: Derive action PDA with nonce (not timestamp)
+      const nonce = new anchor.BN(0); // First action for this user
       [actionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from(ACTION_SEED),
           creatorKeypair.publicKey.toBuffer(),
-          new anchor.BN(actionCreationTime).toArrayLike(Buffer, "le", 8)
+          nonce.toArrayLike(Buffer, "le", 8)
         ],
         program.programId
       );
-      
+
       const tipAmount = new anchor.BN(1_000_000_000); // 1 VCoin
       const expirySeconds = new anchor.BN(86400); // 1 day
       const metadataHash = new Array(32).fill(0);
-      
+
       const tx = await program.methods
         .createAction(
           ACTION_TIP,
@@ -234,7 +235,8 @@ describe("vilink-protocol", () => {
           expirySeconds,
           true, // one_time
           new anchor.BN(1), // max_executions
-          null // no content_id
+          null, // no content_id
+          nonce // M-04: nonce parameter
         )
         .accounts({
           config: configPda,
@@ -261,19 +263,18 @@ describe("vilink-protocol", () => {
     });
 
     it("Should create a vouch action", async () => {
-      const vouchCreationTime = Math.floor(Date.now() / 1000) + 1;
-      
+      // M-04: Use nonce 1 (second action for this user)
+      const nonce = new anchor.BN(1);
+
       const [vouchActionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from(ACTION_SEED),
           creatorKeypair.publicKey.toBuffer(),
-          new anchor.BN(vouchCreationTime).toArrayLike(Buffer, "le", 8)
+          nonce.toArrayLike(Buffer, "le", 8)
         ],
         program.programId
       );
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const tx = await program.methods
         .createAction(
           ACTION_VOUCH,
@@ -283,7 +284,8 @@ describe("vilink-protocol", () => {
           new anchor.BN(86400),
           true,
           new anchor.BN(1),
-          null
+          null,
+          nonce // M-04: nonce parameter
         )
         .accounts({
           config: configPda,
@@ -300,19 +302,18 @@ describe("vilink-protocol", () => {
     });
 
     it("Should create a follow action", async () => {
-      const followCreationTime = Math.floor(Date.now() / 1000) + 2;
-      
+      // M-04: Use nonce 2 (third action for this user)
+      const nonce = new anchor.BN(2);
+
       const [followActionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from(ACTION_SEED),
           creatorKeypair.publicKey.toBuffer(),
-          new anchor.BN(followCreationTime).toArrayLike(Buffer, "le", 8)
+          nonce.toArrayLike(Buffer, "le", 8)
         ],
         program.programId
       );
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const tx = await program.methods
         .createAction(
           ACTION_FOLLOW,
@@ -322,7 +323,8 @@ describe("vilink-protocol", () => {
           new anchor.BN(86400),
           false, // reusable
           new anchor.BN(100), // max 100 follows
-          null
+          null,
+          nonce // M-04: nonce parameter
         )
         .accounts({
           config: configPda,
@@ -343,11 +345,11 @@ describe("vilink-protocol", () => {
     it("Should register a dApp", async () => {
       const name = Buffer.alloc(32);
       name.write("TestDApp", 0);
-      
+
       const webhookHash = new Array(32).fill(1);
       const allowedActions = 0xFF; // All actions allowed
       const feeShareBps = 100; // 1% affiliate fee
-      
+
       const tx = await program.methods
         .registerDapp(
           Array.from(name) as number[],
@@ -362,6 +364,8 @@ describe("vilink-protocol", () => {
           authority: provider.wallet.publicKey,
           systemProgram: SystemProgram.programId,
         })
+        // L-05: dApp authority must also sign to prove ownership
+        .signers([dappAuthorityKeypair])
         .rpc();
       
       console.log("Register dApp tx:", tx);
@@ -379,7 +383,7 @@ describe("vilink-protocol", () => {
   describe("Configuration Updates", () => {
     it("Should update platform fee", async () => {
       const newFeeBps = 300; // 3%
-      
+
       await program.methods
         .setPlatformFee(newFeeBps)
         .accounts({
@@ -387,10 +391,10 @@ describe("vilink-protocol", () => {
           authority: provider.wallet.publicKey,
         })
         .rpc();
-      
+
       const config = await program.account.viLinkConfig.fetch(configPda);
       expect(config.platformFeeBps).to.equal(300);
-      
+
       // Reset to default
       await program.methods
         .setPlatformFee(250)
@@ -399,8 +403,42 @@ describe("vilink-protocol", () => {
           authority: provider.wallet.publicKey,
         })
         .rpc();
-      
+
       console.log("✓ Platform fee updated");
+    });
+
+    it("Should reject out-of-bounds platform fee (M-02)", async () => {
+      // Try fee below minimum (0.1% = 10 bps)
+      try {
+        await program.methods
+          .setPlatformFee(5) // 0.05% - below minimum
+          .accounts({
+            config: configPda,
+            authority: provider.wallet.publicKey,
+          })
+          .rpc();
+
+        expect.fail("Should have thrown InvalidFeeRange error");
+      } catch (error: any) {
+        expect(error.message).to.include("InvalidFeeRange");
+      }
+
+      // Try fee above maximum (10% = 1000 bps)
+      try {
+        await program.methods
+          .setPlatformFee(1500) // 15% - above maximum
+          .accounts({
+            config: configPda,
+            authority: provider.wallet.publicKey,
+          })
+          .rpc();
+
+        expect.fail("Should have thrown InvalidFeeRange error");
+      } catch (error: any) {
+        expect(error.message).to.include("InvalidFeeRange");
+      }
+
+      console.log("✓ Out-of-bounds platform fees correctly rejected (M-02)");
     });
 
     it("Should enable/disable action types", async () => {
@@ -492,12 +530,15 @@ describe("vilink-protocol", () => {
   describe("Statistics", () => {
     it("Should fetch user stats", async () => {
       const stats = await program.account.userActionStats.fetch(creatorStatsPda);
-      
+
       expect(stats.user.toBase58()).to.equal(creatorKeypair.publicKey.toBase58());
       expect(stats.actionsCreated.toNumber()).to.be.greaterThan(0);
-      
+      // M-04: actionNonce tracks how many actions created (used for PDA derivation)
+      expect(stats.actionNonce.toNumber()).to.equal(stats.actionsCreated.toNumber());
+
       console.log("✓ User stats retrieved");
       console.log("  Actions created:", stats.actionsCreated.toNumber());
+      console.log("  Action nonce:", stats.actionNonce.toNumber());
     });
 
     it("Should fetch config stats", async () => {

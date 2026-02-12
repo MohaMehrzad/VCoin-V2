@@ -31,7 +31,12 @@ pub fn handler(ctx: Context<ClaimRefund>) -> Result<()> {
     };
     
     if refund_pct > 0 {
-        let refund_amount = ((content.energy_spent as u32 * refund_pct) / 100) as u16;
+        // C-AUDIT-21: Use checked arithmetic to prevent overflow in refund calculation
+        let refund_amount = (content.energy_spent as u32)
+            .checked_mul(refund_pct)
+            .ok_or(ContentError::Overflow)?
+            .checked_div(100)
+            .ok_or(ContentError::Overflow)? as u16;
         
         let user_energy = &mut ctx.accounts.user_energy;
         user_energy.current_energy = user_energy.current_energy

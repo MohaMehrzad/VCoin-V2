@@ -13,6 +13,12 @@ pub fn handler(ctx: Context<UpdateConfig>, new_staking_protocol: Pubkey) -> Resu
         VeVCoinError::Unauthorized
     );
     
+    // C-02: Validate staking protocol address is not zero
+    require!(
+        new_staking_protocol != Pubkey::default(),
+        VeVCoinError::InvalidStakingProtocol
+    );
+
     let old_staking_protocol = config.staking_protocol;
     config.staking_protocol = new_staking_protocol;
     

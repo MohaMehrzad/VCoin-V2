@@ -34,10 +34,29 @@ pub struct DelegationCreated {
 }
 
 #[event]
+pub struct PrivateVoteCast {
+    pub proposal_id: u64,
+    pub voter: Pubkey,
+    pub total_private_votes: u32,
+}
+
+#[event]
+pub struct DecryptionShareVerified {
+    pub proposal_id: u64,
+    pub committee_member: Pubkey,
+    pub committee_index: u8,
+    pub shares_received: u8,
+}
+
+#[event]
 pub struct ZKRevealComplete {
     pub proposal_id: u64,
     pub votes_for: u128,
     pub votes_against: u128,
     pub votes_abstain: u128,
+    /// H(for || against || abstain || share_0 || ... || share_n)
+    pub verification_hash: [u8; 32],
+    /// Number of DecryptionShare PDAs verified on-chain
+    pub shares_verified: u8,
 }
 

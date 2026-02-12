@@ -3,128 +3,29 @@
  */
 
 import { Keypair, PublicKey } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
 import {
   GovernanceClient,
-  calculateVotingPower,
-  integerSqrt,
-  ProposalStatus,
-  VoteChoice,
   GOVERNANCE_CONSTANTS,
+  VoteChoice,
 } from '../governance';
+import { ProposalStatus } from '../types';
 
 describe('Governance Module', () => {
-  describe('Integer Square Root', () => {
-    it('should return 0 for 0', () => {
-      expect(integerSqrt(0n)).toBe(0n);
-    });
-
-    it('should return 1 for 1', () => {
-      expect(integerSqrt(1n)).toBe(1n);
-    });
-
-    it('should calculate perfect squares correctly', () => {
-      expect(integerSqrt(4n)).toBe(2n);
-      expect(integerSqrt(9n)).toBe(3n);
-      expect(integerSqrt(16n)).toBe(4n);
-      expect(integerSqrt(100n)).toBe(10n);
-      expect(integerSqrt(10000n)).toBe(100n);
-      expect(integerSqrt(1000000n)).toBe(1000n);
-    });
-
-    it('should floor non-perfect squares', () => {
-      expect(integerSqrt(2n)).toBe(1n);
-      expect(integerSqrt(5n)).toBe(2n);
-      expect(integerSqrt(99n)).toBe(9n);
-      expect(integerSqrt(101n)).toBe(10n);
-    });
-
-    it('should handle large values', () => {
-      const largeValue = 1_000_000_000n;
-      const result = integerSqrt(largeValue);
-      expect(result).toBe(31622n);
-    });
-  });
-
-  describe('Voting Power Calculation', () => {
-    it('should return 0 for 0 veVCoin', () => {
-      const power = calculateVotingPower({
-        veVCoinBalance: 0n,
-        fiveAScore: 5000,
-        tier: 'bronze',
-      });
-      expect(power).toBe(0n);
-    });
-
-    it('should apply quadratic formula', () => {
-      const power = calculateVotingPower({
-        veVCoinBalance: 10000n,
-        fiveAScore: 0,
-        tier: 'none',
-      });
-      // sqrt(10000) * 1.0 (5A) * 1.0 (tier) = 100
-      expect(Number(power)).toBeCloseTo(100, -1);
-    });
-
-    it('should apply 5A score boost', () => {
-      const basePower = calculateVotingPower({
-        veVCoinBalance: 10000n,
-        fiveAScore: 0,
-        tier: 'none',
-      });
-
-      const boostedPower = calculateVotingPower({
-        veVCoinBalance: 10000n,
-        fiveAScore: 10000, // Max 5A = 2.0x
-        tier: 'none',
-      });
-
-      expect(Number(boostedPower)).toBeCloseTo(Number(basePower) * 2, -1);
-    });
-
-    it('should apply tier multipliers', () => {
-      const bronzePower = calculateVotingPower({
-        veVCoinBalance: 10000n,
-        fiveAScore: 0,
-        tier: 'bronze',
-      });
-
-      const platinumPower = calculateVotingPower({
-        veVCoinBalance: 10000n,
-        fiveAScore: 0,
-        tier: 'platinum',
-      });
-
-      // Platinum = 10x, Bronze = 1x
-      expect(Number(platinumPower)).toBeGreaterThan(Number(bronzePower));
-    });
-
-    it('should apply all boosts together', () => {
-      const power = calculateVotingPower({
-        veVCoinBalance: 10000n,
-        fiveAScore: 10000, // 2.0x
-        tier: 'platinum', // 10x
-      });
-
-      // sqrt(10000) * 2.0 * 10 = 100 * 20 = 2000
-      expect(Number(power)).toBeCloseTo(2000, -1);
-    });
-  });
-
   describe('Proposal Status Enum', () => {
     it('should have all status values', () => {
-      expect(ProposalStatus.Pending).toBe(0);
-      expect(ProposalStatus.Active).toBe(1);
-      expect(ProposalStatus.Passed).toBe(2);
-      expect(ProposalStatus.Rejected).toBe(3);
-      expect(ProposalStatus.Executed).toBe(4);
-      expect(ProposalStatus.Cancelled).toBe(5);
+      expect(ProposalStatus.Active).toBe(0);
+      expect(ProposalStatus.Passed).toBe(1);
+      expect(ProposalStatus.Rejected).toBe(2);
+      expect(ProposalStatus.Executed).toBe(3);
+      expect(ProposalStatus.Cancelled).toBe(4);
     });
   });
 
   describe('Vote Choice Enum', () => {
     it('should have all vote choices', () => {
-      expect(VoteChoice.For).toBe(0);
-      expect(VoteChoice.Against).toBe(1);
+      expect(VoteChoice.Against).toBe(0);
+      expect(VoteChoice.For).toBe(1);
       expect(VoteChoice.Abstain).toBe(2);
     });
   });
@@ -143,7 +44,20 @@ describe('Governance Module', () => {
     });
 
     it('should have correct proposal threshold', () => {
-      expect(GOVERNANCE_CONSTANTS.proposalThreshold).toBe(1000);
+      expect(GOVERNANCE_CONSTANTS.minProposalThreshold).toBe(100);
+    });
+
+    it('should have authority transfer timelock (H-02)', () => {
+      expect(GOVERNANCE_CONSTANTS.authorityTransferTimelock).toBe(24 * 3600);
+    });
+
+    it('should have ZK voting constants', () => {
+      expect(GOVERNANCE_CONSTANTS.zk).toBeDefined();
+      expect(GOVERNANCE_CONSTANTS.zk.voteProofSize).toBe(352);
+      expect(GOVERNANCE_CONSTANTS.zk.ciphertextSize).toBe(64);
+      expect(GOVERNANCE_CONSTANTS.zk.maxCommitteeSize).toBe(5);
+      expect(GOVERNANCE_CONSTANTS.zk.privateVotingConfigSize).toBe(680);
+      expect(GOVERNANCE_CONSTANTS.zk.decryptionShareSize).toBe(242);
     });
   });
 
@@ -151,9 +65,9 @@ describe('Governance Module', () => {
     it('should calculate quorum correctly', () => {
       const totalSupply = 1_000_000_000n;
       const quorumBps = GOVERNANCE_CONSTANTS.quorumBps;
-      
+
       const quorum = (totalSupply * BigInt(quorumBps)) / 10000n;
-      
+
       // 4% of 1B = 40M
       expect(quorum).toBe(40_000_000n);
     });
@@ -166,11 +80,12 @@ describe('Governance Module', () => {
         votesAgainst: 30_000_000n,
         votesAbstain: 10_000_000n,
       };
-      
-      const totalVotes = proposal.votesFor + proposal.votesAgainst + proposal.votesAbstain;
+
+      // C-03: Quorum now counts only for + against (abstains excluded)
+      const quorumVotes = proposal.votesFor + proposal.votesAgainst;
       const quorum = 40_000_000n;
-      
-      const passed = proposal.votesFor > proposal.votesAgainst && totalVotes >= quorum;
+
+      const passed = proposal.votesFor > proposal.votesAgainst && quorumVotes >= quorum;
       expect(passed).toBe(true);
     });
 
@@ -180,23 +95,60 @@ describe('Governance Module', () => {
         votesAgainst: 60_000_000n,
         votesAbstain: 10_000_000n,
       };
-      
+
       const passed = proposal.votesFor > proposal.votesAgainst;
       expect(passed).toBe(false);
     });
 
-    it('should fail when quorum not met', () => {
+    it('should fail when quorum not met (C-03: abstains excluded)', () => {
       const proposal = {
         votesFor: 20_000_000n,
         votesAgainst: 10_000_000n,
-        votesAbstain: 5_000_000n,
+        votesAbstain: 50_000_000n, // lots of abstains, but they don't count
       };
-      
-      const totalVotes = proposal.votesFor + proposal.votesAgainst + proposal.votesAbstain;
+
+      // C-03: Only for + against count toward quorum
+      const quorumVotes = proposal.votesFor + proposal.votesAgainst;
       const quorum = 40_000_000n;
-      
-      const passed = proposal.votesFor > proposal.votesAgainst && totalVotes >= quorum;
-      expect(passed).toBe(false);
+
+      const passed = proposal.votesFor > proposal.votesAgainst && quorumVotes >= quorum;
+      expect(passed).toBe(false); // 30M < 40M quorum
+    });
+
+    it('should demonstrate C-03 quorum change: abstains no longer help reach quorum', () => {
+      const proposal = {
+        votesFor: 25_000_000n,
+        votesAgainst: 10_000_000n,
+        votesAbstain: 100_000_000n, // massive abstains
+      };
+
+      // Old quorum (all votes): 135M >= 40M would pass
+      const oldTotalVotes = proposal.votesFor + proposal.votesAgainst + proposal.votesAbstain;
+      const quorum = 40_000_000n;
+      const oldPassed = proposal.votesFor > proposal.votesAgainst && oldTotalVotes >= quorum;
+      expect(oldPassed).toBe(true); // would have passed under old rules
+
+      // New quorum (C-03: only for + against): 35M < 40M fails
+      const newQuorumVotes = proposal.votesFor + proposal.votesAgainst;
+      const newPassed = proposal.votesFor > proposal.votesAgainst && newQuorumVotes >= quorum;
+      expect(newPassed).toBe(false); // fails under new rules
+    });
+  });
+
+  describe('ZK Voting Constants', () => {
+    it('should have correct vote proof size (3 OR proofs + 1 sum proof)', () => {
+      // 3 OR proofs at 96 bytes each + 1 sum proof at 64 bytes = 352
+      const expectedSize = 3 * 96 + 64;
+      expect(GOVERNANCE_CONSTANTS.zk.voteProofSize).toBe(expectedSize);
+    });
+
+    it('should have correct ciphertext size (R || C)', () => {
+      // ElGamal ciphertext: 32-byte R point + 32-byte C point
+      expect(GOVERNANCE_CONSTANTS.zk.ciphertextSize).toBe(64);
+    });
+
+    it('should support threshold decryption with committee', () => {
+      expect(GOVERNANCE_CONSTANTS.zk.maxCommitteeSize).toBe(5);
     });
   });
 
@@ -206,4 +158,3 @@ describe('Governance Module', () => {
     });
   });
 });
-

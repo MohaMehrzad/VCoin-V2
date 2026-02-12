@@ -6,8 +6,12 @@ use crate::state::{UserEnergy, UserRateLimit};
 pub fn regenerate_energy(energy: &mut UserEnergy, current_time: i64) -> Result<()> {
     let elapsed_seconds = current_time - energy.last_regen_time;
     if elapsed_seconds > 0 {
-        let hours_elapsed = elapsed_seconds as f64 / 3600.0;
-        let regen_amount = (hours_elapsed * energy.regen_rate as f64) as u16;
+        // M-AUDIT-21: Use integer arithmetic instead of floating point to avoid
+        // precision issues and ensure deterministic results across validators.
+        // Formula: (elapsed_seconds * regen_rate) / 3600, clamped to u16::MAX.
+        let regen_amount = ((elapsed_seconds as u32)
+            .saturating_mul(energy.regen_rate as u32) / 3600)
+            .min(u16::MAX as u32) as u16;
         
         energy.current_energy = energy.current_energy
             .saturating_add(regen_amount)

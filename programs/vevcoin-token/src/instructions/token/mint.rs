@@ -59,7 +59,8 @@ pub fn handler(ctx: Context<MintVeVCoin>, amount: u64) -> Result<()> {
         user_account.owner = ctx.accounts.user.key();
         user_account.first_mint_at = now;
         user_account.bump = user_account_bump;
-        config.total_holders = current_total_holders.checked_add(1).unwrap();
+        // M-20: Use saturating_add to prevent panic on overflow
+        config.total_holders = current_total_holders.saturating_add(1);
     }
     
     // Update balances

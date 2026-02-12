@@ -18,6 +18,8 @@ pub struct PairTracking {
     pub amount_24h: u64,
     /// Wash trading flag count
     pub wash_flags: u16,
+    /// M-AUDIT-10: Timestamp of last wash trading flag, used for flag decay
+    pub last_flag_time: i64,
     /// Engagement trust score (0-10000)
     pub trust_score: u16,
     /// PDA bump
@@ -33,6 +35,7 @@ impl PairTracking {
         8 +  // day_reset_time
         8 +  // amount_24h
         2 +  // wash_flags
+        8 +  // last_flag_time (M-AUDIT-10)
         2 +  // trust_score
         1;   // bump
 }

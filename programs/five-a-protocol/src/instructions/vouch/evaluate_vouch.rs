@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{VOUCH_EVALUATION_PERIOD, VOUCH_REWARD};
+use crate::constants::{VOUCH_EVALUATION_PERIOD, VOUCH_REWARD, MAX_VOUCH_AGE};
 use crate::contexts::EvaluateVouch;
 use crate::errors::FiveAError;
 use crate::events::VouchEvaluated;
@@ -9,12 +9,15 @@ use crate::state::VouchStatus;
 /// Evaluate vouch outcome after 90 days
 pub fn handler(ctx: Context<EvaluateVouch>) -> Result<()> {
     let vouch = &mut ctx.accounts.vouch_record;
-    
+
     require!(!vouch.outcome_evaluated, FiveAError::AlreadyEvaluated);
-    
+
     let clock = Clock::get()?;
     let elapsed = clock.unix_timestamp - vouch.vouched_at;
     require!(elapsed >= VOUCH_EVALUATION_PERIOD, FiveAError::EvaluationNotComplete);
+
+    // M-18: Reject evaluation if vouch is too old (max 1 year)
+    require!(elapsed <= MAX_VOUCH_AGE, FiveAError::VouchExpired);
     
     // Check vouchee's current score
     let vouchee_score = &ctx.accounts.vouchee_score;

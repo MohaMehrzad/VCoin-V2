@@ -24,6 +24,12 @@ pub const MAX_SUBSIDIZED_TX_PER_USER: u32 = 50; // Max 50 free tx per user per d
 pub const MAX_FEE_SLIPPAGE_BPS: u16 = 500;
 pub const DEFAULT_MAX_SLIPPAGE_BPS: u16 = 500;
 
+/// H-AUDIT-12: Per-user session count limit
+pub const MAX_SESSIONS_PER_USER: u8 = 5;
+
+/// C-AUDIT-15: Maximum day delta allowed for daily budget reset (clock skew protection)
+pub const MAX_DAY_DELTA: u32 = 2;
+
 /// Action scope bits
 pub const SCOPE_TIP: u16 = 1 << 0;
 pub const SCOPE_VOUCH: u16 = 1 << 1;

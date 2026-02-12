@@ -10,7 +10,14 @@ use crate::utils::{update_user_activity, check_wash_trading};
 pub fn handler(ctx: Context<Execute>, amount: u64) -> Result<()> {
     let config = &ctx.accounts.hook_config;
     
-    // Check if hook is paused
+    // M-AUDIT-11: When the hook is paused, ALL VCoin transfers are blocked.
+    // This is an intentional design choice for emergency response scenarios
+    // (e.g., exploit mitigation, contract migration). The pause affects every
+    // transfer — not just flagged ones — because Token-2022 invokes this hook
+    // on every token transfer. The authority can unpause via set_paused(false)
+    // once the emergency is resolved. This trade-off prioritizes safety over
+    // liveness: it is better to temporarily halt transfers than to allow
+    // potentially exploited transfers to continue.
     require!(!config.paused, TransferHookError::HookPaused);
     
     let clock = Clock::get()?;

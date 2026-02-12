@@ -15,12 +15,12 @@ pub struct VoteRecord {
     pub voted_at: i64,
     /// Whether this is a ZK encrypted vote
     pub is_private: bool,
-    /// Encrypted choice (for ZK voting)
-    pub encrypted_choice: [u8; 32],
-    /// Encrypted weight (for ZK voting)
-    pub encrypted_weight: [u8; 32],
-    /// ZK proof
-    pub zk_proof: [u8; 128],
+    /// ElGamal ciphertext for "for" vote: R (32 bytes) || C (32 bytes)
+    pub ct_for: [u8; 64],
+    /// ElGamal ciphertext for "against" vote: R (32 bytes) || C (32 bytes)
+    pub ct_against: [u8; 64],
+    /// ElGamal ciphertext for "abstain" vote: R (32 bytes) || C (32 bytes)
+    pub ct_abstain: [u8; 64],
     /// Whether vote has been revealed
     pub revealed: bool,
     /// PDA bump
@@ -36,9 +36,9 @@ impl Default for VoteRecord {
             vote_choice: 0,
             voted_at: 0,
             is_private: false,
-            encrypted_choice: [0u8; 32],
-            encrypted_weight: [0u8; 32],
-            zk_proof: [0u8; 128],
+            ct_for: [0u8; 64],
+            ct_against: [0u8; 64],
+            ct_abstain: [0u8; 64],
             revealed: false,
             bump: 0,
         }
@@ -53,10 +53,10 @@ impl VoteRecord {
         1 +  // vote_choice
         8 +  // voted_at
         1 +  // is_private
-        32 + // encrypted_choice
-        32 + // encrypted_weight
-        128 + // zk_proof
+        64 + // ct_for
+        64 + // ct_against
+        64 + // ct_abstain
         1 +  // revealed
         1;   // bump
+    // Total: 284 bytes (same as before: 32 + 32 + 128 = 192 = 64 + 64 + 64)
 }
-

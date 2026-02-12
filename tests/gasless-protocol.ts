@@ -479,15 +479,20 @@ describe("gasless-protocol", () => {
   });
 
   describe("Statistics", () => {
-    it("Should fetch user gasless stats", async () => {
+    it("Should fetch user gasless stats including active sessions (H-AUDIT-12)", async () => {
       const stats = await program.account.userGaslessStats.fetch(userStatsPda);
-      
+
       console.log("✓ User gasless stats retrieved");
       console.log("  User:", stats.user.toBase58());
       console.log("  Total gasless tx:", stats.totalGaslessTx.toNumber());
       console.log("  Total subsidized:", stats.totalSubsidized.toNumber());
       console.log("  Total VCoin fees:", stats.totalVcoinFees.toNumber());
       console.log("  Sessions created:", stats.sessionsCreated);
+      console.log("  Active sessions (H-AUDIT-12):", stats.activeSessions);
+
+      // H-AUDIT-12: active_sessions should be tracked
+      expect(stats.activeSessions).to.be.a("number");
+      expect(stats.activeSessions).to.be.lessThanOrEqual(5); // MAX_SESSIONS_PER_USER
     });
 
     it("Should fetch config stats", async () => {

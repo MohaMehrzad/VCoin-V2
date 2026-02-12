@@ -121,6 +121,10 @@ export class StakingClient {
   
   /**
    * Get tier name
+   *
+   * M-05: The on-chain update_tier instruction will reject no-op tier updates
+   * with TierUnchanged error. Only call updateTier when the user's stake amount
+   * actually qualifies for a different tier.
    */
   getTierName(tier: StakingTier): string {
     const names = ["None", "Bronze", "Silver", "Gold", "Platinum"];

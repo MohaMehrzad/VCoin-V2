@@ -51,19 +51,30 @@ describe("ViLink Protocol - Bankrun Tests", () => {
   });
 
   describe("Platform Fee Calculation", () => {
-    it("should calculate 2.5% fee correctly", () => {
+    it("should calculate 2.5% fee with ceiling division (C-06)", () => {
       const amount = 100_000_000_000; // 100 VCoin
-      const fee = Math.floor((amount * PLATFORM_FEE_BPS) / 10000);
-      
-      expect(fee).to.equal(2_500_000_000); // 2.5 VCoin
+      // C-06: Ceiling division: (amount * bps + 9999) / 10000
+      const fee = Math.floor((amount * PLATFORM_FEE_BPS + 9999) / 10000);
+
+      expect(fee).to.equal(2_500_000_000); // 2.5 VCoin (exact, no rounding diff)
     });
 
     it("should calculate net amount after fee", () => {
       const amount = 100_000_000_000;
-      const fee = Math.floor((amount * PLATFORM_FEE_BPS) / 10000);
+      const fee = Math.floor((amount * PLATFORM_FEE_BPS + 9999) / 10000);
       const netAmount = amount - fee;
-      
+
       expect(netAmount).to.equal(97_500_000_000);
+    });
+
+    it("should round up on small amounts (C-06 ceiling division)", () => {
+      // Small amount where floor and ceiling differ
+      const amount = 1; // 1 lamport
+      const floorFee = Math.floor((amount * PLATFORM_FEE_BPS) / 10000);
+      const ceilFee = Math.floor((amount * PLATFORM_FEE_BPS + 9999) / 10000);
+
+      expect(floorFee).to.equal(0); // Floor rounds to 0
+      expect(ceilFee).to.equal(1);  // Ceiling rounds up to 1
     });
   });
 

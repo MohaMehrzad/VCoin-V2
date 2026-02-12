@@ -183,5 +183,52 @@ describe("5A Protocol - Bankrun Tests", () => {
     expect(isValidScore(-1)).to.be.false;
     expect(isValidScore(MAX_SCORE + 1)).to.be.false;
   });
+
+  it("should prevent mutual vouches (C-08)", () => {
+    const vouches = new Map<string, Set<string>>();
+
+    const addVouch = (voucher: string, target: string) => vouches.get(voucher)?.add(target) || vouches.set(voucher, new Set([target]));
+    const hasVouch = (voucher: string, target: string) => vouches.get(voucher)?.has(target) ?? false;
+
+    const canVouch = (voucher: string, target: string) => {
+      // C-08: Cannot vouch if target already vouched for you
+      if (hasVouch(target, voucher)) return false;
+      // Cannot self-vouch
+      if (voucher === target) return false;
+      return true;
+    };
+
+    // A vouches for B - should succeed
+    expect(canVouch("userA", "userB")).to.be.true;
+    addVouch("userA", "userB");
+
+    // B tries to vouch for A - should fail (mutual vouch)
+    expect(canVouch("userB", "userA")).to.be.false;
+
+    // C vouches for B - should succeed (no mutual vouch)
+    expect(canVouch("userC", "userB")).to.be.true;
+  });
+
+  it("should enforce vouch expiry (M-18)", () => {
+    const MAX_VOUCH_AGE = 365 * 24 * 60 * 60; // 1 year
+    const now = Math.floor(Date.now() / 1000);
+
+    const isVouchValid = (vouchTimestamp: number, currentTime: number) => {
+      return currentTime - vouchTimestamp < MAX_VOUCH_AGE;
+    };
+
+    // Recent vouch (1 day old) - valid
+    expect(isVouchValid(now - 86400, now)).to.be.true;
+
+    // Old vouch (364 days) - still valid
+    expect(isVouchValid(now - 364 * 86400, now)).to.be.true;
+
+    // Expired vouch (366 days) - invalid
+    expect(isVouchValid(now - 366 * 86400, now)).to.be.false;
+
+    // Vouch at exactly MAX_VOUCH_AGE boundary
+    expect(isVouchValid(now - MAX_VOUCH_AGE, now)).to.be.false;
+    expect(isVouchValid(now - MAX_VOUCH_AGE + 1, now)).to.be.true;
+  });
 });
 

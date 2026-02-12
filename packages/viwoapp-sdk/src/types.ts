@@ -115,6 +115,12 @@ export interface VoteRecord {
   votePower: BN;
   support: boolean;
   votedAt: BN;
+  /** ElGamal ciphertext for "for" vote (64 bytes: R || C) - only set for private votes */
+  ctFor?: Uint8Array;
+  /** ElGamal ciphertext for "against" vote (64 bytes: R || C) - only set for private votes */
+  ctAgainst?: Uint8Array;
+  /** ElGamal ciphertext for "abstain" vote (64 bytes: R || C) - only set for private votes */
+  ctAbstain?: Uint8Array;
 }
 
 export interface CreateProposalParams {
@@ -316,6 +322,8 @@ export interface UserGaslessStats {
   totalVcoinFees: BN;
   sessionsCreated: number;
   activeSession: PublicKey;
+  /** H-AUDIT-12: Number of active (non-revoked, non-expired) sessions */
+  activeSessions: number;
 }
 
 // ============ Identity Types ============
@@ -417,28 +425,54 @@ export interface GovernanceConfig extends PendingAuthorityFields {
   vevcoinMint: PublicKey;
   paused: boolean;
   proposalCount: BN;
-  zkVotingEnabled: boolean; // C-01: Currently false
+  /** H-02: Timestamp when pending authority transfer was initiated (for 24h timelock) */
+  pendingAuthorityActivatedAt: BN;
 }
 
-/** ZK voting decryption share storage (C-02) */
+/** ZK voting decryption share with per-category partials and DLEQ proof */
 export interface DecryptionShare {
   proposal: PublicKey;
   committeeIndex: number;
   committeeMember: PublicKey;
-  share: Uint8Array;
+  /** Partial decryption: sk_j * R_for_sum (Ristretto255 point) */
+  partialFor: Uint8Array;
+  /** Partial decryption: sk_j * R_against_sum (Ristretto255 point) */
+  partialAgainst: Uint8Array;
+  /** Partial decryption: sk_j * R_abstain_sum (Ristretto255 point) */
+  partialAbstain: Uint8Array;
+  /** Batched DLEQ proof challenge (Scalar) */
+  dleqChallenge: Uint8Array;
+  /** Batched DLEQ proof response (Scalar) */
+  dleqResponse: Uint8Array;
   submittedAt: BN;
+  verified: boolean;
 }
 
-/** Private voting config with committee tracking (C-02) */
+/** Private voting config with ZK cryptographic verification */
 export interface PrivateVotingConfig {
   proposal: PublicKey;
-  encryptionPubkey: PublicKey;
+  /** Joint ElGamal public key (Ristretto255 point, 32 bytes) */
+  encryptionPubkey: Uint8Array;
   decryptionThreshold: number;
   decryptionCommittee: PublicKey[];
+  /** Committee ElGamal public keys (Ristretto255 points) */
+  committeeElgamalPubkeys: Uint8Array[];
   sharesSubmitted: boolean[];
   revealCompleted: boolean;
   aggregatedFor: BN;
   aggregatedAgainst: BN;
+  aggregatedAbstain: BN;
+  /** Verification hash for audit trail */
+  verificationHash: Uint8Array;
+  /** Homomorphically accumulated ciphertext components */
+  accumulatedCtForR: Uint8Array;
+  accumulatedCtForC: Uint8Array;
+  accumulatedCtAgainstR: Uint8Array;
+  accumulatedCtAgainstC: Uint8Array;
+  accumulatedCtAbstainR: Uint8Array;
+  accumulatedCtAbstainC: Uint8Array;
+  /** Number of private votes cast */
+  totalPrivateVotes: number;
 }
 
 /** Delegation with expiry (M-07) */
@@ -465,6 +499,8 @@ export interface PendingScoreUpdate {
   submissionCount: number;
   createdAt: BN;
   expiresAt: BN;
+  /** C-07: Immutable consensus count stored at creation time */
+  requiredConsensus: number;
 }
 
 // ============ Transfer Hook Config ============
@@ -474,5 +510,84 @@ export interface HookConfig extends PendingAuthorityFields {
   vcoinMint: PublicKey;
   blockWashTrading: boolean; // M-04: When true, blocks detected wash trades
   paused: boolean;
+}
+
+/** Pair tracking for wash trade detection */
+export interface PairTracking {
+  sender: PublicKey;
+  receiver: PublicKey;
+  transferCount: number;
+  lastTransferTime: BN;
+  washFlags: number;
+  /** M-AUDIT-10: Timestamp of last wash flag for decay */
+  lastFlagTime: BN;
+}
+
+// ============ veVCoin Types ============
+
+export interface VeVCoinConfig extends PendingAuthorityFields {
+  authority: PublicKey;
+  vcoinMint: PublicKey;
+  vevcoinMint: PublicKey;
+  stakingProtocol: PublicKey;
+  totalHolders: BN;
+  totalMinted: BN;
+  paused: boolean;
+  /** C-01: Timestamp when pending authority transfer was initiated (for 24h timelock) */
+  pendingAuthorityActivatedAt: BN;
+}
+
+// ============ ZK Private Voting Types ============
+
+/** Parameters for casting a private vote */
+export interface CastPrivateVoteParams {
+  proposalId: BN;
+  /** ElGamal ciphertext for "for" (64 bytes) */
+  ctFor: Uint8Array;
+  /** ElGamal ciphertext for "against" (64 bytes) */
+  ctAgainst: Uint8Array;
+  /** ElGamal ciphertext for "abstain" (64 bytes) */
+  ctAbstain: Uint8Array;
+  /** Vote validity proof (352 bytes) */
+  proofData: Uint8Array;
+}
+
+/** Parameters for enabling private voting on a proposal */
+export interface EnablePrivateVotingParams {
+  proposalId: BN;
+  /** Joint ElGamal public key (Ristretto255 point, 32 bytes) */
+  encryptionPubkey: Uint8Array;
+  /** Committee member Solana pubkeys */
+  decryptionCommittee: PublicKey[];
+  committeeSize: number;
+  decryptionThreshold: number;
+  /** Committee member ElGamal public keys (Ristretto255 points, 32 bytes each) */
+  committeeElgamalPubkeys: Uint8Array[];
+}
+
+/** Parameters for submitting a decryption share */
+export interface SubmitDecryptionShareParams {
+  proposalId: BN;
+  committeeIndex: number;
+  /** Partial decryption for "for" (Ristretto255 point, 32 bytes) */
+  partialFor: Uint8Array;
+  /** Partial decryption for "against" (Ristretto255 point, 32 bytes) */
+  partialAgainst: Uint8Array;
+  /** Partial decryption for "abstain" (Ristretto255 point, 32 bytes) */
+  partialAbstain: Uint8Array;
+  /** DLEQ proof challenge (Scalar, 32 bytes) */
+  dleqChallenge: Uint8Array;
+  /** DLEQ proof response (Scalar, 32 bytes) */
+  dleqResponse: Uint8Array;
+}
+
+/** Parameters for aggregating revealed votes (permissionless) */
+export interface AggregateRevealedVotesParams {
+  proposalId: BN;
+  tallyFor: BN;
+  tallyAgainst: BN;
+  tallyAbstain: BN;
+  /** Lagrange interpolation coefficients (Scalars, 32 bytes each) */
+  lagrangeCoefficients: Uint8Array[];
 }
 

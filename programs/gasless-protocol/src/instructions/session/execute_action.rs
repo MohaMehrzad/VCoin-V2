@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::constants::MAX_DAY_DELTA;
 use crate::contexts::ExecuteSessionAction;
 use crate::errors::GaslessError;
 use crate::events::{DailyBudgetReset, FeeCollected, SessionActionExecuted};
@@ -37,12 +38,20 @@ pub fn handler(
     if matches!(session.fee_method, FeeMethod::PlatformSubsidized) {
         // Reset daily budget if needed
         if config.should_reset_daily_budget(clock.unix_timestamp) {
+            let new_day = GaslessConfig::get_day_number(clock.unix_timestamp);
+
+            // C-AUDIT-15: Validate day delta to detect clock skew
+            require!(
+                new_day <= config.current_day.saturating_add(MAX_DAY_DELTA),
+                GaslessError::ClockSkewDetected
+            );
+
             emit!(DailyBudgetReset {
                 day: config.current_day,
                 previous_spent: config.day_spent,
                 new_budget: config.daily_subsidy_budget,
             });
-            config.current_day = GaslessConfig::get_day_number(clock.unix_timestamp);
+            config.current_day = new_day;
             config.day_spent = 0;
         }
         

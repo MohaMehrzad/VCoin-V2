@@ -15,3 +15,6 @@ pub const USER_VEVCOIN_SEED: &[u8] = b"user-vevcoin";
 /// 4 years in seconds (for veVCoin calculation)
 pub const FOUR_YEARS_SECONDS: i64 = 4 * 365 * 24 * 60 * 60;
 
+/// C-01: 24-hour timelock for authority transfers (in seconds)
+pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 86400;
+

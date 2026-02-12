@@ -16,6 +16,8 @@ pub struct VeVCoinConfig {
     pub total_supply: u64,
     /// Total unique holders
     pub total_holders: u64,
+    /// Timestamp when pending authority was proposed (C-01: timelock enforcement)
+    pub pending_authority_activated_at: i64,
     /// Bump seed for PDA
     pub bump: u8,
 }
@@ -28,6 +30,7 @@ impl VeVCoinConfig {
         32 + // staking_protocol
         8 +  // total_supply
         8 +  // total_holders
+        8 +  // pending_authority_activated_at (C-01)
         1;   // bump
 }
 

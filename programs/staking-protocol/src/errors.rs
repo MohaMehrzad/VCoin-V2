@@ -68,5 +68,9 @@ pub enum StakingError {
     // H-NEW-01: Authority transfer timelock
     #[msg("Authority transfer timelock not elapsed - must wait 24 hours after proposal")]
     AuthorityTransferTimelock,
+
+    // M-05: No-op tier update prevention
+    #[msg("Tier unchanged - no update needed")]
+    TierUnchanged,
 }
 

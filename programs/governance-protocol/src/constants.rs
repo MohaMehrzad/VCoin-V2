@@ -51,14 +51,12 @@ pub const TIER_MULT_PLATINUM: u64 = 10000; // 10.0x
 /// L-02: Configurable via program upgrade
 pub const DIMINISHING_THRESHOLD: u64 = 100_000;
 
+/// H-02: 24-hour timelock for authority transfers (in seconds)
+pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 86400;
+
 /// ZK voting constants
 pub const MIN_DECRYPTION_THRESHOLD: u8 = 3;
 pub const MAX_COMMITTEE_SIZE: usize = 5;
-
-/// ZK voting feature flag - MUST be false until ZK verifier implemented
-/// CRITICAL SECURITY: Setting this to true without implementing proper ZK
-/// verification will allow vote manipulation attacks (C-01, C-02, C-03)
-pub const ZK_VOTING_ENABLED: bool = false;
 
 /// Decryption share PDA seed
 pub const DECRYPTION_SHARE_SEED: &[u8] = b"decryption-share";

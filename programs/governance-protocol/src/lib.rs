@@ -19,6 +19,7 @@ declare_id!("3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe");
 /// - Council (10,000+ veVCoin): Fast-track proposals
 
 pub mod constants;
+pub mod crypto;
 pub mod errors;
 pub mod events;
 pub mod state;
@@ -67,49 +68,72 @@ pub mod governance_protocol {
         vote::cast::handler(ctx, choice)
     }
     
-    /// Cast a ZK private vote
+    /// Cast a ZK private vote with cryptographic proof verification
+    ///
+    /// The voter encrypts their choice using Twisted ElGamal and provides
+    /// OR proofs that each ciphertext encrypts 0 or weight, plus a sum proof
+    /// that exactly one category equals weight. Voting power is verified on-chain.
     pub fn cast_private_vote(
         ctx: Context<CastPrivateVote>,
-        encrypted_choice: [u8; 32],
-        encrypted_weight: [u8; 32],
-        zk_proof: [u8; 128],
+        ct_for: [u8; 64],
+        ct_against: [u8; 64],
+        ct_abstain: [u8; 64],
+        proof_data: Vec<u8>,
     ) -> Result<()> {
-        vote::cast_private::handler(ctx, encrypted_choice, encrypted_weight, zk_proof)
+        vote::cast_private::handler(ctx, ct_for, ct_against, ct_abstain, proof_data)
     }
-    
-    /// Enable ZK private voting for a proposal
+
+    /// Enable ZK private voting for a proposal with ElGamal committee keys
     pub fn enable_private_voting(
         ctx: Context<EnablePrivateVoting>,
-        encryption_pubkey: Pubkey,
+        encryption_pubkey: [u8; 32],
         decryption_committee: [Pubkey; 5],
         committee_size: u8,
         decryption_threshold: u8,
+        committee_elgamal_pubkeys: [[u8; 32]; 5],
     ) -> Result<()> {
-        zk_voting::enable_private_voting::handler(ctx, encryption_pubkey, decryption_committee, committee_size, decryption_threshold)
+        zk_voting::enable_private_voting::handler(
+            ctx, encryption_pubkey, decryption_committee,
+            committee_size, decryption_threshold, committee_elgamal_pubkeys,
+        )
     }
-    
+
     /// Initiate ZK vote reveal after voting ends
     pub fn initiate_reveal(ctx: Context<InitiateReveal>) -> Result<()> {
         zk_voting::initiate_reveal::handler(ctx)
     }
-    
-    /// Submit decryption share (committee member)
+
+    /// Submit decryption share with DLEQ proof (committee member)
     pub fn submit_decryption_share(
         ctx: Context<SubmitDecryptionShare>,
-        decryption_share: [u8; 32],
         committee_index: u8,
+        partial_for: [u8; 32],
+        partial_against: [u8; 32],
+        partial_abstain: [u8; 32],
+        dleq_challenge: [u8; 32],
+        dleq_response: [u8; 32],
     ) -> Result<()> {
-        zk_voting::submit_decryption_share::handler(ctx, decryption_share, committee_index)
+        zk_voting::submit_decryption_share::handler(
+            ctx, committee_index, partial_for, partial_against,
+            partial_abstain, dleq_challenge, dleq_response,
+        )
     }
-    
-    /// Complete ZK reveal and aggregate votes
+
+    /// Complete ZK reveal with trustless on-chain tally verification
+    ///
+    /// Anyone can submit the tally. On-chain verification ensures:
+    ///   tally * H == C_sum - D
+    /// for each category, making fabrication cryptographically impossible.
     pub fn aggregate_revealed_votes(
         ctx: Context<AggregateRevealedVotes>,
-        aggregated_for: u128,
-        aggregated_against: u128,
-        aggregated_abstain: u128,
+        tally_for: u64,
+        tally_against: u64,
+        tally_abstain: u64,
+        lagrange_coefficients: Vec<[u8; 32]>,
     ) -> Result<()> {
-        zk_voting::aggregate_revealed_votes::handler(ctx, aggregated_for, aggregated_against, aggregated_abstain)
+        zk_voting::aggregate_revealed_votes::handler(
+            ctx, tally_for, tally_against, tally_abstain, lagrange_coefficients,
+        )
     }
     
     /// Finalize proposal (determine pass/fail)

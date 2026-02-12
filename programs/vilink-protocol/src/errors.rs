@@ -57,5 +57,13 @@ pub enum ViLinkError {
     // M-04: Nonce validation for deterministic PDA derivation
     #[msg("Invalid nonce: must match expected action_nonce from user stats")]
     InvalidNonce,
+
+    // H-05: Token delegation attack prevention
+    #[msg("Token account has active delegation - revoke before executing")]
+    TokenAccountDelegated,
+
+    // L-04: Invalid expiry validation
+    #[msg("Invalid expiry: must be > 0 and <= max action expiry")]
+    InvalidExpiry,
 }
 

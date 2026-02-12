@@ -13,7 +13,8 @@ pub fn handler(ctx: Context<FinalizeProposal>) -> Result<()> {
         GovernanceError::VotingNotEnded
     );
     
-    let total_votes = proposal.votes_for + proposal.votes_against + proposal.votes_abstain;
+    // C-03: Exclude abstains from quorum calculation - only substantive votes count
+    let total_votes = proposal.votes_for + proposal.votes_against;
     
     // Check quorum
     if total_votes < config.quorum as u128 {

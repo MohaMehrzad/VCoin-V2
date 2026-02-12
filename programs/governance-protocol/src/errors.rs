@@ -40,6 +40,12 @@ pub enum GovernanceError {
     RevealAlreadyComplete,
     #[msg("Invalid decryption share")]
     InvalidDecryptionShare,
+
+    #[msg("Insufficient decryption shares - threshold not met")]
+    InsufficientDecryptionShares,
+
+    #[msg("Invalid DecryptionShare PDA - account does not match expected derivation")]
+    InvalidDecryptionSharePDA,
     #[msg("Invalid ZK proof")]
     InvalidZKProof,
     #[msg("Arithmetic overflow")]
@@ -89,5 +95,25 @@ pub enum GovernanceError {
     // H-NEW-03: Delegation amount validation
     #[msg("Claimed veVCoin balance exceeds delegated amount")]
     ExceedsDelegatedAmount,
+
+    // H-02: Authority transfer timelock
+    #[msg("Authority transfer timelock has not elapsed (24h required)")]
+    AuthorityTransferTimelock,
+
+    // ZK cryptographic verification errors
+    #[msg("Invalid Ristretto point in ciphertext or proof")]
+    InvalidRistrettoPoint,
+
+    #[msg("Vote validity OR proof verification failed")]
+    InvalidOrProof,
+
+    #[msg("Vote validity sum proof verification failed")]
+    InvalidSumProof,
+
+    #[msg("Decryption share DLEQ proof verification failed")]
+    InvalidDleqProof,
+
+    #[msg("Tally verification failed: tally * H != C_sum - D")]
+    TallyVerificationFailed,
 }
 

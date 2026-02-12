@@ -9,11 +9,14 @@ use crate::state::{VeVCoinConfig, UserVeVCoin};
 #[derive(Accounts)]
 #[instruction(amount: u64)]
 pub struct MintVeVCoin<'info> {
-    /// The staking protocol (must match config)
+    /// The staking protocol (must match config).
+    /// H-16: Trust assumption - the staking_protocol is the sole authorized caller
+    /// and is trusted to pass the correct user pubkey. User identity is validated
+    /// at the staking protocol level before CPI into vevcoin_token.
     pub staking_protocol: Signer<'info>,
-    
+
     /// The user receiving veVCoin
-    /// CHECK: Just a pubkey for PDA derivation
+    /// CHECK: Just a pubkey for PDA derivation - validated by staking_protocol (H-16)
     pub user: UncheckedAccount<'info>,
     
     #[account(

@@ -17,9 +17,12 @@ pub fn handler(
 ) -> Result<()> {
     let clock = Clock::get()?;
     
-    // C-01 Security Fix: Validate request_id matches current timestamp
-    // This ensures PDA seeds are consistent between propose/approve/execute
-    // since approve_slash and execute_slash use created_at (which equals clock.unix_timestamp)
+    // C-18 / C-01 Security Fix: Validate request_id matches current timestamp
+    // This ensures PDA seeds are consistent between propose/approve/execute:
+    // - propose_slash: seeds use request_id (u64) from instruction args
+    // - approve_slash/execute_slash: seeds use slash_request.created_at (i64) from state
+    // By enforcing request_id == clock.unix_timestamp as u64, and setting created_at = clock.unix_timestamp,
+    // the LE byte representations are identical for all positive timestamps (high bit = 0).
     require!(
         request_id == clock.unix_timestamp as u64,
         VCoinError::InvalidRequestId

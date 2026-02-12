@@ -17,7 +17,10 @@ pub fn handler(
     let clock = Clock::get()?;
     let identity = &mut ctx.accounts.identity;
     let old_level = identity.verification_level;
-    
+
+    // C-AUDIT-17: Require SAS attestation before verification upgrade
+    require!(identity.verification_hash != [0u8; 32], IdentityError::SASAttestationRequired);
+
     // Cannot downgrade verification
     require!(
         new_level >= old_level,

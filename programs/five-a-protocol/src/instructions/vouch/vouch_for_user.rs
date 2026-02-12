@@ -16,7 +16,13 @@ pub fn handler(ctx: Context<VouchForUser>) -> Result<()> {
     
     // Cannot vouch for self
     require!(voucher_key != vouchee_key, FiveAError::CannotVouchSelf);
-    
+
+    // C-08: Prevent mutual vouching - check if vouchee has already vouched for voucher
+    require!(
+        ctx.accounts.reverse_vouch_record.data_is_empty(),
+        FiveAError::MutualVouchNotAllowed
+    );
+
     // Check voucher's 5A score
     let voucher_score = &ctx.accounts.voucher_score;
     require!(

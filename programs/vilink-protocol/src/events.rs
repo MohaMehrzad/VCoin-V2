@@ -41,3 +41,10 @@ pub struct BatchCreated {
     pub action_count: u8,
 }
 
+// L-02: Authority transfer cancellation event
+#[event]
+pub struct AuthorityTransferCancelled {
+    pub authority: Pubkey,
+    pub cancelled_pending: Pubkey,
+}
+

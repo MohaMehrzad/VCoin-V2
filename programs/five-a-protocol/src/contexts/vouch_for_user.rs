@@ -46,10 +46,19 @@ pub struct VouchForUser<'info> {
     
     #[account(mut)]
     pub voucher: Signer<'info>,
-    
+
     /// CHECK: User receiving vouch
     pub vouchee: UncheckedAccount<'info>,
-    
+
+    /// C-08: Check for reverse vouch record (vouchee -> voucher) to prevent mutual vouching
+    /// CHECK: If this account exists (non-empty), it means the vouchee has already vouched for the voucher
+    #[account(
+        seeds = [VOUCH_RECORD_SEED, vouchee.key().as_ref(), voucher.key().as_ref()],
+        bump,
+        seeds::program = crate::ID
+    )]
+    pub reverse_vouch_record: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
 }
 

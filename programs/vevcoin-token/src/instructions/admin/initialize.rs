@@ -3,7 +3,12 @@ use anchor_lang::prelude::*;
 use crate::contexts::InitializeMint;
 use crate::events::VeVCoinInitialized;
 
-/// Initialize the veVCoin mint with Token-2022 Non-Transferable extension
+/// Initialize the veVCoin mint with Token-2022 Non-Transferable extension.
+///
+/// H-15: The mint MUST be created with the Token-2022 NonTransferable extension
+/// applied before calling this instruction. This makes veVCoin truly soulbound -
+/// any attempt to transfer will be rejected by the Token-2022 program at the
+/// runtime level. The NonTransferable extension is immutable once applied.
 pub fn handler(ctx: Context<InitializeMint>, staking_protocol: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.config;
     

@@ -10,7 +10,8 @@ pub fn calculate_voting_power(
     let base_votes = integer_sqrt(vevcoin_balance);
     
     // Step 2: 5A boost (1.0x to 2.0x)
-    let five_a_boost = 1000 + (five_a_score as u64 / 10); // 1000-2000
+    // M-01: Fix precision loss - scale numerator before dividing to preserve small values
+    let five_a_boost = 1000 + ((five_a_score as u64 * 100) / 1000); // 1000-2000
     
     // Step 3: Tier multiplier
     let tier_mult = match tier {

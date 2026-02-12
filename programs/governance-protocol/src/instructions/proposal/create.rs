@@ -66,8 +66,10 @@ pub fn handler(
     
     let clock = Clock::get()?;
     
-    // Increment proposal count
-    config.proposal_count = config.proposal_count.saturating_add(1);
+    // M-17: Use checked_add to return error instead of silently saturating at u64::MAX
+    config.proposal_count = config.proposal_count
+        .checked_add(1)
+        .ok_or(GovernanceError::Overflow)?;
     
     let proposal = &mut ctx.accounts.proposal;
     proposal.id = config.proposal_count;
