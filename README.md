@@ -9,7 +9,7 @@
 [![npm version](https://img.shields.io/npm/v/@viwoapp/sdk.svg)](https://www.npmjs.com/package/@viwoapp/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg)](https://solana.com)
-[![Tests](https://img.shields.io/badge/tests-377%20passing-brightgreen.svg)](https://github.com/MohaMehrzad/VCoin-V2)
+[![Tests](https://img.shields.io/badge/tests-397%20passing-brightgreen.svg)](https://github.com/MohaMehrzad/VCoin-V2)
 
 Powered by Solana | MIT Open Source | All 11 Contracts on Devnet
 
@@ -21,12 +21,30 @@ ViWoApp introduces a Solana-native protocol stack for trust, reputation, and sus
 
 **Core Innovations:**
 
-1. **5A Reputation Protocol** — Anti-Sybil infrastructure scoring users across five dimensions
-2. **SSCRE Protocol** — Self-Sustaining Circular Reward Economy with 6-layer funding
-3. **Portable DID** — On-chain identity with reputation that travels across Solana
-4. **Gasless UX** — Account abstraction and session keys for mainstream-friendly interactions
+1. **ZK Private Voting** — Production-ready encrypted governance with twisted ElGamal on Ristretto255
+2. **5A Reputation Protocol** — Anti-Sybil infrastructure scoring users across five dimensions
+3. **SSCRE Protocol** — Self-Sustaining Circular Reward Economy with 6-layer funding
+4. **Portable DID** — On-chain identity with reputation that travels across Solana
+5. **Gasless UX** — Account abstraction and session keys for mainstream-friendly interactions
 
 All protocols are **MIT licensed** as a **public good** for the Solana ecosystem.
+
+### Latest Updates (v2.0.0)
+
+**Production ZK Private Voting** — Full encrypted governance implementation:
+- Twisted ElGamal encryption with compressed sigma proofs
+- On-chain vote verification without revealing vote content
+- Homomorphic tallying for private vote accumulation
+- Threshold decryption with DLEQ proof verification
+- Trustless tally verification using cryptographic proofs
+
+**Security Audit Completed** — All 33 findings remediated:
+- 6 Critical severity fixes (quorum calculation, fee rounding, mutual vouching)
+- 10 High severity fixes (authority transfer, session limits, merkle proofs)
+- 9 Medium severity fixes (fee bounds, PDA determinism, tier validation)
+- 8 Low severity fixes (error handling, edge cases, validation)
+
+**SDK v2.0.0 Released** — Major TypeScript SDK update with ZK voting support and breaking changes for security improvements.
 
 ---
 
@@ -75,22 +93,31 @@ avm install 0.32.0 && avm use 0.32.0
 
 ```bash
 anchor build                    # Build all 11 programs
-cargo test --workspace          # Run 279 Rust tests
-cd tests-bankrun && npm test    # Run 98 BankRun tests
+cargo test --workspace          # Run 279 Rust tests (includes ZK crypto tests)
+cd tests-bankrun && npm test    # Run 118 BankRun tests (includes ZK voting)
 ```
 
 ### SDK Installation
 
 ```bash
-npm install @viwoapp/sdk
+npm install @viwoapp/sdk@2.0.0
 ```
 
 ```typescript
-import { ViWoClient, parseVCoin } from "@viwoapp/sdk";
+import { ViWoClient, parseVCoin, VoteChoice } from "@viwoapp/sdk";
 
 const client = new ViWoClient({ connection, wallet });
+
+// Get 5A reputation score
 const score = await client.fivea.getScore(wallet);
 console.log("5A Score:", score.composite / 100, "%");
+
+// Cast private vote with ZK encryption
+const voteTx = await client.governance.buildCastPrivateVoteTransaction({
+  proposalId: new BN(1),
+  voteChoice: VoteChoice.For,
+  votingPower: new BN(1000),
+});
 ```
 
 ---
@@ -121,10 +148,10 @@ All 11 programs deployed to Solana Devnet:
 
 | Program | Purpose |
 |---------|---------|
+| **governance-protocol** | ZK private voting with twisted ElGamal + quadratic power + 5A boost |
 | **five-a-protocol** | Anti-Sybil reputation scoring across 5 dimensions |
 | **sscre-protocol** | Self-Sustaining Circular Reward Economy |
 | **identity-protocol** | Portable DID with verification levels |
-| **governance-protocol** | veVCoin voting with quadratic power + 5A boost |
 
 ### Infrastructure
 
@@ -190,4 +217,66 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-**Version:** 2.8.4 | **Framework:** Anchor 0.32.0 | **Network:** Solana Devnet | **SDK:** @viwoapp/sdk v0.1.8
+**Version:** 2.0.0 | **Framework:** Anchor 0.32.0 | **Network:** Solana Devnet | **SDK:** @viwoapp/sdk v2.0.0
+
+---
+
+## What's New in v2.0.0
+
+### ZK Private Voting
+
+Production-ready encrypted governance with full cryptographic verification:
+
+- **Twisted ElGamal Encryption**: Vote privacy on Ristretto255 curve
+- **Compressed Sigma Proofs**: On-chain vote verification (352 bytes)
+- **Homomorphic Tallying**: Encrypted vote accumulation
+- **Threshold Decryption**: Committee-based trustless reveal with DLEQ proofs
+- **Verifiable Results**: Anyone can verify tally correctness
+
+**Off-chain SDK**: `packages/zk-voting-sdk` for vote encryption/decryption operations
+
+### Security Audit Remediation
+
+All 33 findings from comprehensive security audit have been fixed:
+
+**Critical (6/6 Fixed):**
+- C-03: Abstains excluded from quorum calculation
+- C-05/C-06: Ceiling division for all fee calculations
+- C-08: Mutual vouch prevention in 5A protocol
+- C-AUDIT-10: Monotonic engagement enforcement
+- C-AUDIT-17: SAS attestation required for upgrades
+- C-AUDIT-22: USDC payment enforcement
+
+**High (10/10 Fixed):**
+- H-02: Two-step authority transfer with 24h timelock (all protocols)
+- H-AUDIT-12: Per-user session limit (MAX=5)
+- H-AUDIT-13: Verification required before DID changes
+- H-NEW-02: Merkle proof size limited to 32 levels
+- + 6 additional high severity fixes
+
+**Medium (9/9 Fixed):**
+- M-02: Platform fee bounds validation (0.1%-10%)
+- M-04: Nonce-based deterministic PDA derivation
+- M-05: TierUnchanged error for no-op updates
+- M-18: Vouch expiry (MAX_AGE=1 year)
+- + 5 additional medium severity fixes
+
+**Low (8/8 Fixed):**
+- Enhanced error handling, edge case validation, and security checks
+
+### SDK v2.0.0
+
+Major TypeScript SDK release with breaking changes:
+
+**New Features:**
+- Full ZK voting API (`buildCastPrivateVoteTransaction`, `buildSubmitDecryptionShareTransaction`)
+- `VoteChoice` enum (Against, For, Abstain) replaces boolean votes
+- Enhanced type safety with security-related state fields
+- New security constants and validation
+
+**Breaking Changes:**
+- Updated state account structures (all configs include `pending_authority`)
+- New instruction parameters for security validation
+- Updated PDA derivation for deterministic nonces
+
+See [packages/viwoapp-sdk/README.md](packages/viwoapp-sdk/README.md) for full migration guide.
