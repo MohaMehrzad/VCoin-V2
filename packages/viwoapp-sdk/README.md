@@ -5,7 +5,161 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 0.1.8 (Bug Fixes)
+**Version:** 2.0.0 (Major Release - ZK Private Voting & Security Audit)
+
+## What's New in v2.0.0 (Major Release)
+
+This is a **major release** with production-ready ZK private voting, comprehensive security audit remediation, and breaking changes across all protocol modules.
+
+### ZK Private Voting (Production Ready)
+
+The governance module now supports fully encrypted, verifiable private voting:
+
+- **Twisted ElGamal Encryption** on Ristretto255 with compressed sigma proofs
+- **On-chain Vote Verification**: Validates vote proofs without revealing vote content
+- **Homomorphic Tallying**: Encrypted votes accumulate without decryption
+- **Threshold Decryption**: Committee-based trustless vote reveal with DLEQ proofs
+- **Verifiable Results**: Anyone can verify tally correctness using cryptographic proofs
+
+**New ZK Voting API:**
+
+```typescript
+import { VoteChoice } from "@viwoapp/sdk";
+
+// Create private vote with encryption
+const voteTx = await client.governance.buildCastPrivateVoteTransaction({
+  proposalId: new BN(1),
+  voteChoice: VoteChoice.For,
+  votingPower: new BN(1000),
+});
+
+// Submit decryption share (committee members)
+const decryptTx = await client.governance.buildSubmitDecryptionShareTransaction({
+  proposalId: new BN(1),
+  share: decryptionShareData,
+  dleqProof: dleqProofData,
+});
+
+// Aggregate revealed votes
+const aggregateTx = await client.governance.buildAggregateRevealedVotesTransaction({
+  proposalId: new BN(1),
+});
+```
+
+**Off-chain ZK SDK:**
+For vote encryption/decryption operations, use the companion Rust crate:
+```bash
+cd packages/zk-voting-sdk
+cargo add zk-voting-sdk
+```
+
+### Security Audit Remediation (14 Fixes)
+
+All critical, high, and medium severity findings remediated across 11 programs:
+
+| Finding | Severity | Protocol | Fix |
+|---------|----------|----------|-----|
+| H-02 | High | All protocols | Two-step authority transfer with 24h timelock |
+| H-AUDIT-12 | High | Gasless | Per-user session limit (MAX=5) |
+| H-AUDIT-13 | High | Identity | Require verification before DID changes |
+| H-NEW-02 | High | SSCRE | Merkle proof size limited to 32 levels |
+| C-03 | Critical | Governance | Exclude abstains from quorum calculation |
+| C-05/C-06 | Critical | Multiple | Ceiling division for fee calculations |
+| C-08 | Critical | 5A | Mutual vouch prevention |
+| C-AUDIT-10 | Critical | Content | Monotonic engagement enforcement |
+| C-AUDIT-17 | Critical | Identity | SAS attestation required |
+| C-AUDIT-22 | Critical | Identity | USDC payment enforcement |
+| M-02 | Medium | ViLink | Platform fee bounds (0.1%-10%) |
+| M-04 | Medium | ViLink | Nonce-based deterministic PDAs |
+| M-05 | Medium | Staking | TierUnchanged error for no-ops |
+| M-18 | Medium | 5A | Vouch expiry (MAX_AGE=1yr) |
+
+### Breaking Changes
+
+#### 1. Updated State Account Structures
+All protocol state accounts now include security-related fields. Existing accounts must be migrated:
+
+- **All Configs**: Added `pending_authority` and `transfer_initiated_at`
+- **Gasless**: Added `max_sessions_per_user` to config
+- **Identity**: Added `verification_required_for_did_change` flag
+- **SSCRE**: Added `merkle_proof_max_size` constant
+- **5A**: Added `max_vouch_age` to config
+
+#### 2. New Governance Instructions
+```typescript
+// Old: Only public voting
+await client.governance.buildVoteTransaction(proposalId, true);
+
+// New: Choose public or private voting
+await client.governance.buildVoteTransaction(proposalId, VoteChoice.For); // Public
+await client.governance.buildCastPrivateVoteTransaction({ ... });         // Private
+```
+
+#### 3. Updated Types & Constants
+
+```typescript
+// New VoteChoice enum replaces boolean
+export enum VoteChoice {
+  Against = 0,
+  For = 1,
+  Abstain = 2,
+}
+
+// New security constants
+import { SECURITY_CONSTANTS } from "@viwoapp/sdk";
+
+SECURITY_CONSTANTS.authorityTransferTimelock;    // 86400 (24h)
+SECURITY_CONSTANTS.slashApprovalTimelock;        // 172800 (48h)
+SECURITY_CONSTANTS.merkleProofMaxSize;           // 32
+SECURITY_CONSTANTS.maxSessionsPerUser;           // 5
+SECURITY_CONSTANTS.maxVouchAge;                  // 31536000 (1yr)
+```
+
+#### 4. Updated Instruction Parameters
+
+Many instructions now require additional parameters for security validation:
+
+```typescript
+// Gasless: Session creation now validates session limits
+await client.gasless.buildCreateSessionTransaction({
+  sessionPubkey,
+  scope,
+  durationSeconds,
+  maxActions,
+  feeMethod,
+  // SDK now enforces max 5 sessions per user
+});
+
+// ViLink: Platform fee must be within bounds
+await client.vilink.buildUpdateConfigTransaction({
+  platformFeeBps, // Must be between 10 (0.1%) and 1000 (10%)
+});
+```
+
+### Migration Guide
+
+**Step 1: Update Program Deployments**
+All 11 programs have been redeployed with audit fixes. Update your program IDs if using custom deployments.
+
+**Step 2: Migrate State Accounts**
+Run migration scripts to add new fields to existing state accounts (contact team for migration tools).
+
+**Step 3: Update SDK**
+```bash
+npm install @viwoapp/sdk@2.0.0
+```
+
+**Step 4: Update Code**
+- Replace boolean votes with `VoteChoice` enum
+- Handle new error codes (`TierUnchanged`, `MutualVouchPrevented`, etc.)
+- Update type imports for new state account fields
+
+### New Features
+
+- **ZK Private Voting**: Full production implementation with threshold decryption
+- **Enhanced Security**: 14 audit findings remediated
+- **Improved Error Handling**: New error codes for edge cases
+- **Better Type Safety**: Expanded type definitions with security fields
 
 ## What's New in v0.1.8 (Bug Fixes)
 
