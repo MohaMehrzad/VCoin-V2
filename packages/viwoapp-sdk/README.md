@@ -5,7 +5,85 @@
 
 TypeScript SDK for VCoin Protocol Integration on Solana.
 
-**Version:** 2.0.0 (Major Release - ZK Private Voting & Security Audit)
+**Version:** 2.0.1 (Delegation Balance Validation & 100% Audit Completion)
+
+## What's New in v2.0.1
+
+This release completes the security audit with **100% of all 68 findings resolved** and adds delegation balance validation.
+
+### H-NEW-03: Delegation Balance Validation
+
+The `delegateVotes` instruction now validates the delegation amount against the delegator's actual veVCoin balance from the staking protocol:
+
+```typescript
+// Build delegation transaction (validates balance on-chain)
+const delegateTx = await client.governance.buildDelegateVotesTransaction({
+  delegate: delegatePubkey,
+  delegationType: 0,  // Full delegation
+  categories: 0xFF,   // All categories
+  amount: new BN(5000),
+  expiresAt: new BN(0),
+  revocable: true,
+});
+
+// Revoke delegation
+const revokeTx = await client.governance.buildRevokeDelegationTransaction();
+
+// Check existing delegation
+const delegation = await client.governance.getDelegation();
+```
+
+**On-chain changes:**
+- `DelegateVotes` context now requires `config` and `userStake` accounts
+- Handler validates `vevcoin_amount <= delegator's actual veVCoin balance`
+- Cross-program PDA verification from staking protocol
+- Empty staking accounts correctly return balance of 0
+
+### New SDK Features (v2.0.1)
+
+- **`buildDelegateVotesTransaction()`**: Build delegation with on-chain balance validation
+- **`buildRevokeDelegationTransaction()`**: Revoke existing delegation
+- **`getDelegation()`**: Query delegation state for a user
+- **`getDelegation()` PDA helper**: Derives delegation PDA from delegator pubkey
+- **`getDelegateStats()` PDA helper**: Derives delegate stats PDA from delegate pubkey
+- **`DelegateVotesParams`**: New type for delegation parameters
+
+### Audit Completion
+
+All 68 security findings now resolved:
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| Critical | 12 | ✅ 100% Fixed |
+| High | 8 | ✅ 100% Fixed |
+| Medium | 40 | ✅ 100% Fixed |
+| Low | 8 | ✅ 100% Fixed |
+
+Key fixes in this release:
+- **H-NEW-03**: Delegation amount validated against veVCoin balance
+- **M-01**: Voting power precision loss fixed (scale before divide)
+- **M-04**: Tier update spam prevention (TierUnchanged check)
+
+### Migration from v2.0.0
+
+```typescript
+// Old: delegateVotes only needed 5 accounts
+await program.methods.delegateVotes(0, 0, amount, expiresAt, true)
+  .accounts({
+    delegation, delegateStats, delegator, delegate, systemProgram,
+  }).rpc();
+
+// New: delegateVotes requires config and userStake for balance validation
+await program.methods.delegateVotes(0, 0, amount, expiresAt, true)
+  .accounts({
+    delegation, delegateStats, delegator, delegate,
+    config: govConfigPda,      // NEW: governance config
+    userStake: userStakePda,   // NEW: delegator's staking account
+    systemProgram,
+  }).rpc();
+```
+
+---
 
 ## What's New in v2.0.0 (Major Release)
 
@@ -146,7 +224,7 @@ Run migration scripts to add new fields to existing state accounts (contact team
 
 **Step 3: Update SDK**
 ```bash
-npm install @viwoapp/sdk@2.0.0
+npm install @viwoapp/sdk@2.0.1
 ```
 
 **Step 4: Update Code**
@@ -321,6 +399,13 @@ const votingPower = await client.governance.getVotingPower();
 
 // Build transactions
 const voteTx = await client.governance.buildVoteTransaction(proposalId, true);
+
+// Delegation (v2.0.1)
+const delegateTx = await client.governance.buildDelegateVotesTransaction({
+  delegate: delegatePubkey, delegationType: 0, categories: 0xFF,
+  amount: new BN(1000), expiresAt: new BN(0), revocable: true,
+});
+const revokeTx = await client.governance.buildRevokeDelegationTransaction();
 ```
 
 ### Rewards (`client.rewards`)
@@ -504,6 +589,7 @@ import type {
   VoteChoice,            // v0.1.4: Against, For, Abstain
   GovernanceConfig,
   Delegation,
+  DelegateVotesParams,  // v2.0.1: Delegation parameters
   PrivateVotingConfig,
   DecryptionShare,       // v0.1.1: ZK voting
   

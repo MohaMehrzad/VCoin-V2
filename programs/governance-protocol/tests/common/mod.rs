@@ -15,6 +15,8 @@ pub const GOV_CONFIG_SEED: &[u8] = b"gov-config";
 pub const PROPOSAL_SEED: &[u8] = b"proposal";
 pub const VOTE_RECORD_SEED: &[u8] = b"vote-record";
 pub const DELEGATION_SEED: &[u8] = b"delegation";
+pub const DELEGATE_STATS_SEED: &[u8] = b"delegate-stats";
+pub const USER_STAKE_SEED: &[u8] = b"user-stake";
 
 pub struct TestContext {
     pub banks_client: BanksClient,
@@ -171,12 +173,15 @@ pub fn create_cast_vote_ix(
     }
 }
 
+/// H-NEW-03: Updated to include config and user_stake accounts for balance validation
 pub fn create_delegate_votes_ix(
     program_id: &Pubkey,
     delegator: &Pubkey,
     delegate: &Pubkey,
     delegation: &Pubkey,
+    delegate_stats: &Pubkey,
     config: &Pubkey,
+    user_stake: &Pubkey,
     delegation_type: u8,
     categories: u8,
     vevcoin_amount: u64,
@@ -195,10 +200,12 @@ pub fn create_delegate_votes_ix(
     Instruction {
         program_id: *program_id,
         accounts: vec![
+            AccountMeta::new(*delegation, false),
+            AccountMeta::new(*delegate_stats, false),
             AccountMeta::new(*delegator, true),
             AccountMeta::new_readonly(*delegate, false),
-            AccountMeta::new(*delegation, false),
             AccountMeta::new_readonly(*config, false),
+            AccountMeta::new_readonly(*user_stake, false),
             AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
         ],
         data,

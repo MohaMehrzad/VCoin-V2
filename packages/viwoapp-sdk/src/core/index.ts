@@ -123,7 +123,25 @@ export class PDAs {
     );
     return pda;
   }
-  
+
+  /** H-NEW-03: Delegation PDA (one per delegator) */
+  getDelegation(delegator: PublicKey): PublicKey {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from(SEEDS.delegation), delegator.toBuffer()],
+      this.programIds.governanceProtocol
+    );
+    return pda;
+  }
+
+  /** H-NEW-03: Delegate stats PDA (one per delegate) */
+  getDelegateStats(delegate: PublicKey): PublicKey {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("delegate-stats"), delegate.toBuffer()],
+      this.programIds.governanceProtocol
+    );
+    return pda;
+  }
+
   // SSCRE PDAs
   getRewardsPoolConfig(): PublicKey {
     const [pda] = PublicKey.findProgramAddressSync(

@@ -480,8 +480,26 @@ export interface Delegation {
   delegator: PublicKey;
   delegate: PublicKey;
   delegationType: number;
+  categories: number;
   delegatedAmount: BN;
-  expiresAt?: BN; // M-07: Optional expiry
+  delegatedAt: BN;
+  expiresAt: BN;
+  revocable: boolean;
+}
+
+/** H-NEW-03: Parameters for creating a delegation */
+export interface DelegateVotesParams {
+  /** Address to delegate voting power to */
+  delegate: PublicKey;
+  /** Delegation type (0=Full, 1=PerCategory, 2=TimeScoped) */
+  delegationType: number;
+  /** Category bitmap (0xFF for all) */
+  categories: number;
+  /** Amount of veVCoin to delegate (must be <= actual balance) */
+  amount: BN;
+  /** Expiration timestamp (0 = never expires) */
+  expiresAt: BN;
+  /** Whether the delegation can be revoked mid-vote */
   revocable: boolean;
 }
 

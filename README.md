@@ -29,7 +29,22 @@ ViWoApp introduces a Solana-native protocol stack for trust, reputation, and sus
 
 All protocols are **MIT licensed** as a **public good** for the Solana ecosystem.
 
-### Latest Updates (v2.0.0)
+### Latest Updates (v2.0.1)
+
+**100% Security Audit Complete** — All 68 findings from comprehensive deep audit resolved:
+- 12 Critical severity fixes (100%)
+- 8 High severity fixes (100%) including new delegation balance validation
+- 40 Medium severity fixes (100%) including voting power precision and tier spam prevention
+- 8 Low severity fixes (100%)
+
+**H-NEW-03: Delegation Balance Validation** — New in v2.0.1:
+- Validates delegation amount against actual veVCoin balance on-chain
+- Cross-program PDA verification from staking protocol
+- Prevents users from claiming more voting power than they possess
+
+**SDK v2.0.1 Released** — Adds delegation transaction builders, PDA helpers, and new types.
+
+### v2.0.0 Highlights
 
 **Production ZK Private Voting** — Full encrypted governance implementation:
 - Twisted ElGamal encryption with compressed sigma proofs
@@ -37,14 +52,6 @@ All protocols are **MIT licensed** as a **public good** for the Solana ecosystem
 - Homomorphic tallying for private vote accumulation
 - Threshold decryption with DLEQ proof verification
 - Trustless tally verification using cryptographic proofs
-
-**Security Audit Completed** — All 33 findings remediated:
-- 6 Critical severity fixes (quorum calculation, fee rounding, mutual vouching)
-- 10 High severity fixes (authority transfer, session limits, merkle proofs)
-- 9 Medium severity fixes (fee bounds, PDA determinism, tier validation)
-- 8 Low severity fixes (error handling, edge cases, validation)
-
-**SDK v2.0.0 Released** — Major TypeScript SDK update with ZK voting support and breaking changes for security improvements.
 
 ---
 
@@ -100,7 +107,7 @@ cd tests-bankrun && npm test    # Run 118 BankRun tests (includes ZK voting)
 ### SDK Installation
 
 ```bash
-npm install @viwoapp/sdk@2.0.0
+npm install @viwoapp/sdk@2.0.1
 ```
 
 ```typescript
@@ -169,13 +176,13 @@ All 11 programs deployed to Solana Devnet:
 
 ## Security
 
-All security issues have been addressed in v2.8.4:
+All 68 security findings have been resolved (v2.0.1):
 
 | Severity | Fixed | Status |
 |----------|-------|--------|
-| Critical | 6/6 | ✅ |
-| High | 10/10 | ✅ |
-| Medium | 9/9 | ✅ |
+| Critical | 12/12 | ✅ |
+| High | 8/8 | ✅ |
+| Medium | 40/40 | ✅ |
 | Low | 8/8 | ✅ |
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting and security features.
@@ -217,7 +224,7 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-**Version:** 2.0.0 | **Framework:** Anchor 0.32.0 | **Network:** Solana Devnet | **SDK:** @viwoapp/sdk v2.0.0
+**Version:** 2.0.1 | **Framework:** Anchor 0.32.0 | **Network:** Solana Devnet | **SDK:** @viwoapp/sdk v2.0.1
 
 ---
 

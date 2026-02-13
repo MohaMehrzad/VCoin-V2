@@ -258,12 +258,24 @@ describe("governance-protocol", () => {
   });
 
   describe("Vote Delegation", () => {
-    it("should create delegation", async () => {
+    // H-NEW-03: Derive user_stake PDA for balance validation
+    let userStakePda: anchor.web3.PublicKey;
+
+    before(() => {
+      [userStakePda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("user-stake"), authority.publicKey.toBuffer()],
+        stakingProgram
+      );
+    });
+
+    it("should create delegation with zero amount (no staking account)", async () => {
+      // H-NEW-03: Without a staking account, delegator balance is 0
+      // So we can only delegate 0 veVCoin
       await program.methods
         .delegateVotes(
           0, // Full delegation
           0, // All categories
-          new anchor.BN(5000), // 5000 veVCoin
+          new anchor.BN(0), // 0 veVCoin (matches empty staking balance)
           new anchor.BN(0), // Never expires
           true // Revocable
         )
@@ -272,20 +284,59 @@ describe("governance-protocol", () => {
           delegateStats: delegateStatsPda,
           delegator: authority.publicKey,
           delegate: delegate.publicKey,
+          config: govConfigPda,
+          userStake: userStakePda,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
 
       const delegation = await program.account.delegation.fetch(delegationPda);
-      
+
       expect(delegation.delegator.toString()).to.equal(authority.publicKey.toString());
       expect(delegation.delegate.toString()).to.equal(delegate.publicKey.toString());
-      expect(delegation.delegatedAmount.toNumber()).to.equal(5000);
+      expect(delegation.delegatedAmount.toNumber()).to.equal(0);
       expect(delegation.revocable).to.be.true;
 
       const stats = await program.account.delegateStats.fetch(delegateStatsPda);
       expect(stats.uniqueDelegators).to.equal(1);
-      expect(stats.totalDelegatedVevcoin.toNumber()).to.equal(5000);
+    });
+
+    it("should reject delegation exceeding veVCoin balance (H-NEW-03)", async () => {
+      // H-NEW-03: Trying to delegate more than actual balance should fail
+      const [excessDelegation] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("delegation"), voter2.publicKey.toBuffer()],
+        program.programId
+      );
+
+      const [excessStats] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("delegate-stats"), delegate.publicKey.toBuffer()],
+        program.programId
+      );
+
+      const [voter2StakePda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("user-stake"), voter2.publicKey.toBuffer()],
+        stakingProgram
+      );
+
+      try {
+        await program.methods
+          .delegateVotes(0, 0, new anchor.BN(5000), new anchor.BN(0), true)
+          .accounts({
+            delegation: excessDelegation,
+            delegateStats: excessStats,
+            delegator: voter2.publicKey,
+            delegate: delegate.publicKey,
+            config: govConfigPda,
+            userStake: voter2StakePda,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          })
+          .signers([voter2])
+          .rpc();
+
+        expect.fail("Should have thrown ExceedsDelegatedAmount error");
+      } catch (error) {
+        expect(error.message).to.include("ExceedsDelegatedAmount");
+      }
     });
 
     it("should reject self-delegation", async () => {
@@ -299,19 +350,26 @@ describe("governance-protocol", () => {
         program.programId
       );
 
+      const [voter2StakePda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("user-stake"), voter2.publicKey.toBuffer()],
+        stakingProgram
+      );
+
       try {
         await program.methods
-          .delegateVotes(0, 0, new anchor.BN(1000), new anchor.BN(0), true)
+          .delegateVotes(0, 0, new anchor.BN(0), new anchor.BN(0), true)
           .accounts({
             delegation: selfDelegation,
             delegateStats: selfStats,
             delegator: voter2.publicKey,
             delegate: voter2.publicKey, // Self
+            config: govConfigPda,
+            userStake: voter2StakePda,
             systemProgram: anchor.web3.SystemProgram.programId,
           })
           .signers([voter2])
           .rpc();
-        
+
         expect.fail("Should have thrown error");
       } catch (error) {
         expect(error.message).to.include("CannotDelegateSelf");

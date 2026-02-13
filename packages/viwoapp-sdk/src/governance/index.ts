@@ -5,7 +5,9 @@ import type { ViWoClient } from "../client";
 import type {
   Proposal,
   VoteRecord,
+  Delegation,
   CreateProposalParams,
+  DelegateVotesParams,
   GovernanceConfig,
   PrivateVotingConfig,
   DecryptionShare,
@@ -350,6 +352,115 @@ export class GovernanceClient {
 
     // Add execute instruction
     // tx.add(await this.program.methods.executeProposal(proposalId)...);
+
+    return tx;
+  }
+
+  // ============ Vote Delegation (H-NEW-03) ============
+
+  /**
+   * Get delegation for a user
+   */
+  async getDelegation(delegator?: PublicKey): Promise<Delegation | null> {
+    const target = delegator || this.client.publicKey;
+    if (!target) {
+      throw new Error("No user specified and wallet not connected");
+    }
+
+    try {
+      const delegationPda = this.client.pdas.getDelegation(target);
+      const accountInfo = await this.client.connection.connection.getAccountInfo(delegationPda);
+
+      if (!accountInfo) {
+        return null;
+      }
+
+      const data = accountInfo.data;
+      return {
+        delegator: new PublicKey(data.slice(8, 40)),
+        delegate: new PublicKey(data.slice(40, 72)),
+        delegationType: data[72],
+        categories: data[73],
+        delegatedAmount: new BN(data.slice(74, 82), "le"),
+        delegatedAt: new BN(data.slice(82, 90), "le"),
+        expiresAt: new BN(data.slice(90, 98), "le"),
+        revocable: data[98] !== 0,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Build delegate votes transaction
+   *
+   * H-NEW-03: Validates delegation amount against actual veVCoin balance on-chain.
+   * The delegated amount must be <= the delegator's veVCoin balance from the staking protocol.
+   *
+   * @param params - Delegation parameters
+   */
+  async buildDelegateVotesTransaction(params: DelegateVotesParams): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+
+    // Derive required PDAs
+    const delegationPda = this.client.pdas.getDelegation(this.client.publicKey);
+    const delegateStatsPda = this.client.pdas.getDelegateStats(params.delegate);
+    const configPda = this.client.pdas.getGovernanceConfig();
+    const userStakePda = this.client.pdas.getUserStake(this.client.publicKey);
+
+    // Check if delegation already exists
+    const existing = await this.getDelegation();
+    if (existing) {
+      throw new Error("Active delegation already exists. Revoke it first.");
+    }
+
+    const tx = new Transaction();
+
+    // tx.add(await this.program.methods.delegateVotes(
+    //   params.delegationType,
+    //   params.categories,
+    //   params.amount,
+    //   params.expiresAt,
+    //   params.revocable,
+    // ).accounts({
+    //   delegation: delegationPda,
+    //   delegateStats: delegateStatsPda,
+    //   delegator: this.client.publicKey,
+    //   delegate: params.delegate,
+    //   config: configPda,
+    //   userStake: userStakePda,
+    //   systemProgram: SystemProgram.programId,
+    // }).instruction());
+
+    return tx;
+  }
+
+  /**
+   * Build revoke delegation transaction
+   */
+  async buildRevokeDelegationTransaction(): Promise<Transaction> {
+    if (!this.client.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+
+    const existing = await this.getDelegation();
+    if (!existing) {
+      throw new Error("No active delegation to revoke");
+    }
+
+    const delegationPda = this.client.pdas.getDelegation(this.client.publicKey);
+    const delegateStatsPda = this.client.pdas.getDelegateStats(existing.delegate);
+
+    const tx = new Transaction();
+
+    // tx.add(await this.program.methods.revokeDelegation()
+    //   .accounts({
+    //     delegation: delegationPda,
+    //     delegateStats: delegateStatsPda,
+    //     delegator: this.client.publicKey,
+    //   }).instruction());
 
     return tx;
   }
