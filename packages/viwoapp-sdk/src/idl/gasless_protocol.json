@@ -1,0 +1,1567 @@
+{
+  "address": "FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3",
+  "metadata": {
+    "name": "gasless_protocol",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Gasless Layer - Paymaster and Session Keys for Zero-Friction UX"
+  },
+  "instructions": [
+    {
+      "name": "accept_authority",
+      "discriminator": [
+        107,
+        86,
+        198,
+        91,
+        33,
+        12,
+        107,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "apply_fee",
+      "discriminator": [
+        59,
+        156,
+        222,
+        176,
+        105,
+        28,
+        247,
+        64
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "apply_treasury",
+      "discriminator": [
+        226,
+        18,
+        133,
+        106,
+        27,
+        32,
+        83,
+        204
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "new_treasury"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_authority_transfer",
+      "discriminator": [
+        94,
+        131,
+        125,
+        184,
+        183,
+        24,
+        125,
+        229
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_session",
+      "discriminator": [
+        242,
+        193,
+        143,
+        179,
+        150,
+        25,
+        122,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_program"
+              },
+              {
+                "kind": "account",
+                "path": "session_signer"
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "session_signer",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "scope",
+          "type": "u16"
+        },
+        {
+          "name": "valid_until",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Upgrade authority only."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vcoin_mint"
+        },
+        {
+          "name": "fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury"
+        },
+        {
+          "name": "program",
+          "address": "FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"
+        },
+        {
+          "name": "program_data"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "vcoin_fee_per_tx",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "pay_vcoin_fee",
+      "discriminator": [
+        148,
+        237,
+        210,
+        122,
+        129,
+        59,
+        87,
+        123
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "docs": [
+            "Read-only: paying a fee never write-locks global state (audit GAS-09)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "fee_vault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "payer_vcoin",
+          "writable": true
+        },
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": [
+        {
+          "name": "max_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_authority",
+      "discriminator": [
+        20,
+        148,
+        236,
+        198,
+        76,
+        119,
+        99,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "revoke_session",
+      "discriminator": [
+        86,
+        92,
+        198,
+        120,
+        144,
+        2,
+        7,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "session.target_program",
+                "account": "SessionToken"
+              },
+              {
+                "kind": "account",
+                "path": "session.session_signer",
+                "account": "SessionToken"
+              },
+              {
+                "kind": "account",
+                "path": "session.authority",
+                "account": "SessionToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "relations": [
+            "session"
+          ]
+        },
+        {
+          "name": "revoker",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "schedule_fee",
+      "discriminator": [
+        67,
+        220,
+        176,
+        104,
+        30,
+        254,
+        14,
+        75
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "schedule_treasury",
+      "discriminator": [
+        26,
+        251,
+        92,
+        172,
+        144,
+        95,
+        77,
+        68
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_treasury",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_fees",
+      "discriminator": [
+        198,
+        212,
+        171,
+        109,
+        144,
+        215,
+        174,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  115,
+                  108,
+                  101,
+                  115,
+                  115,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "fee_vault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "GaslessConfig",
+      "discriminator": [
+        127,
+        255,
+        120,
+        55,
+        81,
+        121,
+        160,
+        49
+      ]
+    },
+    {
+      "name": "SessionToken",
+      "discriminator": [
+        233,
+        4,
+        115,
+        14,
+        46,
+        21,
+        1,
+        15
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AuthorityProposed",
+      "discriminator": [
+        244,
+        117,
+        94,
+        112,
+        53,
+        151,
+        35,
+        89
+      ]
+    },
+    {
+      "name": "AuthorityTransferCancelled",
+      "discriminator": [
+        31,
+        228,
+        187,
+        148,
+        20,
+        99,
+        237,
+        48
+      ]
+    },
+    {
+      "name": "AuthorityTransferred",
+      "discriminator": [
+        245,
+        109,
+        179,
+        54,
+        135,
+        92,
+        22,
+        64
+      ]
+    },
+    {
+      "name": "FeeChangeScheduled",
+      "discriminator": [
+        13,
+        77,
+        179,
+        118,
+        246,
+        34,
+        119,
+        205
+      ]
+    },
+    {
+      "name": "FeeChanged",
+      "discriminator": [
+        103,
+        252,
+        132,
+        250,
+        1,
+        49,
+        116,
+        145
+      ]
+    },
+    {
+      "name": "FeePaid",
+      "discriminator": [
+        159,
+        12,
+        52,
+        212,
+        249,
+        36,
+        24,
+        18
+      ]
+    },
+    {
+      "name": "FeesWithdrawn",
+      "discriminator": [
+        234,
+        15,
+        0,
+        119,
+        148,
+        241,
+        40,
+        21
+      ]
+    },
+    {
+      "name": "GaslessInitialized",
+      "discriminator": [
+        0,
+        194,
+        64,
+        64,
+        32,
+        87,
+        160,
+        245
+      ]
+    },
+    {
+      "name": "PauseChanged",
+      "discriminator": [
+        238,
+        188,
+        213,
+        78,
+        134,
+        209,
+        178,
+        218
+      ]
+    },
+    {
+      "name": "SessionCreated",
+      "discriminator": [
+        107,
+        111,
+        254,
+        25,
+        21,
+        122,
+        220,
+        225
+      ]
+    },
+    {
+      "name": "SessionRevoked",
+      "discriminator": [
+        90,
+        48,
+        35,
+        234,
+        203,
+        192,
+        126,
+        211
+      ]
+    },
+    {
+      "name": "TreasuryChangeScheduled",
+      "discriminator": [
+        195,
+        70,
+        226,
+        198,
+        179,
+        132,
+        185,
+        154
+      ]
+    },
+    {
+      "name": "TreasuryChanged",
+      "discriminator": [
+        252,
+        2,
+        55,
+        56,
+        106,
+        205,
+        227,
+        47
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Paused",
+      "msg": "Gasless protocol is paused"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidScope",
+      "msg": "Scope must be non-empty and use only allowed bits"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidValidity",
+      "msg": "Session validity must be in the future and at most 24h"
+    },
+    {
+      "code": 6003,
+      "name": "SessionExpired",
+      "msg": "Session has expired"
+    },
+    {
+      "code": 6004,
+      "name": "SessionMismatch",
+      "msg": "Session does not belong to this authority, signer or program"
+    },
+    {
+      "code": 6005,
+      "name": "ActionNotInScope",
+      "msg": "Exactly one in-scope action bit must be requested"
+    },
+    {
+      "code": 6006,
+      "name": "RevokeNotAllowed",
+      "msg": "Only the session authority may revoke an unexpired session"
+    },
+    {
+      "code": 6007,
+      "name": "FeeAboveMax",
+      "msg": "Fee exceeds the caller's max_fee"
+    },
+    {
+      "code": 6008,
+      "name": "FeeTooHigh",
+      "msg": "Fee above the allowed maximum"
+    },
+    {
+      "code": 6009,
+      "name": "NothingScheduled",
+      "msg": "No change is scheduled"
+    },
+    {
+      "code": 6010,
+      "name": "TimelockActive",
+      "msg": "The scheduled change is not yet effective"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidProgramData",
+      "msg": "Program data account does not belong to this program"
+    },
+    {
+      "code": 6012,
+      "name": "ZeroAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6013,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "AdminState",
+      "docs": [
+        "Authority with a two-step, time-locked transfer.",
+        "",
+        "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
+        "(new authority). The current authority can `cancel` at any time before acceptance."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "docs": [
+              "`Pubkey::default()` when no transfer is pending."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_since",
+            "docs": [
+              "Unix time the pending transfer was proposed (0 when none)."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed",
+            "type": "pubkey"
+          },
+          {
+            "name": "ready_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTransferCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeChangeScheduled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_fee",
+            "type": "u64"
+          },
+          {
+            "name": "effective_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_fee",
+            "type": "u64"
+          },
+          {
+            "name": "new_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeePaid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeesWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GaslessConfig",
+      "docs": [
+        "Singleton configuration, PDA `[\"gasless-config\"]`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": {
+              "defined": {
+                "name": "AdminState"
+              }
+            }
+          },
+          {
+            "name": "vcoin_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_vault",
+            "docs": [
+              "VCoin vault (PDA `[\"fee-vault\"]`, authority = this config) collecting fees."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "docs": [
+              "VCoin token account that `withdraw_fees` pays out to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury_eta",
+            "type": "i64"
+          },
+          {
+            "name": "vcoin_fee_per_tx",
+            "docs": [
+              "VCoin charged per `pay_vcoin_fee` (base units)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_fee",
+            "type": "u64"
+          },
+          {
+            "name": "fee_eta",
+            "type": "i64"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GaslessInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "vcoin_fee_per_tx",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SessionCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "session",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "session_signer",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "scope",
+            "type": "u16"
+          },
+          {
+            "name": "valid_until",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SessionRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "session",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "revoked_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SessionToken",
+      "docs": [
+        "A scoped, expiring session key, PDA",
+        "`[\"session\", target_program, session_signer, authority]` (MagicBlock gpl-session model).",
+        "",
+        "Consuming programs load it as `Account<SessionToken>` with",
+        "`seeds::program = gasless_protocol::ID` and call [`SessionToken::verify`]."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "The wallet the session acts for."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "target_program",
+            "docs": [
+              "The only program this session may be used with."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "session_signer",
+            "docs": [
+              "Ephemeral key that signs on the authority's behalf."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "scope",
+            "type": "u16"
+          },
+          {
+            "name": "valid_until",
+            "type": "i64"
+          },
+          {
+            "name": "payer",
+            "docs": [
+              "Account that paid rent; refunded on revoke."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TreasuryChangeScheduled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TreasuryChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_treasury",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "FEE_VAULT_SEED",
+      "type": "bytes",
+      "value": "[102, 101, 101, 45, 118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "GASLESS_CONFIG_SEED",
+      "type": "bytes",
+      "value": "[103, 97, 115, 108, 101, 115, 115, 45, 99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "MAX_SESSION_DURATION",
+      "docs": [
+        "Longest allowed session (24 h), following MagicBlock gpl-session practice."
+      ],
+      "type": "i64",
+      "value": "86400"
+    },
+    {
+      "name": "MAX_VCOIN_FEE_PER_TX",
+      "docs": [
+        "Upper bound on the per-transaction VCoin fee the admin may schedule (100 VCoin)."
+      ],
+      "type": "u64",
+      "value": "100000000000"
+    },
+    {
+      "name": "PARAM_CHANGE_DELAY",
+      "docs": [
+        "Delay before a fee or treasury change takes effect."
+      ],
+      "type": "i64",
+      "value": "86400"
+    },
+    {
+      "name": "SCOPE_CONTENT",
+      "type": "u16",
+      "value": "4"
+    },
+    {
+      "name": "SCOPE_FOLLOW",
+      "type": "u16",
+      "value": "128"
+    },
+    {
+      "name": "SCOPE_VOUCH",
+      "docs": [
+        "Session scopes. Sessions may only authorize low-risk, non-value-moving social actions:",
+        "never transfers, tips, withdrawals, claims, staking or votes (those always need the",
+        "main wallet). Bit positions are kept from v2 for client compatibility."
+      ],
+      "type": "u16",
+      "value": "2"
+    },
+    {
+      "name": "SESSION_SEED",
+      "docs": [
+        "Session PDA: `[\"session\", target_program, session_signer, authority]`."
+      ],
+      "type": "bytes",
+      "value": "[115, 101, 115, 115, 105, 111, 110]"
+    },
+    {
+      "name": "VALID_SCOPE_MASK",
+      "docs": [
+        "Union of every allowed scope bit; any other bit is rejected."
+      ],
+      "type": "u16",
+      "value": "134"
+    }
+  ]
+}

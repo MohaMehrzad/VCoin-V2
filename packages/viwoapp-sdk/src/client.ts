@@ -1,251 +1,58 @@
-import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
-import { AnchorProvider, Program, Wallet, BN } from "@coral-xyz/anchor";
-import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
-
-import { PROGRAM_IDS } from "./constants";
-import { ViWoConnection, PDAs, WalletAdapter, ConnectionConfig } from "./core";
-import { StakingClient } from "./staking";
-import { GovernanceClient } from "./governance";
-import { RewardsClient } from "./rewards";
-import { ViLinkClient } from "./vilink";
-import { GaslessClient } from "./gasless";
-import { IdentityClient } from "./identity";
-import { FiveAClient } from "./fivea";
-import { ContentClient } from "./content";
-
-export interface ViWoClientConfig {
-  connection: ConnectionConfig | Connection;
-  wallet?: WalletAdapter;
-  programIds?: Partial<typeof PROGRAM_IDS>;
-}
-
 /**
- * Main ViWoApp SDK Client
- * 
- * Provides unified access to all ViWoApp protocols.
- * 
- * @example
- * ```typescript
- * import { ViWoClient } from "@viwoapp/sdk";
- * 
- * const client = new ViWoClient({
- *   connection: { endpoint: "https://api.devnet.solana.com" },
- *   wallet: walletAdapter,
- * });
- * 
- * // Stake VCoin
- * await client.staking.stake({ amount: new BN(1000), lockDuration: 30 * 24 * 3600 });
- * 
- * // Create ViLink tip action
- * await client.vilink.createTipAction({
- *   target: recipientPubkey,
- *   amount: new BN(10),
- * });
- * ```
+ * Convenience wrapper: typed programs plus fetchers for the accounts apps read most.
+ * Decoding always goes through the IDL coder.
  */
+import { Connection, PublicKey } from "@solana/web3.js";
+
+import { pda } from "./pda";
+import { createPrograms, type Programs } from "./programs";
+import { lockedAmount, toDeposits, toWeightParams, voterWeight } from "./staking";
+
 export class ViWoClient {
-  public connection: ViWoConnection;
-  public pdas: PDAs;
-  public wallet: WalletAdapter | null;
-  public programIds: typeof PROGRAM_IDS;
-  
-  // Protocol clients
-  public staking: StakingClient;
-  public governance: GovernanceClient;
-  public rewards: RewardsClient;
-  public vilink: ViLinkClient;
-  public gasless: GaslessClient;
-  public identity: IdentityClient;
-  public fivea: FiveAClient;
-  public content: ContentClient;
-  
-  constructor(config: ViWoClientConfig) {
-    // Setup connection
-    if (config.connection instanceof Connection) {
-      this.connection = new ViWoConnection({
-        endpoint: config.connection.rpcEndpoint,
-        commitment: "confirmed",
-      });
-    } else {
-      this.connection = new ViWoConnection(config.connection);
-    }
-    
-    // Setup wallet
-    this.wallet = config.wallet || null;
-    
-    // Setup program IDs
-    this.programIds = {
-      ...PROGRAM_IDS,
-      ...config.programIds,
-    };
-    
-    // Setup PDAs
-    this.pdas = new PDAs(this.programIds);
-    
-    // Initialize protocol clients
-    this.staking = new StakingClient(this);
-    this.governance = new GovernanceClient(this);
-    this.rewards = new RewardsClient(this);
-    this.vilink = new ViLinkClient(this);
-    this.gasless = new GaslessClient(this);
-    this.identity = new IdentityClient(this);
-    this.fivea = new FiveAClient(this);
-    this.content = new ContentClient(this);
+  readonly programs: Programs;
+
+  /** Uses the caller's connection (v2 silently created its own, audit SDK). */
+  constructor(readonly connection: Connection) {
+    this.programs = createPrograms(connection);
   }
-  
-  /**
-   * Get the wallet public key
-   */
-  get publicKey(): PublicKey | null {
-    return this.wallet?.publicKey || null;
+
+  fetchRegistrar() {
+    return this.programs.staking.account.registrar.fetch(pda.registrar());
   }
-  
-  /**
-   * Check if wallet is connected
-   */
-  get isConnected(): boolean {
-    return this.wallet !== null && this.wallet.publicKey !== null;
+
+  fetchVoter(owner: PublicKey) {
+    return this.programs.staking.account.voter.fetchNullable(pda.voter(owner));
   }
-  
-  /**
-   * Set wallet adapter
-   */
-  setWallet(wallet: WalletAdapter): void {
-    this.wallet = wallet;
-    
-    // Re-initialize clients with new wallet
-    this.staking = new StakingClient(this);
-    this.governance = new GovernanceClient(this);
-    this.rewards = new RewardsClient(this);
-    this.vilink = new ViLinkClient(this);
-    this.gasless = new GaslessClient(this);
-    this.identity = new IdentityClient(this);
-    this.fivea = new FiveAClient(this);
-    this.content = new ContentClient(this);
+
+  /** Current Realms voting weight (base units) and VCoin still locked, computed locally. */
+  async votingPower(owner: PublicKey, at = BigInt(Math.floor(Date.now() / 1000))): Promise<{ weight: bigint; locked: bigint }> {
+    const [registrar, voter] = await Promise.all([this.fetchRegistrar(), this.fetchVoter(owner)]);
+    if (!voter) return { weight: 0n, locked: 0n };
+    const deposits = toDeposits(voter);
+    return { weight: voterWeight(deposits, toWeightParams(registrar.weight), at), locked: lockedAmount(deposits, at) };
   }
-  
-  /**
-   * Get Anchor provider
-   */
-  getProvider(): AnchorProvider | null {
-    if (!this.wallet || !this.wallet.publicKey) {
-      return null;
-    }
-    
-    return new AnchorProvider(
-      this.connection.connection,
-      this.wallet as Wallet,
-      { commitment: this.connection.commitment }
-    );
+
+  fetchUserScore(user: PublicKey) {
+    return this.programs.fiveA.account.userScore.fetchNullable(pda.userScore(user));
   }
-  
-  /**
-   * Send and confirm transaction
-   */
-  async sendTransaction(tx: Transaction): Promise<string> {
-    if (!this.wallet) {
-      throw new Error("Wallet not connected");
-    }
-    
-    const { blockhash, lastValidBlockHeight } = 
-      await this.connection.connection.getLatestBlockhash();
-    
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = this.wallet.publicKey!;
-    
-    const signedTx = await this.wallet.signTransaction(tx);
-    
-    const signature = await this.connection.connection.sendRawTransaction(
-      signedTx.serialize()
-    );
-    
-    await this.connection.connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight,
-    });
-    
-    return signature;
+
+  fetchIdentity(owner: PublicKey) {
+    return this.programs.identity.account.identity.fetchNullable(pda.identity(owner));
   }
-  
-  /**
-   * Get VCoin balance
-   * 
-   * Finding #2 Fix: Now filters by VCoin mint address instead of summing all Token-2022 accounts.
-   * Make sure to set programIds.vcoinMint in your ViWoClient config.
-   */
-  async getVCoinBalance(user?: PublicKey): Promise<BN> {
-    const target = user || this.publicKey;
-    if (!target) {
-      throw new Error("No user specified and wallet not connected");
-    }
-    
-    try {
-      // Finding #2 Fix: Filter by VCoin mint to avoid summing other Token-2022 tokens
-      const tokenAccounts = await this.connection.connection.getTokenAccountsByOwner(
-        target,
-        { mint: this.programIds.vcoinMint, programId: TOKEN_2022_PROGRAM_ID }
-      );
-      
-      let balance = new BN(0);
-      for (const { account } of tokenAccounts.value) {
-        const data = account.data;
-        // Parse balance from account data (offset 64-72 for amount in Token-2022)
-        const amount = data.slice(64, 72);
-        balance = balance.add(new BN(amount, "le"));
-      }
-      
-      return balance;
-    } catch (error) {
-      // Finding #9 Fix: Log errors instead of silently returning 0
-      console.warn("[ViWoSDK] getVCoinBalance failed:", error instanceof Error ? error.message : error);
-      return new BN(0);
-    }
+
+  fetchUserEnergy(user: PublicKey) {
+    return this.programs.content.account.userEnergy.fetchNullable(pda.userEnergy(user));
   }
-  
-  /**
-   * Get veVCoin balance
-   */
-  async getVeVCoinBalance(user?: PublicKey): Promise<BN> {
-    const target = user || this.publicKey;
-    if (!target) {
-      throw new Error("No user specified and wallet not connected");
-    }
-    
-    try {
-      const stakeData = await this.staking.getUserStake(target);
-      return stakeData?.vevcoinBalance || new BN(0);
-    } catch (error) {
-      // Finding #9 Fix: Log errors instead of silently returning 0
-      console.warn("[ViWoSDK] getVeVCoinBalance failed:", error instanceof Error ? error.message : error);
-      return new BN(0);
-    }
+
+  fetchEpoch(index: bigint | number) {
+    return this.programs.sscre.account.epoch.fetchNullable(pda.epoch(index));
   }
-  
-  /**
-   * Check connection health
-   */
-  async healthCheck(): Promise<{
-    connected: boolean;
-    slot: number | null;
-    blockTime: number | null;
-  }> {
-    try {
-      const [connected, slot] = await Promise.all([
-        this.connection.isHealthy(),
-        this.connection.getSlot(),
-      ]);
-      
-      const blockTime = await this.connection.getBlockTime();
-      
-      return { connected, slot, blockTime };
-    } catch (error) {
-      // Finding #9 Fix: Log errors instead of silently failing
-      console.warn("[ViWoSDK] healthCheck failed:", error instanceof Error ? error.message : error);
-      return { connected: false, slot: null, blockTime: null };
-    }
+
+  fetchPoll(pollId: bigint | number) {
+    return this.programs.privatePoll.account.poll.fetchNullable(pda.poll(pollId));
+  }
+
+  fetchAction(creator: PublicKey, nonce: bigint | number) {
+    return this.programs.vilink.account.viLinkAction.fetchNullable(pda.action(creator, nonce));
   }
 }
-
-export default ViWoClient;
-

@@ -1,19 +1,22 @@
 {
   "name": "@viwoapp/sdk",
-  "version": "2.0.1",
-  "description": "ViWoApp SDK - TypeScript SDK for VCoin Protocol Integration",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
+  "version": "3.0.0",
+  "description": "TypeScript SDK for the VCoin programs: typed clients from the IDLs, PDA helpers, builders for staking + Realms, private polls, SSCRE claims, sessions, content, ViLink, identity and 5A",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "lint": "eslint src --ext .ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src",
     "test": "jest",
-    "clean": "rm -rf dist"
+    "smoke": "node scripts/smoke.mjs",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run build && npm run smoke"
   },
   "keywords": [
     "viwoapp",
@@ -25,58 +28,41 @@
   "author": "ViWoApp Team",
   "license": "MIT",
   "dependencies": {
-    "@coral-xyz/anchor": "^0.32.0",
-    "@solana/web3.js": "^1.95.0",
-    "@solana/spl-token": "^0.4.0",
-    "bs58": "^5.0.0"
+    "@noble/hashes": "^1.8.0"
   },
   "devDependencies": {
+    "@coral-xyz/anchor": "0.32.1",
+    "@eslint/js": "^9.39.5",
+    "@solana/web3.js": "^1.98.0",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
+    "eslint": "^9.39.5",
     "jest": "^29.7.0",
+    "litesvm": "1.6.2",
     "ts-jest": "^29.1.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.72.2"
   },
   "peerDependencies": {
-    "@coral-xyz/anchor": ">=0.30.0",
-    "@solana/web3.js": ">=1.90.0"
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.95.0"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     },
-    "./core": {
-      "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.esm.js",
-      "require": "./dist/core/index.js"
-    },
-    "./staking": {
-      "types": "./dist/staking/index.d.ts",
-      "import": "./dist/staking/index.esm.js",
-      "require": "./dist/staking/index.js"
-    },
-    "./governance": {
-      "types": "./dist/governance/index.d.ts",
-      "import": "./dist/governance/index.esm.js",
-      "require": "./dist/governance/index.js"
-    },
-    "./rewards": {
-      "types": "./dist/rewards/index.d.ts",
-      "import": "./dist/rewards/index.esm.js",
-      "require": "./dist/rewards/index.js"
-    },
-    "./vilink": {
-      "types": "./dist/vilink/index.d.ts",
-      "import": "./dist/vilink/index.esm.js",
-      "require": "./dist/vilink/index.js"
-    },
-    "./gasless": {
-      "types": "./dist/gasless/index.d.ts",
-      "import": "./dist/gasless/index.esm.js",
-      "require": "./dist/gasless/index.js"
-    }
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
   }
 }

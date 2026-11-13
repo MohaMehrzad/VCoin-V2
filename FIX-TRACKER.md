@@ -121,23 +121,23 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | VL-6 | Medium | Five action types can be created but never executed, and no action can be closed | 10-vilink-protocol.md | C16 | fixed (C16: only tip/vouch/follow exist; types ≥ 3 rejected; close_action (expired or exhausted) and close_receipt) |
 | VL-7 | Low | The dApp registry is never enforced | 10-vilink-protocol.md | C16 | removed (C16: unenforced dApp registry deleted) |
 | VL-16 | Low | The fee rate is read at execution, not when the link is created (MON-9) | 10-vilink-protocol.md | C16 | fixed (C16: fee_bps stored per link at creation; test shows a link keeping 2.5% after the fee rose to 10%) |
-| SDK-01 | High | Every `build*Transaction` returns an empty transaction | 11-typescript-sdk.md | C17 | open |
-| SDK-02 | High | Published ESM and subpath exports point to files that don't exist | 11-typescript-sdk.md | C17 | open |
-| SDK-03 | High | The ViLinkAction decoder makes every action look expired | 11-typescript-sdk.md | C17 | open |
-| SDK-04 | High | The UserStake decoder is wrong, and `canUnstake` throws for about 255 in 256 users | 11-typescript-sdk.md | C17 | open |
-| SDK-05 | High | The StakingPool decoder is wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-06 | High | The rewards decoders and claim-status logic are wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-07 | Medium | The Merkle helpers can never match the chain (no SDK path calls them, and they are marked as placeholders) | 11-typescript-sdk.md | C17 | open |
-| SDK-08 | High | Three PDA seeds are wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-09 | High | The VoteChoice and ProposalStatus enums are wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-10 | High | The Proposal decoder and proposal-ID loop are wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-11 | Medium | The GovernanceConfig and VoteRecord decoders are wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-12 | Medium | Voting power, threshold and quorum disagree with the program | 11-typescript-sdk.md | C17 | open |
-| SDK-13 | Medium | The content client is wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-14 | Medium | The identity client is wrong | 11-typescript-sdk.md | C17 | open |
-| SDK-15 | Medium | The default VCoin mint is the System Program | 11-typescript-sdk.md | C17 | open |
-| SDK-16 | Medium | The SDK tests lock in the wrong values | 11-typescript-sdk.md | C17 | open |
-| SDK-17 | Medium | The README examples don't work | 11-typescript-sdk.md | C17 | open |
+| SDK-01 | High | Every `build*Transaction` returns an empty transaction | 11-typescript-sdk.md | C17 | fixed (C17: real builders via program.methods…accountsStrict; buildTransaction refuses empty lists; packages/viwoapp-sdk/src/__tests__/builders.test.ts, e2e.test.ts) |
+| SDK-02 | High | Published ESM and subpath exports point to files that don't exist | 11-typescript-sdk.md | C17 | fixed (C17: single entry, explicit ESM/CJS exports map; npm run smoke resolves the package by name in both module systems; Anchor CJS interop shim) |
+| SDK-03 | High | The ViLinkAction decoder makes every action look expired | 11-typescript-sdk.md | C17 | fixed (C17: SDK v3 decodes with the IDL coder (no hand offsets)) |
+| SDK-04 | High | The UserStake decoder is wrong, and `canUnstake` throws for about 255 in 256 users | 11-typescript-sdk.md | C17 | fixed (C17: SDK v3 decodes with the IDL coder (no hand offsets); staking accounts are the v3 Registrar/Voter) |
+| SDK-05 | High | The StakingPool decoder is wrong | 11-typescript-sdk.md | C17 | fixed (C17: SDK v3 decodes with the IDL coder (no hand offsets)) |
+| SDK-06 | High | The rewards decoders and claim-status logic are wrong | 11-typescript-sdk.md | C17 | fixed (C17: SDK v3 decodes with the IDL coder (no hand offsets); per-epoch ClaimStatus PDAs) |
+| SDK-07 | Medium | The Merkle helpers can never match the chain (no SDK path calls them, and they are marked as placeholders) | 11-typescript-sdk.md | C17 | fixed (C17: keccak via @noble/hashes, frozen vector test, and an end-to-end SSCRE epoch claimed with TypeScript proofs on the real program; packages/viwoapp-sdk/src/__tests__/e2e.test.ts) |
+| SDK-08 | High | Three PDA seeds are wrong | 11-typescript-sdk.md | C17 | fixed (C17: every PDA seed read from the IDL constants; idl.test.ts compares with direct derivations) |
+| SDK-09 | High | The VoteChoice and ProposalStatus enums are wrong | 11-typescript-sdk.md | C17 | removed (C17: governance moved to Realms; enums come from the IDLs) |
+| SDK-10 | High | The Proposal decoder and proposal-ID loop are wrong | 11-typescript-sdk.md | C17 | removed (C17: proposals live in Realms; no proposal decoder) |
+| SDK-11 | Medium | The GovernanceConfig and VoteRecord decoders are wrong | 11-typescript-sdk.md | C17 | removed (C17: custom governance accounts retired; private-poll accounts decoded by the IDL coder) |
+| SDK-12 | Medium | Voting power, threshold and quorum disagree with the program | 11-typescript-sdk.md | C17 | fixed (C17: weight.rs ported with bigint and identical rounding; math.test.ts uses the Rust test values; e2e compares with the chain) |
+| SDK-13 | Medium | The content client is wrong | 11-typescript-sdk.md | C17 | fixed (C17: content builders from the IDL, session support, tierForLocked mirrors the program) |
+| SDK-14 | Medium | The identity client is wrong | 11-typescript-sdk.md | C17 | fixed (C17: identity builders from the IDL; levelForClaims and username rules mirror the program) |
+| SDK-15 | Medium | The default VCoin mint is the System Program | 11-typescript-sdk.md | C17 | fixed (C17: vcoinMint() is the vcoin-token mint PDA; no placeholder mint) |
+| SDK-16 | Medium | The SDK tests lock in the wrong values | 11-typescript-sdk.md | C17 | fixed (C17: v2 tests deleted; packages/viwoapp-sdk/src/__tests__ checks IDL parity, PDAs, math vectors, builders and runs end-to-end flows) |
+| SDK-17 | Medium | The README examples don't work | 11-typescript-sdk.md | C17 | fixed (C17: README rewritten against the v3 API) |
 | TOOL-1 | High | The main CI suite has been red on every push, including the release | 12-tests-ci-tooling.md | C1 | fixed (C1: CI rewritten; fmt/clippy -D warnings/anchor build+IDL/cargo test all green locally) |
 | TOOL-2 | High | None of the 209 Rust integration tests in `programs/*/tests` compile | 12-tests-ci-tooling.md | C1 | fixed (C1: broken solana-program-test suites removed; LiteSVM harness `integration-tests/`) |
 | TOOL-3 | High | IDL generation is broken, so the TypeScript tests and an IDL-based SDK are impossible | 12-tests-ci-tooling.md | C1 | fixed (C1: `anchor build` with IDL succeeds for all programs) |
@@ -147,9 +147,9 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | TOOL-7 | Medium | Root `package.json` scripts point at things that don't exist | 12-tests-ci-tooling.md | C1 | fixed (C1: root scripts point at real crates) |
 | TOOL-8 | Medium | 14 unit tests fail; 13 of them are stale size assertions | 12-tests-ci-tooling.md | C1 | fixed (C1: size tests compare LEN to Borsh size; epoch test asserts bitmap semantics) |
 | TOOL-9 | Medium | Program keypairs are not in the repo, so a fresh build deploys to the wrong addresses | 12-tests-ci-tooling.md | C1 | partial (C1: localnet only; deploy runbook in C18) |
-| TOOL-10 | High | The published `@viwoapp/sdk@2.0.1` has broken ESM and subpath exports | 12-tests-ci-tooling.md | C17 | open |
+| TOOL-10 | High | The published `@viwoapp/sdk@2.0.1` has broken ESM and subpath exports | 12-tests-ci-tooling.md | C17 | fixed (C17: exports map + smoke test in CI; publish only via prepublishOnly gate (typecheck, lint, test, build, smoke)) |
 | TOOL-11 | Medium | Clippy deny-level error: an always-true scope check | 12-tests-ci-tooling.md | C1 | fixed (C1: `scope & !VALID_SCOPE_MASK == 0`) |
-| TOOL-12 | Low | Smaller tooling problems | 12-tests-ci-tooling.md | C1 | partial (C1: fmt + clippy clean; SDK eslint in C17) |
+| TOOL-12 | Low | Smaller tooling problems | 12-tests-ci-tooling.md | C1 | fixed (C1 fmt/clippy; C17 SDK eslint config + lint in CI) |
 | X-1 | High | Every program's `initialize` can be front-run | 13-cross-cutting-security.md | C2+per-program | fixed (C2–C16: every program's init checks the upgrade authority via ProgramData; each suite has an init-gate test) |
 | X-2 | Medium | 7 of 11 programs have no authority-transfer timelock, contrary to the "all 11" claim | 13-cross-cutting-security.md | C2+per-program | fixed (C2–C16: every program uses vcoin-common AdminState: 24h two-step propose/accept/cancel, evented) |
 | X-3 | Medium | Admin powers that take effect instantly, with no timelock | 13-cross-cutting-security.md | C2+per-program | fixed (C7–C16: fee/treasury/oracle/payment changes are 24h-timelocked; remaining admin powers (pause, kill switches, params, slashing) are exercised by the Realms governance PDA after handover, i.e. a vote + hold-up; see runbook C18) |

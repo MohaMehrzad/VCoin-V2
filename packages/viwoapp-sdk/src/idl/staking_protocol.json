@@ -1,0 +1,3189 @@
+{
+  "address": "6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu",
+  "metadata": {
+    "name": "staking_protocol",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "VCoin Staking Protocol with Tier System and veVCoin Minting"
+  },
+  "instructions": [
+    {
+      "name": "accept_authority",
+      "discriminator": [
+        107,
+        86,
+        198,
+        91,
+        33,
+        12,
+        107,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_authority_transfer",
+      "discriminator": [
+        94,
+        131,
+        125,
+        184,
+        183,
+        24,
+        125,
+        229
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_slash",
+      "discriminator": [
+        222,
+        163,
+        161,
+        54,
+        103,
+        113,
+        42,
+        67
+      ],
+      "accounts": [
+        {
+          "name": "close",
+          "accounts": [
+            {
+              "name": "registrar",
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      114,
+                      101,
+                      103,
+                      105,
+                      115,
+                      116,
+                      114,
+                      97,
+                      114
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "voter",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      116,
+                      101,
+                      114
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "voter.owner",
+                    "account": "Voter"
+                  }
+                ]
+              },
+              "relations": [
+                "slash_request"
+              ]
+            },
+            {
+              "name": "slash_request",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      115,
+                      108,
+                      97,
+                      115,
+                      104
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "voter"
+                  },
+                  {
+                    "kind": "account",
+                    "path": "slash_request.nonce",
+                    "account": "SlashRequest"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "rent_payer",
+              "writable": true,
+              "relations": [
+                "slash_request"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_voter",
+      "docs": [
+        "Closes an empty voter account and refunds its rent."
+      ],
+      "discriminator": [
+        117,
+        35,
+        234,
+        247,
+        206,
+        131,
+        182,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "voter"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "configure_governance",
+      "docs": [
+        "Wires the registrar to its Realms realm as voter-weight plugin (one-shot)."
+      ],
+      "discriminator": [
+        46,
+        219,
+        164,
+        132,
+        222,
+        7,
+        9,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "realm"
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "slash_destination",
+          "docs": [
+            "DAO treasury token account that receives slashed VCoin."
+          ]
+        },
+        {
+          "name": "max_voter_weight_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  120,
+                  45,
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  45,
+                  119,
+                  101,
+                  105,
+                  103,
+                  104,
+                  116,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "governance_program_id",
+          "type": "pubkey"
+        },
+        {
+          "name": "min_vote_score",
+          "type": "u16"
+        },
+        {
+          "name": "min_propose_score",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "create_registrar",
+      "docs": [
+        "Creates the registrar and VCoin vault. Upgrade authority only."
+      ],
+      "discriminator": [
+        132,
+        235,
+        36,
+        49,
+        139,
+        66,
+        202,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vcoin_mint",
+          "docs": [
+            "Must be the vcoin-token program's mint PDA (checked in the handler) and pass",
+            "`validate_vcoin_mint` (no hook, fee, freeze authority or permanent delegate)."
+          ]
+        },
+        {
+          "name": "vevcoin_mint",
+          "docs": [
+            "Must be the vevcoin-token program's mint PDA (checked in the handler)."
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program",
+          "address": "6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu"
+        },
+        {
+          "name": "program_data"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_voter",
+      "docs": [
+        "Creates the caller's voter account."
+      ],
+      "discriminator": [
+        6,
+        24,
+        245,
+        52,
+        243,
+        255,
+        148,
+        25
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_voter_weight_record",
+      "discriminator": [
+        184,
+        249,
+        133,
+        178,
+        88,
+        152,
+        250,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter_weight_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  45,
+                  119,
+                  101,
+                  105,
+                  103,
+                  104,
+                  116,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deposit",
+      "docs": [
+        "Locks VCoin into deposit slot `index` for at least `lock_secs` seconds."
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "voter"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "owner_vcoin",
+          "writable": true
+        },
+        {
+          "name": "vevcoin_mint",
+          "writable": true,
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "owner_vevcoin",
+          "docs": [
+            "The owner's canonical veVCoin ATA: receipts live in exactly one account per owner, so",
+            "a slash can always burn them (anyone can recreate the ATA)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "vevcoin_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vevcoin_config"
+        },
+        {
+          "name": "vevcoin_program",
+          "address": "FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "lock_secs",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "execute_slash",
+      "discriminator": [
+        15,
+        240,
+        38,
+        73,
+        175,
+        55,
+        88,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter.owner",
+                "account": "Voter"
+              }
+            ]
+          },
+          "relations": [
+            "slash_request"
+          ]
+        },
+        {
+          "name": "slash_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  108,
+                  97,
+                  115,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              },
+              {
+                "kind": "account",
+                "path": "slash_request.nonce",
+                "account": "SlashRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rent_payer",
+          "writable": true,
+          "relations": [
+            "slash_request"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "slash_destination",
+          "writable": true,
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "vevcoin_mint",
+          "writable": true,
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "owner_vevcoin",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "vevcoin_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vevcoin_config"
+        },
+        {
+          "name": "vevcoin_program",
+          "address": "FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "expire_slash",
+      "discriminator": [
+        114,
+        239,
+        117,
+        220,
+        151,
+        115,
+        241,
+        214
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter.owner",
+                "account": "Voter"
+              }
+            ]
+          },
+          "relations": [
+            "slash_request"
+          ]
+        },
+        {
+          "name": "slash_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  108,
+                  97,
+                  115,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              },
+              {
+                "kind": "account",
+                "path": "slash_request.nonce",
+                "account": "SlashRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rent_payer",
+          "writable": true,
+          "relations": [
+            "slash_request"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "extend_lock",
+      "docs": [
+        "Moves a deposit's lock end to `now + lock_secs` (must be later than today's end)."
+      ],
+      "discriminator": [
+        68,
+        151,
+        140,
+        144,
+        139,
+        122,
+        118,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "voter"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "lock_secs",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "propose_authority",
+      "discriminator": [
+        20,
+        148,
+        236,
+        198,
+        76,
+        119,
+        99,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_slash",
+      "docs": [
+        "Opens a slash of `amount` against a voter (authority = the DAO). Freezes the",
+        "voter's withdrawals; executable by anyone after 48h, void 7 days later."
+      ],
+      "discriminator": [
+        198,
+        144,
+        128,
+        49,
+        72,
+        78,
+        74,
+        118
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter.owner",
+                "account": "Voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slash_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  108,
+                  97,
+                  115,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              },
+              {
+                "kind": "account",
+                "path": "registrar.slash_nonce",
+                "account": "Registrar"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "reason_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_gate_params",
+      "discriminator": [
+        210,
+        137,
+        12,
+        226,
+        140,
+        51,
+        168,
+        141
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "min_vote_score",
+          "type": "u16"
+        },
+        {
+          "name": "min_propose_score",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_slash_destination",
+      "discriminator": [
+        169,
+        103,
+        49,
+        31,
+        130,
+        160,
+        239,
+        131
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "registrar"
+          ]
+        },
+        {
+          "name": "slash_destination"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_weight_params",
+      "discriminator": [
+        69,
+        84,
+        102,
+        30,
+        62,
+        106,
+        226,
+        79
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "WeightParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_max_voter_weight_record",
+      "discriminator": [
+        103,
+        175,
+        201,
+        251,
+        2,
+        9,
+        251,
+        179
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "max_voter_weight_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  120,
+                  45,
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  45,
+                  119,
+                  101,
+                  105,
+                  103,
+                  104,
+                  116,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_voter_weight_record",
+      "docs": [
+        "Writes the voter's weight for one Realms action (valid for the current slot)."
+      ],
+      "discriminator": [
+        45,
+        185,
+        3,
+        36,
+        109,
+        190,
+        115,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter.owner",
+                "account": "Voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter_weight_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  45,
+                  119,
+                  101,
+                  105,
+                  103,
+                  104,
+                  116,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter.owner",
+                "account": "Voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_score"
+        }
+      ],
+      "args": [
+        {
+          "name": "action",
+          "type": {
+            "defined": {
+              "name": "VoterWeightAction"
+            }
+          }
+        },
+        {
+          "name": "target",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "docs": [
+        "Withdraws unlocked VCoin from deposit slot `index`."
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "stake",
+          "accounts": [
+            {
+              "name": "registrar",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      114,
+                      101,
+                      103,
+                      105,
+                      115,
+                      116,
+                      114,
+                      97,
+                      114
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "voter",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      116,
+                      101,
+                      114
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "owner"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "owner",
+              "signer": true,
+              "relations": [
+                "voter"
+              ]
+            },
+            {
+              "name": "vault",
+              "writable": true,
+              "relations": [
+                "registrar"
+              ]
+            },
+            {
+              "name": "vcoin_mint",
+              "relations": [
+                "registrar"
+              ]
+            },
+            {
+              "name": "owner_vcoin",
+              "writable": true
+            },
+            {
+              "name": "vevcoin_mint",
+              "writable": true,
+              "relations": [
+                "registrar"
+              ]
+            },
+            {
+              "name": "owner_vevcoin",
+              "docs": [
+                "The owner's canonical veVCoin ATA: receipts live in exactly one account per owner, so",
+                "a slash can always burn them (anyone can recreate the ATA)."
+              ],
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "account",
+                    "path": "owner"
+                  },
+                  {
+                    "kind": "account",
+                    "path": "token_program"
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vevcoin_mint"
+                  }
+                ],
+                "program": {
+                  "kind": "const",
+                  "value": [
+                    140,
+                    151,
+                    37,
+                    143,
+                    78,
+                    36,
+                    137,
+                    241,
+                    187,
+                    61,
+                    16,
+                    41,
+                    20,
+                    142,
+                    13,
+                    131,
+                    11,
+                    90,
+                    19,
+                    153,
+                    218,
+                    255,
+                    16,
+                    132,
+                    4,
+                    142,
+                    123,
+                    216,
+                    219,
+                    233,
+                    248,
+                    89
+                  ]
+                }
+              }
+            },
+            {
+              "name": "vevcoin_config"
+            },
+            {
+              "name": "vevcoin_program",
+              "address": "FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx"
+            },
+            {
+              "name": "token_program",
+              "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+            }
+          ]
+        },
+        {
+          "name": "token_owner_record"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "MaxVoterWeightRecord",
+      "discriminator": [
+        157,
+        95,
+        242,
+        151,
+        16,
+        98,
+        26,
+        118
+      ]
+    },
+    {
+      "name": "Registrar",
+      "discriminator": [
+        193,
+        202,
+        205,
+        51,
+        78,
+        168,
+        150,
+        128
+      ]
+    },
+    {
+      "name": "SlashRequest",
+      "discriminator": [
+        147,
+        209,
+        38,
+        84,
+        60,
+        216,
+        230,
+        70
+      ]
+    },
+    {
+      "name": "Voter",
+      "discriminator": [
+        241,
+        93,
+        35,
+        191,
+        254,
+        147,
+        17,
+        202
+      ]
+    },
+    {
+      "name": "VoterWeightRecord",
+      "discriminator": [
+        46,
+        249,
+        155,
+        75,
+        153,
+        248,
+        116,
+        9
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AuthorityProposed",
+      "discriminator": [
+        244,
+        117,
+        94,
+        112,
+        53,
+        151,
+        35,
+        89
+      ]
+    },
+    {
+      "name": "AuthorityTransferCancelled",
+      "discriminator": [
+        31,
+        228,
+        187,
+        148,
+        20,
+        99,
+        237,
+        48
+      ]
+    },
+    {
+      "name": "AuthorityTransferred",
+      "discriminator": [
+        245,
+        109,
+        179,
+        54,
+        135,
+        92,
+        22,
+        64
+      ]
+    },
+    {
+      "name": "Deposited",
+      "discriminator": [
+        111,
+        141,
+        26,
+        45,
+        161,
+        35,
+        100,
+        57
+      ]
+    },
+    {
+      "name": "GateParamsUpdated",
+      "discriminator": [
+        149,
+        17,
+        1,
+        38,
+        44,
+        120,
+        77,
+        202
+      ]
+    },
+    {
+      "name": "GovernanceConfigured",
+      "discriminator": [
+        20,
+        49,
+        34,
+        211,
+        4,
+        57,
+        158,
+        250
+      ]
+    },
+    {
+      "name": "LockExtended",
+      "discriminator": [
+        25,
+        118,
+        227,
+        150,
+        119,
+        138,
+        207,
+        234
+      ]
+    },
+    {
+      "name": "PauseChanged",
+      "discriminator": [
+        238,
+        188,
+        213,
+        78,
+        134,
+        209,
+        178,
+        218
+      ]
+    },
+    {
+      "name": "RegistrarCreated",
+      "discriminator": [
+        244,
+        170,
+        255,
+        18,
+        94,
+        149,
+        46,
+        71
+      ]
+    },
+    {
+      "name": "SlashCancelled",
+      "discriminator": [
+        30,
+        217,
+        21,
+        135,
+        62,
+        236,
+        194,
+        221
+      ]
+    },
+    {
+      "name": "SlashDestinationChanged",
+      "discriminator": [
+        83,
+        74,
+        117,
+        243,
+        104,
+        194,
+        226,
+        42
+      ]
+    },
+    {
+      "name": "SlashExecuted",
+      "discriminator": [
+        170,
+        48,
+        78,
+        119,
+        242,
+        155,
+        108,
+        61
+      ]
+    },
+    {
+      "name": "SlashExpired",
+      "discriminator": [
+        82,
+        186,
+        235,
+        181,
+        176,
+        9,
+        128,
+        0
+      ]
+    },
+    {
+      "name": "SlashProposed",
+      "discriminator": [
+        158,
+        90,
+        179,
+        8,
+        227,
+        190,
+        15,
+        231
+      ]
+    },
+    {
+      "name": "VoterCreated",
+      "discriminator": [
+        211,
+        244,
+        166,
+        5,
+        238,
+        33,
+        110,
+        76
+      ]
+    },
+    {
+      "name": "WeightParamsUpdated",
+      "discriminator": [
+        191,
+        60,
+        240,
+        236,
+        105,
+        47,
+        6,
+        215
+      ]
+    },
+    {
+      "name": "Withdrawn",
+      "discriminator": [
+        20,
+        89,
+        223,
+        198,
+        194,
+        124,
+        219,
+        13
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Paused",
+      "msg": "Staking is paused"
+    },
+    {
+      "code": 6001,
+      "name": "ZeroAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidLockDuration",
+      "msg": "Lock duration outside [1 week, 4 years]"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidDepositIndex",
+      "msg": "Deposit index out of range"
+    },
+    {
+      "code": 6004,
+      "name": "DepositNotUsed",
+      "msg": "Deposit slot is empty"
+    },
+    {
+      "code": 6005,
+      "name": "DepositExpired",
+      "msg": "Cannot add to an expired deposit; withdraw or relock it first"
+    },
+    {
+      "code": 6006,
+      "name": "LockNotExtended",
+      "msg": "A lock can only be extended"
+    },
+    {
+      "code": 6007,
+      "name": "StillLocked",
+      "msg": "Deposit is still locked"
+    },
+    {
+      "code": 6008,
+      "name": "InsufficientDeposit",
+      "msg": "Amount exceeds the deposit"
+    },
+    {
+      "code": 6009,
+      "name": "VoterNotEmpty",
+      "msg": "Voter still has deposits"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidProgramData",
+      "msg": "Program data account does not belong to this program"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidVCoinMint",
+      "msg": "VCoin mint must be the vcoin-token program's mint PDA"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidVeVCoinMint",
+      "msg": "veVCoin mint must be the vevcoin-token program's mint PDA"
+    },
+    {
+      "code": 6013,
+      "name": "NothingReceived",
+      "msg": "No VCoin was received by the vault"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidWeightParams",
+      "msg": "Weight parameters out of bounds"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidRealm",
+      "msg": "Realm must be a RealmV2 of the configured governance program with VCoin as community mint"
+    },
+    {
+      "code": 6016,
+      "name": "GovernanceAlreadyConfigured",
+      "msg": "Governance is already configured"
+    },
+    {
+      "code": 6017,
+      "name": "GovernanceNotConfigured",
+      "msg": "Governance is not configured yet"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidTokenOwnerRecord",
+      "msg": "Token owner record does not match this realm, mint and owner"
+    },
+    {
+      "code": 6019,
+      "name": "VotesNotRelinquished",
+      "msg": "Relinquish all votes and finish open proposals before withdrawing"
+    },
+    {
+      "code": 6020,
+      "name": "ScoreBelowGate",
+      "msg": "5A reputation score is below the required gate"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidScoreAccount",
+      "msg": "5A score account is not the owner's UserScore PDA"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidGateParams",
+      "msg": "Gate scores must be at most 10000"
+    },
+    {
+      "code": 6023,
+      "name": "SlashPending",
+      "msg": "Withdrawals are frozen while a slash request is pending"
+    },
+    {
+      "code": 6024,
+      "name": "SlashNotReady",
+      "msg": "Slash request is still inside its appeal window"
+    },
+    {
+      "code": 6025,
+      "name": "SlashWindowClosed",
+      "msg": "Slash request has expired"
+    },
+    {
+      "code": 6026,
+      "name": "SlashNotExpired",
+      "msg": "Slash request has not expired yet"
+    },
+    {
+      "code": 6027,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "AdminState",
+      "docs": [
+        "Authority with a two-step, time-locked transfer.",
+        "",
+        "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
+        "(new authority). The current authority can `cancel` at any time before acceptance."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "docs": [
+              "`Pubkey::default()` when no transfer is pending."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_since",
+            "docs": [
+              "Unix time the pending transfer was proposed (0 when none)."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed",
+            "type": "pubkey"
+          },
+          {
+            "name": "ready_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTransferCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositEntry",
+      "docs": [
+        "One locked deposit."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "lock_start",
+            "type": "i64"
+          },
+          {
+            "name": "lock_end",
+            "type": "i64"
+          },
+          {
+            "name": "is_used",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Deposited",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "lock_end",
+            "type": "i64"
+          },
+          {
+            "name": "total_locked",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GateParamsUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_vote_score",
+            "type": "u16"
+          },
+          {
+            "name": "min_propose_score",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GovernanceConfigured",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "realm",
+            "type": "pubkey"
+          },
+          {
+            "name": "governance_program_id",
+            "type": "pubkey"
+          },
+          {
+            "name": "slash_destination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockExtended",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "old_lock_end",
+            "type": "i64"
+          },
+          {
+            "name": "new_lock_end",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MaxVoterWeightRecord",
+      "docs": [
+        "Realm-wide maximum voter weight, PDA `[\"max-voter-weight-record\"]`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "realm",
+            "type": "pubkey"
+          },
+          {
+            "name": "governing_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_voter_weight",
+            "type": "u64"
+          },
+          {
+            "name": "max_voter_weight_expiry",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Registrar",
+      "docs": [
+        "Singleton registrar, PDA `[\"registrar\"]`. Owns the VCoin vault and is the only",
+        "account the veVCoin program accepts as mint/burn signer."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Authority for pause, parameters and slashing. Bootstrapped by the deployer and handed",
+              "(24h two-step) to the Realms governance PDA after launch, so every change is a DAO vote."
+            ],
+            "type": {
+              "defined": {
+                "name": "AdminState"
+              }
+            }
+          },
+          {
+            "name": "governance_program_id",
+            "docs": [
+              "Realms (SPL Governance) program and realm this registrar serves as voter-weight plugin."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "realm",
+            "type": "pubkey"
+          },
+          {
+            "name": "realm_governing_token_mint",
+            "docs": [
+              "The realm's community governing-token mint (the mint Realms votes are cast for)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vcoin_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "vevcoin_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "slash_destination",
+            "docs": [
+              "Where slashed VCoin goes (DAO treasury token account)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "weight",
+            "type": {
+              "defined": {
+                "name": "WeightParams"
+              }
+            }
+          },
+          {
+            "name": "min_vote_score",
+            "docs": [
+              "5A composite score (0..=10000) required to vote / to create proposals."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "min_propose_score",
+            "type": "u16"
+          },
+          {
+            "name": "total_locked",
+            "docs": [
+              "Sum of all deposits (receipt supply upper bound; drives MaxVoterWeightRecord)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "slash_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RegistrarCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "registrar",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "vcoin_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vevcoin_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "request",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashDestinationChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_destination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "request",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "requested",
+            "type": "u64"
+          },
+          {
+            "name": "slashed",
+            "type": "u64"
+          },
+          {
+            "name": "receipts_burned",
+            "type": "u64"
+          },
+          {
+            "name": "total_locked",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashExpired",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "request",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "request",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "reason_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "executable_at",
+            "type": "i64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SlashRequest",
+      "docs": [
+        "A DAO-approved slash of one voter's locked deposits, PDA",
+        "`[\"slash\", voter, nonce]`. Executable by anyone in `[executable_at, expires_at)`;",
+        "the voter's withdrawals are frozen while it exists. Closed (rent to `rent_payer`) when",
+        "cancelled, executed or expired."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Requested amount; execution takes `min(amount, deposits)`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "reason_hash",
+            "docs": [
+              "Hash of the off-chain evidence / DAO proposal text."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "proposed_at",
+            "type": "i64"
+          },
+          {
+            "name": "executable_at",
+            "type": "i64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "rent_payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Voter",
+      "docs": [
+        "Per-owner deposits, PDA `[\"voter\", owner]`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposits",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "DepositEntry"
+                  }
+                },
+                8
+              ]
+            }
+          },
+          {
+            "name": "pending_slashes",
+            "docs": [
+              "Open slash requests against this voter; withdrawals are frozen while > 0."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoterCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoterWeightAction",
+      "docs": [
+        "Realms action a voter-weight record is valid for (order is part of the wire format)."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "CastVote"
+          },
+          {
+            "name": "CommentProposal"
+          },
+          {
+            "name": "CreateGovernance"
+          },
+          {
+            "name": "CreateProposal"
+          },
+          {
+            "name": "SignOffProposal"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoterWeightRecord",
+      "docs": [
+        "Per-owner voter weight, PDA `[\"voter-weight-record\", owner]`. Rewritten by",
+        "`update_voter_weight_record` in the same transaction as the Realms action",
+        "(`voter_weight_expiry = current slot`)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "realm",
+            "type": "pubkey"
+          },
+          {
+            "name": "governing_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "governing_token_owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "voter_weight",
+            "type": "u64"
+          },
+          {
+            "name": "voter_weight_expiry",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "weight_action",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "VoterWeightAction"
+                }
+              }
+            }
+          },
+          {
+            "name": "weight_action_target",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WeightParams",
+      "docs": [
+        "Voting-weight parameters (fixed point, [`FACTOR_SCALE`] = 1.0×)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "baseline_factor",
+            "type": "u64"
+          },
+          {
+            "name": "max_extra_factor",
+            "type": "u64"
+          },
+          {
+            "name": "saturation_secs",
+            "type": "u64"
+          },
+          {
+            "name": "min_lock_remaining_to_vote",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WeightParamsUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "baseline_factor",
+            "type": "u64"
+          },
+          {
+            "name": "max_extra_factor",
+            "type": "u64"
+          },
+          {
+            "name": "saturation_secs",
+            "type": "u64"
+          },
+          {
+            "name": "min_lock_remaining_to_vote",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Withdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_locked",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "MAX_LOCK_SECS",
+      "type": "i64",
+      "value": "126144000"
+    },
+    {
+      "name": "MAX_VOTER_WEIGHT_RECORD_SEED",
+      "type": "bytes",
+      "value": "[109, 97, 120, 45, 118, 111, 116, 101, 114, 45, 119, 101, 105, 103, 104, 116, 45, 114, 101, 99, 111, 114, 100]"
+    },
+    {
+      "name": "MIN_LOCK_SECS",
+      "docs": [
+        "Lock bounds (seconds)."
+      ],
+      "type": "i64",
+      "value": "604800"
+    },
+    {
+      "name": "REGISTRAR_SEED",
+      "docs": [
+        "Registrar PDA seed (must match `vevcoin_token::constants::STAKING_REGISTRAR_SEED`)."
+      ],
+      "type": "bytes",
+      "value": "[114, 101, 103, 105, 115, 116, 114, 97, 114]"
+    },
+    {
+      "name": "SLASH_SEED",
+      "docs": [
+        "Slashing: DAO-proposed, executable after a 48h appeal window, void after 7 more days."
+      ],
+      "type": "bytes",
+      "value": "[115, 108, 97, 115, 104]"
+    },
+    {
+      "name": "VAULT_SEED",
+      "docs": [
+        "VCoin vault PDA seed (token account owned by the registrar)."
+      ],
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "VOTER_SEED",
+      "docs": [
+        "Per-owner voter PDA seed: `[\"voter\", owner]`."
+      ],
+      "type": "bytes",
+      "value": "[118, 111, 116, 101, 114]"
+    },
+    {
+      "name": "VOTER_WEIGHT_RECORD_SEED",
+      "docs": [
+        "Realms voter-weight records written by this plugin."
+      ],
+      "type": "bytes",
+      "value": "[118, 111, 116, 101, 114, 45, 119, 101, 105, 103, 104, 116, 45, 114, 101, 99, 111, 114, 100]"
+    }
+  ]
+}

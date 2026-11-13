@@ -1,0 +1,2646 @@
+{
+  "address": "6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ",
+  "metadata": {
+    "name": "sscre_protocol",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "SSCRE rewards: per-epoch merkle distributor funded from a reserve on a declining emission schedule, roots approved by an oracle quorum with a dispute delay and DAO veto, unclaimed funds clawed back"
+  },
+  "instructions": [
+    {
+      "name": "accept_authority",
+      "discriminator": [
+        107,
+        86,
+        198,
+        91,
+        33,
+        12,
+        107,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "activate_root",
+      "discriminator": [
+        67,
+        150,
+        173,
+        61,
+        217,
+        174,
+        188,
+        125
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch.index",
+                "account": "Epoch"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "apply_fee",
+      "discriminator": [
+        59,
+        156,
+        222,
+        176,
+        105,
+        28,
+        247,
+        64
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_authority_transfer",
+      "discriminator": [
+        94,
+        131,
+        125,
+        184,
+        183,
+        24,
+        125,
+        229
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_fee",
+      "discriminator": [
+        5,
+        77,
+        56,
+        64,
+        104,
+        252,
+        30,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch.index",
+                "account": "Epoch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "epoch"
+          ]
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "claimant",
+          "signer": true
+        },
+        {
+          "name": "claimant_token",
+          "writable": true
+        },
+        {
+          "name": "fee_destination",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "claim_status",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch"
+              },
+              {
+                "kind": "account",
+                "path": "claimant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "clawback",
+      "discriminator": [
+        111,
+        92,
+        142,
+        79,
+        33,
+        234,
+        82,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch.index",
+                "account": "Epoch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "epoch"
+          ]
+        },
+        {
+          "name": "reserve_vault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "rent_payer",
+          "writable": true,
+          "relations": [
+            "epoch"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_claim_status",
+      "discriminator": [
+        163,
+        214,
+        191,
+        165,
+        245,
+        188,
+        17,
+        185
+      ],
+      "accounts": [
+        {
+          "name": "epoch",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch.index",
+                "account": "Epoch"
+              }
+            ]
+          },
+          "relations": [
+            "claim_status"
+          ]
+        },
+        {
+          "name": "claim_status",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch"
+              },
+              {
+                "kind": "account",
+                "path": "claim_status.claimant",
+                "account": "ClaimStatus"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rent_payer",
+          "writable": true,
+          "relations": [
+            "claim_status"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_pool",
+      "docs": [
+        "Creates the pool and reserve vault. Upgrade authority only; VCoin mint pinned."
+      ],
+      "discriminator": [
+        95,
+        180,
+        10,
+        172,
+        84,
+        174,
+        232,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vcoin_mint"
+        },
+        {
+          "name": "reserve_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  101,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_destination"
+        },
+        {
+          "name": "program",
+          "address": "6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ"
+        },
+        {
+          "name": "program_data"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "PoolParams"
+            }
+          }
+        },
+        {
+          "name": "first_epoch_budget",
+          "type": "u64"
+        },
+        {
+          "name": "fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "propose_authority",
+      "discriminator": [
+        20,
+        148,
+        236,
+        198,
+        76,
+        119,
+        99,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_fee",
+      "discriminator": [
+        103,
+        204,
+        172,
+        134,
+        248,
+        252,
+        27,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "fee_destination"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": [
+        {
+          "name": "fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "register_oracle",
+      "discriminator": [
+        176,
+        200,
+        234,
+        37,
+        199,
+        129,
+        164,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "remove_oracle",
+      "discriminator": [
+        60,
+        93,
+        51,
+        197,
+        182,
+        42,
+        170,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_next_epoch_budget",
+      "discriminator": [
+        31,
+        146,
+        92,
+        20,
+        29,
+        197,
+        51,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "budget",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_params",
+      "discriminator": [
+        27,
+        234,
+        178,
+        52,
+        147,
+        2,
+        187,
+        141
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "PoolParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_root_quorum",
+      "discriminator": [
+        29,
+        109,
+        121,
+        116,
+        0,
+        238,
+        20,
+        175
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "quorum",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "start_epoch",
+      "docs": [
+        "Funds the next epoch from the reserve (permissionless, rate-limited)."
+      ],
+      "discriminator": [
+        204,
+        248,
+        232,
+        82,
+        251,
+        45,
+        164,
+        113
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "reserve_vault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "epoch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.epoch_count",
+                "account": "PoolConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "epoch_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.epoch_count",
+                "account": "PoolConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "veto_root",
+      "discriminator": [
+        141,
+        196,
+        194,
+        143,
+        204,
+        114,
+        90,
+        226
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch.index",
+                "account": "Epoch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "vote_root",
+      "discriminator": [
+        84,
+        39,
+        101,
+        24,
+        102,
+        244,
+        191,
+        247
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  112,
+                  111,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "epoch.index",
+                "account": "Epoch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "oracle",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "max_total_claim",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ClaimStatus",
+      "discriminator": [
+        22,
+        183,
+        249,
+        157,
+        247,
+        95,
+        150,
+        96
+      ]
+    },
+    {
+      "name": "Epoch",
+      "discriminator": [
+        93,
+        83,
+        120,
+        89,
+        151,
+        138,
+        152,
+        108
+      ]
+    },
+    {
+      "name": "PoolConfig",
+      "discriminator": [
+        26,
+        108,
+        14,
+        123,
+        116,
+        230,
+        129,
+        43
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AuthorityProposed",
+      "discriminator": [
+        244,
+        117,
+        94,
+        112,
+        53,
+        151,
+        35,
+        89
+      ]
+    },
+    {
+      "name": "AuthorityTransferCancelled",
+      "discriminator": [
+        31,
+        228,
+        187,
+        148,
+        20,
+        99,
+        237,
+        48
+      ]
+    },
+    {
+      "name": "AuthorityTransferred",
+      "discriminator": [
+        245,
+        109,
+        179,
+        54,
+        135,
+        92,
+        22,
+        64
+      ]
+    },
+    {
+      "name": "EpochClawedBack",
+      "discriminator": [
+        254,
+        108,
+        134,
+        173,
+        101,
+        1,
+        30,
+        24
+      ]
+    },
+    {
+      "name": "EpochStarted",
+      "discriminator": [
+        46,
+        87,
+        217,
+        228,
+        8,
+        115,
+        2,
+        97
+      ]
+    },
+    {
+      "name": "FeeChangeApplied",
+      "discriminator": [
+        29,
+        161,
+        73,
+        128,
+        118,
+        93,
+        106,
+        11
+      ]
+    },
+    {
+      "name": "FeeChangeCancelled",
+      "discriminator": [
+        161,
+        33,
+        166,
+        220,
+        65,
+        151,
+        132,
+        41
+      ]
+    },
+    {
+      "name": "FeeChangeProposed",
+      "discriminator": [
+        227,
+        197,
+        50,
+        240,
+        150,
+        215,
+        223,
+        243
+      ]
+    },
+    {
+      "name": "NextEpochBudgetSet",
+      "discriminator": [
+        54,
+        138,
+        88,
+        69,
+        146,
+        206,
+        164,
+        242
+      ]
+    },
+    {
+      "name": "OracleRegistered",
+      "discriminator": [
+        97,
+        225,
+        241,
+        71,
+        180,
+        49,
+        38,
+        60
+      ]
+    },
+    {
+      "name": "OracleRemoved",
+      "discriminator": [
+        62,
+        112,
+        125,
+        81,
+        128,
+        93,
+        194,
+        96
+      ]
+    },
+    {
+      "name": "ParamsUpdated",
+      "discriminator": [
+        2,
+        163,
+        138,
+        99,
+        135,
+        11,
+        136,
+        169
+      ]
+    },
+    {
+      "name": "PauseChanged",
+      "discriminator": [
+        238,
+        188,
+        213,
+        78,
+        134,
+        209,
+        178,
+        218
+      ]
+    },
+    {
+      "name": "PoolInitialized",
+      "discriminator": [
+        100,
+        118,
+        173,
+        87,
+        12,
+        198,
+        254,
+        229
+      ]
+    },
+    {
+      "name": "RewardClaimed",
+      "discriminator": [
+        49,
+        28,
+        87,
+        84,
+        158,
+        48,
+        229,
+        175
+      ]
+    },
+    {
+      "name": "RootActivated",
+      "discriminator": [
+        24,
+        59,
+        236,
+        54,
+        131,
+        27,
+        149,
+        19
+      ]
+    },
+    {
+      "name": "RootProposed",
+      "discriminator": [
+        42,
+        37,
+        28,
+        46,
+        99,
+        215,
+        183,
+        163
+      ]
+    },
+    {
+      "name": "RootQuorumSet",
+      "discriminator": [
+        13,
+        138,
+        123,
+        252,
+        244,
+        216,
+        189,
+        120
+      ]
+    },
+    {
+      "name": "RootVetoed",
+      "discriminator": [
+        104,
+        203,
+        229,
+        184,
+        178,
+        81,
+        64,
+        117
+      ]
+    },
+    {
+      "name": "RootVoted",
+      "discriminator": [
+        107,
+        145,
+        234,
+        68,
+        199,
+        173,
+        224,
+        233
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Paused",
+      "msg": "Rewards are paused"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidProgramData",
+      "msg": "Program data account does not belong to this program"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidVCoinMint",
+      "msg": "VCoin mint must be the vcoin-token program's mint PDA"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidParams",
+      "msg": "Parameters out of bounds"
+    },
+    {
+      "code": 6004,
+      "name": "FeeTooHigh",
+      "msg": "Fee above 1%"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidOracle",
+      "msg": "Invalid oracle key"
+    },
+    {
+      "code": 6006,
+      "name": "OracleExists",
+      "msg": "Oracle already registered"
+    },
+    {
+      "code": 6007,
+      "name": "TooManyOracles",
+      "msg": "All oracle slots are used"
+    },
+    {
+      "code": 6008,
+      "name": "OracleNotFound",
+      "msg": "Oracle not registered"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidQuorum",
+      "msg": "Quorum must be between 2 and the number of registered oracles"
+    },
+    {
+      "code": 6010,
+      "name": "NotActiveOracle",
+      "msg": "Signer is not an active oracle"
+    },
+    {
+      "code": 6011,
+      "name": "EpochTooSoon",
+      "msg": "The previous epoch has not run its full duration"
+    },
+    {
+      "code": 6012,
+      "name": "ReserveEmpty",
+      "msg": "Reserve is empty"
+    },
+    {
+      "code": 6013,
+      "name": "BudgetTooHigh",
+      "msg": "Budget above the configured ceiling"
+    },
+    {
+      "code": 6014,
+      "name": "EpochNotEnded",
+      "msg": "The epoch has not ended"
+    },
+    {
+      "code": 6015,
+      "name": "NotVoting",
+      "msg": "Epoch is not accepting root votes"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidRoot",
+      "msg": "Root must be non-zero and max_total_claim within (0, budget]"
+    },
+    {
+      "code": 6017,
+      "name": "NoProposedRoot",
+      "msg": "No root has reached quorum"
+    },
+    {
+      "code": 6018,
+      "name": "DisputeDelayActive",
+      "msg": "Dispute delay has not passed"
+    },
+    {
+      "code": 6019,
+      "name": "RootDeadlinePassed",
+      "msg": "The root deadline passed; claw the budget back instead"
+    },
+    {
+      "code": 6020,
+      "name": "QuorumLost",
+      "msg": "Proposed root lost quorum"
+    },
+    {
+      "code": 6021,
+      "name": "NotActive",
+      "msg": "Epoch has no active root"
+    },
+    {
+      "code": 6022,
+      "name": "ClaimWindowClosed",
+      "msg": "Claim window closed"
+    },
+    {
+      "code": 6023,
+      "name": "ClaimWindowOpen",
+      "msg": "Claim window still open"
+    },
+    {
+      "code": 6024,
+      "name": "ZeroAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6025,
+      "name": "ProofTooLong",
+      "msg": "Proof too long"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidProof",
+      "msg": "Invalid merkle proof"
+    },
+    {
+      "code": 6027,
+      "name": "ExceedsMaxTotalClaim",
+      "msg": "Claim exceeds the epoch's max_total_claim"
+    },
+    {
+      "code": 6028,
+      "name": "EpochNotClosed",
+      "msg": "Epoch not closed yet"
+    },
+    {
+      "code": 6029,
+      "name": "NoPendingFee",
+      "msg": "No fee change pending"
+    },
+    {
+      "code": 6030,
+      "name": "FeeTimelockActive",
+      "msg": "Fee change timelock still active"
+    },
+    {
+      "code": 6031,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "AdminState",
+      "docs": [
+        "Authority with a two-step, time-locked transfer.",
+        "",
+        "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
+        "(new authority). The current authority can `cancel` at any time before acceptance."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "docs": [
+              "`Pubkey::default()` when no transfer is pending."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_since",
+            "docs": [
+              "Unix time the pending transfer was proposed (0 when none)."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed",
+            "type": "pubkey"
+          },
+          {
+            "name": "ready_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTransferCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimStatus",
+      "docs": [
+        "Marks one claimant's claim in one epoch, PDA `[\"claim\", epoch, claimant]` (SSC-10: no",
+        "per-user epoch bitmap to run out of)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "epoch",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimant",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_at",
+            "type": "i64"
+          },
+          {
+            "name": "rent_payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Epoch",
+      "docs": [
+        "One distribution, PDA `[\"epoch\", index]`, with its own vault `[\"epoch-vault\", index]`",
+        "holding exactly its budget, so no epoch can pay out another's funds (SSC-02)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "budget",
+            "type": "u64"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "end_ts",
+            "type": "i64"
+          },
+          {
+            "name": "pause_accum_at_start",
+            "type": "i64"
+          },
+          {
+            "name": "votes",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "OracleVote"
+                  }
+                },
+                7
+              ]
+            }
+          },
+          {
+            "name": "proposed_root",
+            "docs": [
+              "Candidate that reached quorum (`proposed_at == 0` = none)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "proposed_max_total",
+            "type": "u64"
+          },
+          {
+            "name": "proposed_at",
+            "type": "i64"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_total_claim",
+            "type": "u64"
+          },
+          {
+            "name": "fee_bps",
+            "docs": [
+              "Fee snapshot at activation, so every claimant of an epoch pays the same rate."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "activated_at",
+            "type": "i64"
+          },
+          {
+            "name": "claim_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "pause_accum_at_activation",
+            "type": "i64"
+          },
+          {
+            "name": "total_claimed",
+            "docs": [
+              "Gross (before fee), like `max_total_claim` (SSC-13)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "num_claims",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "EpochState"
+              }
+            }
+          },
+          {
+            "name": "rent_payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochClawedBack",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "returned",
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochStarted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "budget",
+            "type": "u64"
+          },
+          {
+            "name": "start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "end_ts",
+            "type": "i64"
+          },
+          {
+            "name": "next_epoch_budget",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Voting"
+          },
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Closed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeChangeApplied",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "fee_destination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeChangeCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "FeeChangeProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "fee_destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "eta",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NextEpochBudgetSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "budget",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "docs": [
+              "`Pubkey::default()` = empty slot."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "active_from",
+            "docs": [
+              "Votes count only from this time on (registration + 24h)."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "active_from",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleVote",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "oracle",
+            "docs": [
+              "`Pubkey::default()` = empty slot."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_total_claim",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ParamsUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "params",
+            "type": {
+              "defined": {
+                "name": "PoolParams"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolConfig",
+      "docs": [
+        "Singleton, PDA `[\"pool-config\"]`. Owns the reserve vault and every epoch vault."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Bootstrapped by the upgrade authority, handed to the Realms governance PDA."
+            ],
+            "type": {
+              "defined": {
+                "name": "AdminState"
+              }
+            }
+          },
+          {
+            "name": "vcoin_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "reserve_vault",
+            "docs": [
+              "PDA `[\"reserve-vault\"]`: the undistributed rewards (e.g. the 350M allocation)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "fee_destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_fee_bps",
+            "docs": [
+              "Timelocked fee change (`pending_fee_eta == 0` = none)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "pending_fee_destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_fee_eta",
+            "type": "i64"
+          },
+          {
+            "name": "params",
+            "type": {
+              "defined": {
+                "name": "PoolParams"
+              }
+            }
+          },
+          {
+            "name": "max_epoch_budget",
+            "docs": [
+              "Ceiling for any epoch's budget, fixed at initialization."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "next_epoch_budget",
+            "type": "u64"
+          },
+          {
+            "name": "epoch_count",
+            "type": "u64"
+          },
+          {
+            "name": "last_epoch_start",
+            "type": "i64"
+          },
+          {
+            "name": "oracles",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "OracleEntry"
+                  }
+                },
+                7
+              ]
+            }
+          },
+          {
+            "name": "root_quorum",
+            "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "paused_since",
+            "type": "i64"
+          },
+          {
+            "name": "pause_accum",
+            "docs": [
+              "Total seconds spent paused, so deadlines can be extended by downtime (SSC-05)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserve_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "reserve_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "first_epoch_budget",
+            "type": "u64"
+          },
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "epoch_duration",
+            "type": "i64"
+          },
+          {
+            "name": "claim_window",
+            "docs": [
+              "How long claims stay open after a root activates (also the deadline for activating one)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "dispute_delay",
+            "docs": [
+              "Wait between a root reaching quorum and becoming claimable (DAO can veto meanwhile)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "decay_bps",
+            "docs": [
+              "Each epoch's budget is the previous one × (1 − decay_bps / 10000)."
+            ],
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "claimant",
+            "type": "pubkey"
+          },
+          {
+            "name": "gross",
+            "type": "u64"
+          },
+          {
+            "name": "fee",
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RootActivated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_total_claim",
+            "type": "u64"
+          },
+          {
+            "name": "claim_deadline",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RootProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_total_claim",
+            "type": "u64"
+          },
+          {
+            "name": "claimable_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RootQuorumSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "quorum",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RootVetoed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RootVoted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_total_claim",
+            "type": "u64"
+          },
+          {
+            "name": "votes_for_candidate",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "CLAIM_SEED",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109]"
+    },
+    {
+      "name": "EPOCH_SEED",
+      "type": "bytes",
+      "value": "[101, 112, 111, 99, 104]"
+    },
+    {
+      "name": "EPOCH_VAULT_SEED",
+      "type": "bytes",
+      "value": "[101, 112, 111, 99, 104, 45, 118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "POOL_CONFIG_SEED",
+      "type": "bytes",
+      "value": "[112, 111, 111, 108, 45, 99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "RESERVE_VAULT_SEED",
+      "type": "bytes",
+      "value": "[114, 101, 115, 101, 114, 118, 101, 45, 118, 97, 117, 108, 116]"
+    }
+  ]
+}

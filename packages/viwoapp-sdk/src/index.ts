@@ -1,33 +1,18 @@
 /**
- * @viwoapp/sdk - TypeScript SDK for VCoin Protocol Integration
- * 
- * This SDK provides easy-to-use interfaces for interacting with
- * all ViWoApp smart contracts on Solana.
- * 
- * Modules:
- * - @viwoapp/core - Connection, wallet adapters
- * - @viwoapp/staking - Staking operations
- * - @viwoapp/governance - Proposal and voting
- * - @viwoapp/rewards - SSCRE claim helpers
- * - @viwoapp/vilink - Action link generation
- * - @viwoapp/gasless - Session key management
+ * @viwoapp/sdk v3: TypeScript client for the VCoin programs.
+ *
+ * - `createPrograms(connection)`: typed Anchor clients for every program and instruction.
+ * - `pda`: every program-derived address (seeds from the IDLs).
+ * - Builders for user flows: staking + Realms plugin, private polls, SSCRE claims (merkle),
+ *   sessions, content, ViLink, identity, 5A vouching.
  */
-
-// Core exports
-export * from './core';
-export * from './types';
-export * from './constants';
-
-// Module exports
-export * from './staking';
-export * from './governance';
-export * from './rewards';
-export * from './vilink';
-export * from './gasless';
-export * from './identity';
-export * from './fivea';
-export * from './content';
-
-// Re-export main client
-export { ViWoClient } from './client';
-
+export * from "./client";
+export * from "./governance";
+export * from "./pda";
+export * from "./privatePoll";
+export * from "./programs";
+export * from "./social";
+export * from "./sscre";
+export * from "./staking";
+export * from "./tokens";
+export * from "./tx";
