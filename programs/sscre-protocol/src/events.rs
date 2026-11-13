@@ -1,67 +1,132 @@
 use anchor_lang::prelude::*;
 
+use crate::state::PoolParams;
+
 #[event]
 pub struct PoolInitialized {
     pub authority: Pubkey,
-    pub vcoin_mint: Pubkey,
-    pub initial_reserves: u64,
+    pub reserve_vault: Pubkey,
+    pub first_epoch_budget: u64,
+    pub fee_bps: u16,
+}
+
+#[event]
+pub struct OracleRegistered {
+    pub oracle: Pubkey,
+    pub active_from: i64,
+}
+
+#[event]
+pub struct OracleRemoved {
+    pub oracle: Pubkey,
+}
+
+#[event]
+pub struct RootQuorumSet {
+    pub quorum: u8,
+}
+
+#[event]
+pub struct ParamsUpdated {
+    pub params: PoolParams,
+}
+
+#[event]
+pub struct NextEpochBudgetSet {
+    pub budget: u64,
+}
+
+#[event]
+pub struct FeeChangeProposed {
+    pub fee_bps: u16,
+    pub fee_destination: Pubkey,
+    pub eta: i64,
+}
+
+#[event]
+pub struct FeeChangeApplied {
+    pub fee_bps: u16,
+    pub fee_destination: Pubkey,
+}
+
+#[event]
+pub struct FeeChangeCancelled {}
+
+#[event]
+pub struct PauseChanged {
+    pub paused: bool,
 }
 
 #[event]
 pub struct EpochStarted {
-    pub epoch: u64,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub index: u64,
+    pub budget: u64,
+    pub start_ts: i64,
+    pub end_ts: i64,
+    pub next_epoch_budget: u64,
 }
 
 #[event]
-pub struct EpochFinalized {
-    pub epoch: u64,
-    pub merkle_root: [u8; 32],
-    pub total_allocation: u64,
-    pub eligible_users: u64,
+pub struct RootVoted {
+    pub index: u64,
+    pub oracle: Pubkey,
+    pub root: [u8; 32],
+    pub max_total_claim: u64,
+    pub votes_for_candidate: u8,
 }
 
 #[event]
-pub struct RewardsClaimed {
-    pub user: Pubkey,
-    pub epoch: u64,
-    pub gross_amount: u64,
-    pub fee_deducted: u64,
-    pub net_amount: u64,
+pub struct RootProposed {
+    pub index: u64,
+    pub root: [u8; 32],
+    pub max_total_claim: u64,
+    pub claimable_at: i64,
 }
 
 #[event]
-pub struct CircuitBreakerTriggered {
-    pub reason: u8,
-    pub value: u64,
-    pub threshold: u64,
-    pub timestamp: i64,
+pub struct RootVetoed {
+    pub index: u64,
+    pub root: [u8; 32],
 }
 
 #[event]
-pub struct FundingLayerSwitch {
-    pub from_layer: u8,
-    pub to_layer: u8,
-    pub reason: String,
-    pub timestamp: i64,
-}
-
-// L-01: Authority transfer events
-#[event]
-pub struct AuthorityTransferProposed {
-    pub current_authority: Pubkey,
-    pub proposed_authority: Pubkey,
+pub struct RootActivated {
+    pub index: u64,
+    pub root: [u8; 32],
+    pub max_total_claim: u64,
+    pub claim_deadline: i64,
 }
 
 #[event]
-pub struct AuthorityTransferAccepted {
-    pub old_authority: Pubkey,
-    pub new_authority: Pubkey,
+pub struct RewardClaimed {
+    pub index: u64,
+    pub claimant: Pubkey,
+    pub gross: u64,
+    pub fee: u64,
+    pub total_claimed: u64,
+}
+
+#[event]
+pub struct EpochClawedBack {
+    pub index: u64,
+    pub returned: u64,
+    pub total_claimed: u64,
+}
+
+#[event]
+pub struct AuthorityProposed {
+    pub current: Pubkey,
+    pub proposed: Pubkey,
+    pub ready_at: i64,
 }
 
 #[event]
 pub struct AuthorityTransferCancelled {
     pub authority: Pubkey,
-    pub cancelled_pending: Pubkey,
+}
+
+#[event]
+pub struct AuthorityTransferred {
+    pub previous: Pubkey,
+    pub new_authority: Pubkey,
 }

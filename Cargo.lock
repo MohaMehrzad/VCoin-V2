@@ -1755,6 +1755,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-system-interface",
  "spl-governance-mythic",
+ "sscre-protocol",
  "staking-protocol",
  "vcoin-common",
  "vcoin-token",
@@ -5573,7 +5574,10 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
- "solana-program",
+ "sha3",
+ "solana-keccak-hasher",
+ "vcoin-common",
+ "vcoin-token",
 ]
 
 [[package]]

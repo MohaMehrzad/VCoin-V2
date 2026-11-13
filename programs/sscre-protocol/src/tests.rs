@@ -1,418 +1,158 @@
-//! Unit tests for SSCRE Protocol
-//!
-//! These tests run against the ACTUAL program code.
-#![allow(
-    clippy::module_inception,
-    clippy::field_reassign_with_default,
-    clippy::needless_range_loop
-)]
+//! Unit tests: leaf format vector, merkle builder/verifier, parameter bounds, sizes.
+//! Instruction behaviour: `integration-tests/tests/sscre.rs`.
 
-#[cfg(test)]
-mod tests {
-    use crate::constants::*;
-    use crate::state::utils::{compute_leaf, get_five_a_multiplier, verify_merkle_proof};
-    use crate::state::{EpochDistribution, RewardsPoolConfig, UserClaim};
-    use anchor_lang::prelude::Pubkey;
-    use solana_program::keccak;
+use anchor_lang::prelude::*;
+use sha3::{Digest, Keccak256};
 
-    // ========================================================================
-    // Constants Tests
-    // ========================================================================
+use crate::constants::*;
+use crate::merkle::builder::{Tree, TreeError};
+use crate::merkle::*;
+use crate::state::*;
 
-    #[test]
-    fn test_primary_reserves() {
-        // 350M VCoin = 350 * 10^6 * 10^9
-        assert_eq!(PRIMARY_RESERVES, 350_000_000 * 1_000_000_000);
-    }
+/// Frozen test vector shared with the TypeScript SDK and `docs/offchain/merkle-leaf-format.md`.
+pub const VECTOR_CLAIMANT: [u8; 32] = [7u8; 32];
+pub const VECTOR_AMOUNT: u64 = 1_234_567_890;
+pub const VECTOR_EPOCH: u64 = 3;
+pub const VECTOR_LEAF_HEX: &str =
+    "5867436a6f21c025885194461701203778b53c261bd3f449af326ca8b9cf0083";
 
-    #[test]
-    fn test_secondary_reserves() {
-        assert_eq!(SECONDARY_RESERVES, 40_000_000 * 1_000_000_000);
-    }
+fn hex(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
 
-    #[test]
-    fn test_epoch_duration() {
-        assert_eq!(EPOCH_DURATION, 30 * 24 * 60 * 60, "30 days epoch");
-    }
+#[test]
+fn leaf_matches_an_independent_keccak_of_the_documented_preimage() {
+    let claimant = Pubkey::new_from_array(VECTOR_CLAIMANT);
+    let mut preimage = Vec::new();
+    preimage.extend_from_slice(b"SSCRE_CLAIM_V1");
+    preimage.extend_from_slice(&VECTOR_CLAIMANT);
+    preimage.extend_from_slice(&VECTOR_AMOUNT.to_le_bytes());
+    preimage.extend_from_slice(&VECTOR_EPOCH.to_le_bytes());
+    assert_eq!(
+        preimage.len(),
+        62,
+        "never 64 bytes, so a leaf cannot pose as a node"
+    );
+    let expected: [u8; 32] = Keccak256::digest(&preimage).into();
+    let leaf = compute_leaf(&claimant, VECTOR_AMOUNT, VECTOR_EPOCH);
+    assert_eq!(leaf, expected);
+    assert_eq!(
+        hex(&leaf),
+        VECTOR_LEAF_HEX,
+        "frozen vector changed: update the doc and the TS SDK"
+    );
+}
 
-    #[test]
-    fn test_claim_window() {
-        assert_eq!(CLAIM_WINDOW, 90 * 24 * 60 * 60, "90 days claim window");
-    }
-
-    #[test]
-    fn test_gasless_fee() {
-        assert_eq!(GASLESS_FEE_BPS, 100, "1% fee");
-    }
-
-    #[test]
-    fn test_min_claim_amount() {
-        assert_eq!(MIN_CLAIM_AMOUNT, 1_000_000_000, "1 VCoin minimum");
-    }
-
-    #[test]
-    fn test_circuit_breaker_thresholds() {
-        assert_eq!(
-            MAX_EPOCH_EMISSION,
-            10_000_000 * 1_000_000_000,
-            "10M VCoin max/epoch"
-        );
-        assert_eq!(
-            MAX_SINGLE_CLAIM,
-            100_000 * 1_000_000_000,
-            "100K VCoin max/claim"
-        );
-    }
-
-    // ========================================================================
-    // 5A Score Multiplier Tests
-    // ========================================================================
-
-    #[test]
-    fn test_five_a_multiplier_lowest() {
-        assert_eq!(get_five_a_multiplier(0), SCORE_MULT_0_20);
-        assert_eq!(get_five_a_multiplier(1000), SCORE_MULT_0_20);
-        assert_eq!(get_five_a_multiplier(1999), SCORE_MULT_0_20);
-    }
-
-    #[test]
-    fn test_five_a_multiplier_low() {
-        assert_eq!(get_five_a_multiplier(2000), SCORE_MULT_20_40);
-        assert_eq!(get_five_a_multiplier(3999), SCORE_MULT_20_40);
-    }
-
-    #[test]
-    fn test_five_a_multiplier_mid() {
-        assert_eq!(get_five_a_multiplier(4000), SCORE_MULT_40_60);
-        assert_eq!(get_five_a_multiplier(5999), SCORE_MULT_40_60);
-    }
-
-    #[test]
-    fn test_five_a_multiplier_high() {
-        assert_eq!(get_five_a_multiplier(6000), SCORE_MULT_60_80);
-        assert_eq!(get_five_a_multiplier(7999), SCORE_MULT_60_80);
-    }
-
-    #[test]
-    fn test_five_a_multiplier_highest() {
-        assert_eq!(get_five_a_multiplier(8000), SCORE_MULT_80_100);
-        assert_eq!(get_five_a_multiplier(10000), SCORE_MULT_80_100);
-    }
-
-    #[test]
-    fn test_multiplier_values() {
-        assert_eq!(SCORE_MULT_0_20, 100, "0.1x = 10%");
-        assert_eq!(SCORE_MULT_20_40, 400, "0.4x = 40%");
-        assert_eq!(SCORE_MULT_40_60, 700, "0.7x = 70%");
-        assert_eq!(SCORE_MULT_60_80, 1000, "1.0x = 100%");
-        assert_eq!(SCORE_MULT_80_100, 1200, "1.2x = 120%");
-    }
-
-    // ========================================================================
-    // PDA Seeds Tests
-    // ========================================================================
-
-    #[test]
-    fn test_pda_seeds() {
-        assert_eq!(POOL_CONFIG_SEED, b"pool-config");
-        assert_eq!(EPOCH_SEED, b"epoch");
-        assert_eq!(USER_CLAIM_SEED, b"user-claim");
-        assert_eq!(FUNDING_LAYER_SEED, b"funding-layer");
-        assert_eq!(CIRCUIT_BREAKER_SEED, b"circuit-breaker");
-    }
-
-    // ========================================================================
-    // State Size Tests
-    // ========================================================================
-
-    #[test]
-    fn test_rewards_pool_config_size() {
-        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
-        let mut buf = Vec::new();
-        anchor_lang::AnchorSerialize::serialize(&RewardsPoolConfig::default(), &mut buf).unwrap();
-        assert_eq!(
-            RewardsPoolConfig::LEN,
-            8 + buf.len(),
-            "RewardsPoolConfig::LEN out of sync with struct"
-        );
-    }
-
-    #[test]
-    fn test_epoch_distribution_size() {
-        let expected = 8 + 8 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 32 + 2 + 8 + 1;
-        assert_eq!(EpochDistribution::LEN, expected, "Epoch size mismatch");
-    }
-
-    #[test]
-    fn test_user_claim_size() {
-        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
-        let mut buf = Vec::new();
-        anchor_lang::AnchorSerialize::serialize(&UserClaim::default(), &mut buf).unwrap();
-        assert_eq!(
-            UserClaim::LEN,
-            8 + buf.len(),
-            "UserClaim::LEN out of sync with struct"
-        );
-    }
-
-    // ========================================================================
-    // Merkle Proof Tests
-    // ========================================================================
-
-    #[test]
-    fn test_compute_leaf() {
-        let user = Pubkey::new_unique();
-        let amount = 1000u64;
-        let epoch = 1u64;
-
-        let leaf = compute_leaf(&user, amount, epoch);
-
-        // Verify it's deterministic
-        let leaf2 = compute_leaf(&user, amount, epoch);
-        assert_eq!(leaf, leaf2);
-    }
-
-    #[test]
-    fn test_compute_leaf_different_inputs() {
-        let user1 = Pubkey::new_unique();
-        let user2 = Pubkey::new_unique();
-        let amount = 1000u64;
-        let epoch = 1u64;
-
-        let leaf1 = compute_leaf(&user1, amount, epoch);
-        let leaf2 = compute_leaf(&user2, amount, epoch);
-
-        assert_ne!(leaf1, leaf2, "Different users should have different leaves");
-    }
-
-    #[test]
-    fn test_verify_merkle_proof_empty() {
-        // For a single-leaf tree, the leaf is the root
-        let user = Pubkey::new_unique();
-        let leaf = compute_leaf(&user, 1000, 1);
-
-        let proof: Vec<[u8; 32]> = vec![];
-
-        // With empty proof, leaf must equal root
-        assert!(verify_merkle_proof(&proof, &leaf, &leaf));
-    }
-
-    #[test]
-    fn test_verify_merkle_proof_single_sibling() {
-        let user1 = Pubkey::new_unique();
-        let user2 = Pubkey::new_unique();
-
-        let leaf1 = compute_leaf(&user1, 1000, 1);
-        let leaf2 = compute_leaf(&user2, 2000, 1);
-
-        // Create root from two leaves
-        let (left, right) = if leaf1 < leaf2 {
-            (leaf1, leaf2)
-        } else {
-            (leaf2, leaf1)
-        };
-        let mut combined = [0u8; 64];
-        combined[..32].copy_from_slice(&left);
-        combined[32..].copy_from_slice(&right);
-        let root = keccak::hash(&combined).to_bytes();
-
-        // Verify leaf1 with proof = [leaf2]
-        let proof = vec![leaf2];
-        assert!(verify_merkle_proof(&proof, &root, &leaf1));
-
-        // Verify leaf2 with proof = [leaf1]
-        let proof2 = vec![leaf1];
-        assert!(verify_merkle_proof(&proof2, &root, &leaf2));
-    }
-
-    #[test]
-    fn test_verify_merkle_proof_invalid() {
-        let user = Pubkey::new_unique();
-        let leaf = compute_leaf(&user, 1000, 1);
-
-        let fake_root = [0u8; 32];
-        let proof: Vec<[u8; 32]> = vec![];
-
-        // Wrong root should fail
-        assert!(!verify_merkle_proof(&proof, &fake_root, &leaf));
-    }
-
-    // ========================================================================
-    // User Claim Bitmap Tests
-    // ========================================================================
-
-    #[test]
-    fn test_user_claim_epoch_unclaimed() {
-        let claim = UserClaim::default();
-
-        assert!(!claim.is_epoch_claimed(0));
-        assert!(!claim.is_epoch_claimed(1));
-        assert!(!claim.is_epoch_claimed(100));
-    }
-
-    #[test]
-    fn test_user_claim_mark_claimed() {
-        let mut claim = UserClaim::default();
-
-        claim.mark_epoch_claimed(5).unwrap();
-
-        assert!(claim.is_epoch_claimed(5));
-        assert!(!claim.is_epoch_claimed(4));
-        assert!(!claim.is_epoch_claimed(6));
-    }
-
-    #[test]
-    fn test_user_claim_multiple_epochs() {
-        let mut claim = UserClaim::default();
-
-        claim.mark_epoch_claimed(1).unwrap();
-        claim.mark_epoch_claimed(10).unwrap();
-        claim.mark_epoch_claimed(100).unwrap();
-
-        assert!(claim.is_epoch_claimed(1));
-        assert!(claim.is_epoch_claimed(10));
-        assert!(claim.is_epoch_claimed(100));
-        assert!(!claim.is_epoch_claimed(50));
-    }
-
-    #[test]
-    fn test_user_claim_bitmap_boundaries() {
-        let mut claim = UserClaim::default();
-
-        // Test at bitmap boundaries (0, 63, 64, 127, 128, 191, 192, 255)
-        for epoch in [0u64, 63, 64, 127, 128, 191, 192, 255] {
-            claim.mark_epoch_claimed(epoch).unwrap();
+#[test]
+fn every_leaf_of_a_built_tree_verifies_and_nothing_else_does() {
+    for n in [1usize, 2, 3, 5, 8, 13, 64, 100] {
+        let claims: Vec<(Pubkey, u64)> = (0..n)
+            .map(|i| (Pubkey::new_unique(), (i as u64 + 1) * 1_000))
+            .collect();
+        let tree = Tree::new(9, &claims, u64::MAX).unwrap();
+        let root = tree.root();
+        for (i, (who, amount)) in claims.iter().enumerate() {
+            let proof = tree.proof(i);
             assert!(
-                claim.is_epoch_claimed(epoch),
-                "Epoch {} should be claimed",
-                epoch
+                verify_proof(&proof, &root, &compute_leaf(who, *amount, 9)),
+                "n={n} i={i}"
             );
+            assert!(!verify_proof(
+                &proof,
+                &root,
+                &compute_leaf(who, amount + 1, 9)
+            ));
+            assert!(!verify_proof(
+                &proof,
+                &root,
+                &compute_leaf(who, *amount, 10)
+            ));
+            assert!(!verify_proof(
+                &proof,
+                &root,
+                &compute_leaf(&Pubkey::new_unique(), *amount, 9)
+            ));
         }
     }
+}
 
-    #[test]
-    fn test_user_claim_large_epoch() {
-        let mut claim = UserClaim::default();
+#[test]
+fn builder_rejects_trees_the_program_could_not_honour() {
+    let a = Pubkey::new_unique();
+    assert_eq!(Tree::new(0, &[], 10).err(), Some(TreeError::Empty));
+    assert_eq!(
+        Tree::new(0, &[(a, 0)], 10).err(),
+        Some(TreeError::ZeroAmount(a))
+    );
+    assert_eq!(
+        Tree::new(0, &[(a, 1), (a, 2)], 10).err(),
+        Some(TreeError::DuplicateClaimant(a))
+    );
+    assert_eq!(
+        Tree::new(0, &[(a, 6), (Pubkey::new_unique(), 5)], 10).err(),
+        Some(TreeError::OverBudget {
+            total: 11,
+            max_total_claim: 10
+        })
+    );
+    assert_eq!(
+        Tree::new(0, &[(a, 6), (Pubkey::new_unique(), 4)], 10)
+            .unwrap()
+            .total,
+        10
+    );
+}
 
-        // Epochs 256..1023 use the extended bitmaps: claiming one epoch must not
-        // mark any other epoch as claimed (each epoch is tracked independently).
-        claim.mark_epoch_claimed(300).unwrap();
-
-        assert_eq!(claim.last_claimed_epoch, 300);
-        assert!(claim.is_epoch_claimed(300));
-        assert!(!claim.is_epoch_claimed(256));
-        assert!(!claim.is_epoch_claimed(299));
-    }
-
-    // ========================================================================
-    // Fee Calculation Tests
-    // ========================================================================
-
-    #[test]
-    fn test_gasless_fee_calculation() {
-        let amount = 100_000_000_000u64; // 100 VCoin
-        let fee = (amount as u128 * GASLESS_FEE_BPS as u128 / 10000) as u64;
-        let net = amount - fee;
-
-        assert_eq!(fee, 1_000_000_000, "1% of 100 VCoin = 1 VCoin");
-        assert_eq!(net, 99_000_000_000, "Net = 99 VCoin");
-    }
-
-    #[test]
-    fn test_min_claim_fee() {
-        let amount = MIN_CLAIM_AMOUNT; // 1 VCoin
-        let fee = (amount as u128 * GASLESS_FEE_BPS as u128 / 10000) as u64;
-
-        assert_eq!(fee, 10_000_000, "1% of 1 VCoin = 0.01 VCoin");
-    }
-
-    // ========================================================================
-    // Epoch Progression Tests
-    // ========================================================================
-
-    #[test]
-    fn test_epoch_default() {
-        let epoch = EpochDistribution::default();
-
-        assert_eq!(epoch.epoch, 0);
-        assert_eq!(epoch.total_allocation, 0);
-        assert_eq!(epoch.total_claimed, 0);
-        assert!(!epoch.is_finalized);
-    }
-
-    #[test]
-    fn test_epoch_claim_expiry() {
-        let start_time = 1000i64;
-        let end_time = start_time + EPOCH_DURATION;
-        let claim_expiry = start_time + EPOCH_DURATION + CLAIM_WINDOW;
-        assert!(
-            claim_expiry > end_time,
-            "claim window must extend past the epoch end"
-        );
-
-        // 30 + 90 = 120 days total
-        assert_eq!(claim_expiry - start_time, (30 + 90) * 24 * 60 * 60);
-    }
-
-    // ========================================================================
-    // Invariant Tests
-    // ========================================================================
-
-    #[test]
-    fn test_invariant_total_claimed_bounded() {
-        let epoch = EpochDistribution {
-            total_allocation: 1_000_000 * 1_000_000_000, // 1M VCoin
-            total_claimed: 500_000 * 1_000_000_000,      // 500K VCoin
+#[test]
+fn params_bounds_and_sizes() {
+    assert!(PoolParams::default().is_valid());
+    for bad in [
+        PoolParams {
+            epoch_duration: DAY - 1,
             ..Default::default()
-        };
-
-        // total_claimed should never exceed total_allocation
-        assert!(epoch.total_claimed <= epoch.total_allocation);
+        },
+        PoolParams {
+            epoch_duration: MAX_EPOCH_DURATION + 1,
+            ..Default::default()
+        },
+        PoolParams {
+            claim_window: MIN_CLAIM_WINDOW - 1,
+            ..Default::default()
+        },
+        PoolParams {
+            dispute_delay: MIN_DISPUTE_DELAY - 1,
+            ..Default::default()
+        },
+        PoolParams {
+            decay_bps: MAX_DECAY_BPS + 1,
+            ..Default::default()
+        },
+    ] {
+        assert!(!bad.is_valid(), "{bad:?}");
     }
-
-    #[test]
-    fn test_invariant_circuit_breaker_limits() {
-        let claim_amount = 50_000u64 * 1_000_000_000; // 50K VCoin
-
-        assert!(claim_amount < MAX_SINGLE_CLAIM, "Within single claim limit");
+    let mut buf = Vec::new();
+    ClaimStatus {
+        epoch: Pubkey::default(),
+        claimant: Pubkey::default(),
+        amount: 0,
+        claimed_at: 0,
+        rent_payer: Pubkey::default(),
+        bump: 0,
     }
+    .serialize(&mut buf)
+    .unwrap();
+    assert_eq!(ClaimStatus::LEN, 8 + buf.len());
+}
 
-    #[test]
-    fn test_invariant_epoch_emission_limit() {
-        let epoch_emission = 5_000_000u64 * 1_000_000_000; // 5M VCoin
-
-        assert!(epoch_emission < MAX_EPOCH_EMISSION, "Within epoch limit");
+#[test]
+fn emission_schedule_declines_two_percent_per_epoch() {
+    let mut budget: u64 = 10_000_000 * 1_000_000_000;
+    let mut total: u128 = 0;
+    for _ in 0..120 {
+        total += budget as u128;
+        budget = (budget as u128 * (BPS - DEFAULT_DECAY_BPS as u64) as u128 / BPS as u128) as u64;
     }
-
-    // ========================================================================
-    // PDA Derivation Tests
-    // ========================================================================
-
-    #[test]
-    fn test_epoch_pda_unique() {
-        let program_id = Pubkey::new_unique();
-
-        let (pda1, _) =
-            Pubkey::find_program_address(&[EPOCH_SEED, &1u64.to_le_bytes()], &program_id);
-
-        let (pda2, _) =
-            Pubkey::find_program_address(&[EPOCH_SEED, &2u64.to_le_bytes()], &program_id);
-
-        assert_ne!(pda1, pda2, "Different epochs should have different PDAs");
-    }
-
-    #[test]
-    fn test_user_claim_pda_unique() {
-        let program_id = Pubkey::new_unique();
-        let user1 = Pubkey::new_unique();
-        let user2 = Pubkey::new_unique();
-
-        let (pda1, _) =
-            Pubkey::find_program_address(&[USER_CLAIM_SEED, user1.as_ref()], &program_id);
-
-        let (pda2, _) =
-            Pubkey::find_program_address(&[USER_CLAIM_SEED, user2.as_ref()], &program_id);
-
-        assert_ne!(pda1, pda2, "Different users should have different PDAs");
-    }
+    // 10M × (1 − 0.98^120) / 0.02 ≈ 456M over 10 years: the 350M reserve runs out first,
+    // after which epochs pay min(budget, reserve).
+    assert!(total > 350_000_000 * 1_000_000_000u128);
 }

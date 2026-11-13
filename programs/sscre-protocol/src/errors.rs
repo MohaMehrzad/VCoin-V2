@@ -1,80 +1,69 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum SSCREError {
-    #[msg("Unauthorized: Only the authority can perform this action")]
-    Unauthorized,
-    #[msg("SSCRE Protocol is paused")]
-    ProtocolPaused,
-    #[msg("Invalid merkle proof")]
-    InvalidMerkleProof,
-    #[msg("Already claimed for this epoch")]
-    AlreadyClaimed,
-    #[msg("Claim window expired")]
-    ClaimWindowExpired,
-    #[msg("Epoch not finalized")]
-    EpochNotFinalized,
-    #[msg("Insufficient pool balance")]
-    InsufficientPoolBalance,
-    #[msg("Claim amount below minimum")]
-    ClaimBelowMinimum,
-    #[msg("Circuit breaker triggered: max epoch emission exceeded")]
-    CircuitBreakerEpochMax,
-    #[msg("Circuit breaker triggered: max single claim exceeded")]
-    CircuitBreakerClaimMax,
-    #[msg("Invalid epoch number")]
-    InvalidEpoch,
-    #[msg("Epoch already exists")]
-    EpochAlreadyExists,
+pub enum SscreError {
+    #[msg("Rewards are paused")]
+    Paused,
+    #[msg("Program data account does not belong to this program")]
+    InvalidProgramData,
+    #[msg("VCoin mint must be the vcoin-token program's mint PDA")]
+    InvalidVCoinMint,
+    #[msg("Parameters out of bounds")]
+    InvalidParams,
+    #[msg("Fee above 1%")]
+    FeeTooHigh,
+    #[msg("Invalid oracle key")]
+    InvalidOracle,
+    #[msg("Oracle already registered")]
+    OracleExists,
+    #[msg("All oracle slots are used")]
+    TooManyOracles,
     #[msg("Oracle not registered")]
-    OracleNotRegistered,
-    #[msg("Funding layer inactive")]
-    FundingLayerInactive,
+    OracleNotFound,
+    #[msg("Quorum must be between 2 and the number of registered oracles")]
+    InvalidQuorum,
+    #[msg("Signer is not an active oracle")]
+    NotActiveOracle,
+    #[msg("The previous epoch has not run its full duration")]
+    EpochTooSoon,
+    #[msg("Reserve is empty")]
+    ReserveEmpty,
+    #[msg("Budget above the configured ceiling")]
+    BudgetTooHigh,
+    #[msg("The epoch has not ended")]
+    EpochNotEnded,
+    #[msg("Epoch is not accepting root votes")]
+    NotVoting,
+    #[msg("Root must be non-zero and max_total_claim within (0, budget]")]
+    InvalidRoot,
+    #[msg("No root has reached quorum")]
+    NoProposedRoot,
+    #[msg("Dispute delay has not passed")]
+    DisputeDelayActive,
+    #[msg("The root deadline passed; claw the budget back instead")]
+    RootDeadlinePassed,
+    #[msg("Proposed root lost quorum")]
+    QuorumLost,
+    #[msg("Epoch has no active root")]
+    NotActive,
+    #[msg("Claim window closed")]
+    ClaimWindowClosed,
+    #[msg("Claim window still open")]
+    ClaimWindowOpen,
+    #[msg("Amount must be greater than zero")]
+    ZeroAmount,
+    #[msg("Proof too long")]
+    ProofTooLong,
+    #[msg("Invalid merkle proof")]
+    InvalidProof,
+    #[msg("Claim exceeds the epoch's max_total_claim")]
+    ExceedsMaxTotalClaim,
+    #[msg("Epoch not closed yet")]
+    EpochNotClosed,
+    #[msg("No fee change pending")]
+    NoPendingFee,
+    #[msg("Fee change timelock still active")]
+    FeeTimelockActive,
     #[msg("Arithmetic overflow")]
     Overflow,
-    #[msg("Invalid token account owner")]
-    InvalidTokenAccount,
-    #[msg("Invalid token mint")]
-    InvalidMint,
-
-    // H-02: Two-step authority transfer errors
-    #[msg("Not the pending authority")]
-    NotPendingAuthority,
-
-    #[msg("No pending authority transfer")]
-    NoPendingTransfer,
-
-    #[msg("Cannot propose self as new authority")]
-    CannotProposeSelf,
-
-    #[msg("Invalid authority address (zero)")]
-    InvalidAuthority,
-
-    // H-04: Epoch claim bitmap errors
-    #[msg("Too many epochs claimed - high epoch array full")]
-    TooManyEpochsClaimed,
-
-    // M-05: Circuit breaker cooldown
-    #[msg("Circuit breaker cooldown not elapsed - wait 6 hours after trigger")]
-    CircuitBreakerCooldown,
-
-    // H-NEW-02: Merkle proof size limit
-    #[msg("Merkle proof too large - maximum 32 levels (supports 4 billion users)")]
-    MerkleProofTooLarge,
-
-    // C-12: Duplicate oracle prevention
-    #[msg("Oracle is already registered")]
-    OracleAlreadyRegistered,
-
-    // M-08: Score bounds validation
-    #[msg("Invalid 5A score value (must be 0-10000)")]
-    InvalidScore,
-
-    // M-09: Zero allocation prevention
-    #[msg("Epoch allocation must be greater than zero")]
-    ZeroAllocation,
-
-    // L-03: Invalid address validation
-    #[msg("Invalid address (zero pubkey not allowed)")]
-    InvalidAddress,
 }

@@ -1,33 +1,44 @@
-/// Seeds
+use anchor_lang::prelude::*;
+
+#[constant]
 pub const POOL_CONFIG_SEED: &[u8] = b"pool-config";
+#[constant]
+pub const RESERVE_VAULT_SEED: &[u8] = b"reserve-vault";
+#[constant]
 pub const EPOCH_SEED: &[u8] = b"epoch";
-pub const USER_CLAIM_SEED: &[u8] = b"user-claim";
-pub const FUNDING_LAYER_SEED: &[u8] = b"funding-layer";
-pub const CIRCUIT_BREAKER_SEED: &[u8] = b"circuit-breaker";
+#[constant]
+pub const EPOCH_VAULT_SEED: &[u8] = b"epoch-vault";
+#[constant]
+pub const CLAIM_SEED: &[u8] = b"claim";
 
-/// Pool configuration
-pub const PRIMARY_RESERVES: u64 = 350_000_000 * 1_000_000_000; // 350M VCoin (35% of 1B)
-pub const SECONDARY_RESERVES: u64 = 40_000_000 * 1_000_000_000; // 40M VCoin buyback buffer
-pub const EPOCH_DURATION: i64 = 30 * 24 * 60 * 60; // 30 days
-pub const CLAIM_WINDOW: i64 = 90 * 24 * 60 * 60; // 90 days to claim
+pub const HOUR: i64 = 60 * 60;
+pub const DAY: i64 = 24 * HOUR;
+pub const BPS: u64 = 10_000;
 
-/// Fee deduction for gasless claims
-pub const GASLESS_FEE_BPS: u16 = 100; // 1% deducted for gas
+/// Up to 7 oracles; a root needs `root_quorum` (≥ 2) matching votes.
+pub const MAX_ORACLES: usize = 7;
+pub const MIN_ROOT_QUORUM: u8 = 2;
+/// A newly registered oracle can vote only after this delay.
+pub const ORACLE_ACTIVATION_DELAY: i64 = DAY;
+/// Fee changes take effect after this delay.
+pub const FEE_CHANGE_DELAY: i64 = DAY;
+/// Claim fee ceiling: 1%.
+pub const MAX_FEE_BPS: u16 = 100;
+/// Proofs longer than this (2^32 leaves) are rejected before hashing.
+pub const MAX_PROOF_LEN: usize = 32;
 
-/// Minimum claim amount
-pub const MIN_CLAIM_AMOUNT: u64 = 1_000_000_000; // 1 VCoin minimum
+/// Defaults (adjustable by the DAO within the bounds below).
+pub const DEFAULT_EPOCH_DURATION: i64 = 30 * DAY;
+pub const DEFAULT_CLAIM_WINDOW: i64 = 90 * DAY;
+pub const DEFAULT_DISPUTE_DELAY: i64 = DAY;
+pub const DEFAULT_DECAY_BPS: u16 = 200; // −2% per epoch
+pub const DEFAULT_FEE_BPS: u16 = 100;
+pub const DEFAULT_ROOT_QUORUM: u8 = 2;
 
-/// Circuit breaker thresholds
-pub const MAX_EPOCH_EMISSION: u64 = 10_000_000 * 1_000_000_000; // 10M VCoin max per epoch
-pub const MAX_SINGLE_CLAIM: u64 = 100_000 * 1_000_000_000; // 100K VCoin max single claim
-
-/// M-05 Security Fix: Circuit breaker cooldown period (6 hours)
-/// Prevents immediate reset after trigger, allowing time for investigation
-pub const CIRCUIT_BREAKER_COOLDOWN: i64 = 6 * 60 * 60; // 6 hours in seconds
-
-/// 5A Score multipliers (x1000 for precision)
-pub const SCORE_MULT_0_20: u64 = 100; // 0.1x (10%)
-pub const SCORE_MULT_20_40: u64 = 400; // 0.4x (40%)
-pub const SCORE_MULT_40_60: u64 = 700; // 0.7x (70%)
-pub const SCORE_MULT_60_80: u64 = 1000; // 1.0x (100%)
-pub const SCORE_MULT_80_100: u64 = 1200; // 1.2x (120%)
+pub const MIN_EPOCH_DURATION: i64 = DAY;
+pub const MAX_EPOCH_DURATION: i64 = 90 * DAY;
+pub const MIN_CLAIM_WINDOW: i64 = 7 * DAY;
+pub const MAX_CLAIM_WINDOW: i64 = 365 * DAY;
+pub const MIN_DISPUTE_DELAY: i64 = HOUR;
+pub const MAX_DISPUTE_DELAY: i64 = 7 * DAY;
+pub const MAX_DECAY_BPS: u16 = 5_000;

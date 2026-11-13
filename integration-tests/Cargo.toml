@@ -15,6 +15,7 @@ staking-protocol = { path = "../programs/staking-protocol", features = ["no-entr
 gasless-protocol = { path = "../programs/gasless-protocol", features = ["no-entrypoint"] }
 five-a-protocol = { path = "../programs/five-a-protocol", features = ["no-entrypoint"] }
 private-poll = { path = "../programs/private-poll", features = ["no-entrypoint"] }
+sscre-protocol = { path = "../programs/sscre-protocol", features = ["no-entrypoint"] }
 litesvm = { workspace = true }
 solana-sdk = { workspace = true }
 bincode = "1.3"
