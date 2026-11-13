@@ -519,10 +519,17 @@ export type VevcoinToken = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -544,6 +551,13 @@ export type VevcoinToken = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }

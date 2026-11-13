@@ -174,9 +174,11 @@ fn slash_freezes_withdrawals_waits_out_the_appeal_window_and_pays_the_treasury()
         (voter.deposits[0].amount, voter.pending_slashes),
         (70 * VCOIN, 0)
     );
+    let r: Registrar = read_account(&d.s.svm, &d.s.registrar);
     assert_eq!(
-        read_account::<Registrar>(&d.s.svm, &d.s.registrar).total_locked,
-        70 * VCOIN
+        (r.total_locked, r.active_locked),
+        (70 * VCOIN, 70 * VCOIN),
+        "slashed principal leaves the max-weight base too"
     );
     assert!(d
         .s

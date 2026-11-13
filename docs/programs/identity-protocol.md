@@ -21,6 +21,8 @@ Attestation Service accounts.
 - The identity takes the attestation's level, whether that is higher or lower than before
   (audit ID-01).
 - `AttestationLink` `["attestation", id]` binds an attestation id to one wallet (ID-03).
+- Only the attester that issued an id can refresh it. Another attester cannot take a link
+  over and remove the issuer's right to revoke it.
 - Expiry is at most 2 years.
 - Levels by claim:
 
@@ -35,7 +37,9 @@ Attestation Service accounts.
 attester was removed. Consumers should use it, not the raw level (ID-02).
 
 - **`revoke_attestation`.** The issuing attester or the authority clears the level and closes
-  the link.
+  the link. The owner's identity account is a required, derived account, so a revocation can
+  never close the link and leave the level in place. It also works after the identity was
+  closed.
 - **`admin_lower_level`.** Can only lower a level.
 
 ## Subscriptions
@@ -44,7 +48,9 @@ attester was removed. Consumers should use it, not the raw level (ID-02).
 the treasury account, for 30 days.
 
 - **Same tier:** extends from the current expiry, so no paid time is lost.
-- **Upgrade:** credits the unused time of the current tier.
+- **Upgrade:** credits the unused time of the current tier against the new tier's price, for
+  30 days. If the prepaid time is worth a full period of the new tier or more, the upgrade is
+  free and the time carries over at the price ratio, so no paid value is lost.
 - **Downgrade:** refused while the higher tier is active (ID-05).
 - **Default prices:** $4 / $12 / $59.
 
@@ -53,5 +59,5 @@ the treasury account, for 30 days.
 - `initialize`: upgrade authority only; USDC mint and treasury validated.
 - Attesters: `add_attester` / `remove_attester`.
 - Payment changes: `propose_payment` / `apply_payment` / `cancel_payment` (24h).
-- `set_paused`.
+- `set_paused`, `set_guardian` (an emergency key that may pause but never unpause).
 - Two-step authority.

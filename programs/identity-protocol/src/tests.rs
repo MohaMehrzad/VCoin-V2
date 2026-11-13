@@ -73,4 +73,22 @@ fn subscription_pricing() {
         (cost, until),
         (p[2] - p[0] / 2, now + SUBSCRIPTION_DURATION)
     );
+
+    // Re-review C4: four prepaid periods of tier 1 are worth more than one period of
+    // tier 2. The upgrade is free and the time carries over at the price ratio.
+    let prepaid = now + 4 * SUBSCRIPTION_DURATION;
+    let (cost, until) = subscription_quote(&sub(1, prepaid), 2, &p, now).unwrap();
+    let carried = (4 * SUBSCRIPTION_DURATION) as u128 * p[0] as u128 / p[1] as u128;
+    assert_eq!((cost, until), (0, now + carried as i64));
+    assert!(until > now + SUBSCRIPTION_DURATION, "no paid time dropped");
+    // Value before and after is the same (up to rounding down by under a second's worth).
+    let before = (4 * SUBSCRIPTION_DURATION) as u128 * p[0] as u128;
+    let after = (until - now) as u128 * p[1] as u128;
+    assert!(after <= before && before - after < p[1] as u128);
+    // Exactly one period's worth: free, one period.
+    let exact = now + SUBSCRIPTION_DURATION * p[1] as i64 / p[0] as i64;
+    assert_eq!(
+        subscription_quote(&sub(1, exact), 2, &p, now),
+        Some((0, now + SUBSCRIPTION_DURATION))
+    );
 }

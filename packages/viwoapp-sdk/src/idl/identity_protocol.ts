@@ -946,10 +946,9 @@ export type IdentityProtocol = {
         {
           "name": "identity",
           "docs": [
-            "The owner's identity, if it still exists."
+            "link. The handler deserializes it if it still exists."
           ],
           "writable": true,
-          "optional": true,
           "pda": {
             "seeds": [
               {
@@ -986,6 +985,62 @@ export type IdentityProtocol = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  100,
+                  101,
+                  110,
+                  116,
+                  105,
+                  116,
+                  121,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "setPaused",
@@ -1409,6 +1464,19 @@ export type IdentityProtocol = {
       ]
     },
     {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
+      ]
+    },
+    {
       "name": "identityClosed",
       "discriminator": [
         158,
@@ -1629,6 +1697,11 @@ export type IdentityProtocol = {
     },
     {
       "code": 6020,
+      "name": "attesterMismatch",
+      "msg": "Only the attester that issued this attestation may refresh it"
+    },
+    {
+      "code": 6021,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     }
@@ -1637,10 +1710,17 @@ export type IdentityProtocol = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1662,6 +1742,13 @@ export type IdentityProtocol = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -1870,6 +1957,21 @@ export type IdentityProtocol = {
                 32
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
           }
         ]
       }

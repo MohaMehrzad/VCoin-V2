@@ -27,12 +27,14 @@ pub mod wasm;
 pub use ballot::{encrypt_ballot, Choice, EncryptedBallot};
 pub use decrypt::{partial_decrypt, PartialDecryption};
 pub use dkg::{
-    aggregate_dealings, finish, Dealer, GroupKey, KeyShare, PublicDealing, ShareMessage,
+    aggregate_dealings, check_revealed_share, finish, Dealer, GroupKey, KeyShare, PublicDealing,
+    ShareMessage, DKG_POK_LEN,
 };
 pub use error::{SdkError, SdkResult};
 pub use tally::{combine, lagrange_at_zero, TallyResult};
 pub use zk_poll_core::{
     ballot_from_bytes, ballot_to_bytes, poll_weight, verify_ballot, verify_committee, verify_dleq,
-    verify_tally, Ballot, BallotContext, Ciphertext, DleqContext, ZkError, BALLOT_PROOF_LEN,
-    DLEQ_PROOF_LEN, MAX_COMMITTEE, MAX_TALLY, MIN_THRESHOLD, NUM_CHOICES, WEIGHT_UNIT,
+    verify_feldman, verify_tally, Ballot, BallotContext, Ciphertext, DleqContext, ZkError,
+    BALLOT_PROOF_LEN, DLEQ_PROOF_LEN, MAX_COMMITTEE, MAX_TALLY, MIN_THRESHOLD, NUM_CHOICES,
+    WEIGHT_UNIT,
 };

@@ -29,6 +29,24 @@ struct Pool {
     oracles: Vec<Keypair>,
 }
 
+fn fee_vault() -> Pubkey {
+    pda(&[FEE_VAULT_SEED], &sscre_protocol::ID)
+}
+
+fn withdraw_fees_ix(p: &Pool) -> Instruction {
+    ix(
+        sscre_protocol::ID,
+        sscre_protocol::accounts::WithdrawFees {
+            config: p.config,
+            fee_vault: fee_vault(),
+            fee_destination: p.fee_destination,
+            vcoin_mint: p.s.vcoin_mint,
+            token_program: spl_token_2022::ID,
+        },
+        sscre_protocol::instruction::WithdrawFees {},
+    )
+}
+
 fn epoch_pda(i: u64) -> Pubkey {
     pda(&[EPOCH_SEED, &i.to_le_bytes()], &sscre_protocol::ID)
 }
@@ -57,6 +75,7 @@ fn init_ix(
             config: pda(&[POOL_CONFIG_SEED], &sscre_protocol::ID),
             vcoin_mint,
             reserve_vault: pda(&[RESERVE_VAULT_SEED], &sscre_protocol::ID),
+            fee_vault: fee_vault(),
             fee_destination,
             program: sscre_protocol::ID,
             program_data: programdata(&sscre_protocol::ID),
@@ -102,6 +121,27 @@ fn transfer_vcoin(s: &mut Stack, to: &Pubkey, amount: u64) {
 
 /// Pool with a funded reserve and three active oracles (quorum 2).
 fn pool(reserve_amount: u64) -> Pool {
+    let mut p = pool_without_oracles(reserve_amount);
+    add_oracles(&mut p, 3);
+    p
+}
+
+fn add_oracles(p: &mut Pool, n: usize) {
+    let admin = p.s.admin.insecure_clone();
+    for _ in 0..n {
+        let o = funded_keypair(&mut p.s.svm, 2);
+        let reg = admin_ix(
+            p.config,
+            admin.pubkey(),
+            sscre_protocol::instruction::RegisterOracle { oracle: o.pubkey() },
+        );
+        send(&mut p.s.svm, &[reg], &admin, &[]).expect("register oracle");
+        p.oracles.push(o);
+    }
+    warp_by(&mut p.s.svm, ORACLE_ACTIVATION_DELAY);
+}
+
+fn pool_without_oracles(reserve_amount: u64) -> Pool {
     let mut s = setup();
     let admin = s.admin.insecure_clone();
     deploy_upgradeable(
@@ -125,22 +165,12 @@ fn pool(reserve_amount: u64) -> Pool {
     if reserve_amount > 0 {
         transfer_vcoin(&mut s, &reserve, reserve_amount);
     }
-    let oracles: Vec<Keypair> = (0..3).map(|_| funded_keypair(&mut s.svm, 2)).collect();
-    for o in &oracles {
-        let reg = admin_ix(
-            config,
-            admin.pubkey(),
-            sscre_protocol::instruction::RegisterOracle { oracle: o.pubkey() },
-        );
-        send(&mut s.svm, &[reg], &admin, &[]).expect("register oracle");
-    }
-    warp_by(&mut s.svm, ORACLE_ACTIVATION_DELAY);
     Pool {
         s,
         config,
         reserve,
         fee_destination,
-        oracles,
+        oracles: Vec::new(),
     }
 }
 
@@ -237,7 +267,7 @@ fn claim_ix(
             vcoin_mint: p.s.vcoin_mint,
             claimant: c.kp.pubkey(),
             claimant_token: c.token,
-            fee_destination: p.fee_destination,
+            fee_vault: fee_vault(),
             claim_status: status_pda(index, &c.kp.pubkey()),
             payer,
             token_program: spl_token_2022::ID,
@@ -330,6 +360,19 @@ fn a_full_epoch_pays_relayed_claims_and_returns_the_rest() {
         err(SscreError::DisputeDelayActive),
     );
     warp_by(&mut p.s.svm, DEFAULT_DISPUTE_DELAY);
+
+    // Re-review B2: the late oracle is active by now, so 2 of 4 is no longer a majority.
+    // The third vote restores the quorum, and the dispute delay starts again (B3).
+    assert_anchor_error(
+        send(&mut p.s.svm, std::slice::from_ref(&act), &admin, &[]),
+        err(SscreError::QuorumLost),
+    );
+    vote(&mut p, 2, 0, tree.root(), tree.total).expect("vote 3");
+    assert_anchor_error(
+        send(&mut p.s.svm, std::slice::from_ref(&act), &admin, &[]),
+        err(SscreError::DisputeDelayActive),
+    );
+    warp_by(&mut p.s.svm, DEFAULT_DISPUTE_DELAY);
     send(&mut p.s.svm, &[act], &admin, &[]).expect("activate");
 
     // A relayer pays rent and fees; claimants hold no SOL (SSC-07).
@@ -346,7 +389,17 @@ fn a_full_epoch_pays_relayed_claims_and_returns_the_rest() {
             "1% fee rounded up"
         );
     }
+    // Re-review B6: fees collect in the program's vault; anyone sweeps them to the treasury.
+    assert_eq!(token::balance(&p.s.svm, &fee_vault()), fees);
+    assert_eq!(token::balance(&p.s.svm, &p.fee_destination), 0);
+    let sweep = withdraw_fees_ix(&p);
+    send(&mut p.s.svm, std::slice::from_ref(&sweep), &relayer, &[]).expect("withdraw fees");
     assert_eq!(token::balance(&p.s.svm, &p.fee_destination), fees);
+    warp_by(&mut p.s.svm, 1);
+    assert_anchor_error(
+        send(&mut p.s.svm, &[sweep], &relayer, &[]),
+        err(SscreError::NothingToWithdraw),
+    );
     let e: Epoch = read_account(&p.s.svm, &epoch_pda(0));
     assert_eq!(
         (e.total_claimed, e.num_claims),
@@ -472,11 +525,12 @@ fn veto_quorum_loss_and_oracle_management() {
 
     // DAO veto wipes the candidate and every vote.
     let stranger = funded_keypair(&mut p.s.svm, 1);
-    let veto = |authority: Pubkey| {
+    let config = p.config;
+    let veto = move |authority: Pubkey| {
         ix(
             sscre_protocol::ID,
             sscre_protocol::accounts::VetoRoot {
-                config: p.config,
+                config,
                 epoch: epoch_pda(0),
                 authority,
             },
@@ -484,11 +538,41 @@ fn veto_quorum_loss_and_oracle_management() {
         )
     };
     let r = send(&mut p.s.svm, &[veto(stranger.pubkey())], &stranger, &[]);
-    assert_anchor_error(r, u32::from(CommonError::NotAuthority));
+    assert_anchor_error(r, u32::from(CommonError::NotAuthorityOrGuardian));
     send(&mut p.s.svm, &[veto(admin.pubkey())], &admin, &[]).expect("veto");
     let e: Epoch = read_account(&p.s.svm, &epoch_pda(0));
     assert_eq!(e.proposed_at, 0);
     assert!(e.votes.iter().all(|v| v.oracle == Pubkey::default()));
+
+    // Re-review B1: a DAO vote is slower than the dispute delay, so the guardian can veto
+    // (and pause) at once; it cannot do anything else.
+    let guardian = funded_keypair(&mut p.s.svm, 1);
+    let set_guardian = admin_ix(
+        p.config,
+        admin.pubkey(),
+        sscre_protocol::instruction::SetGuardian {
+            guardian: guardian.pubkey(),
+        },
+    );
+    send(&mut p.s.svm, &[set_guardian], &admin, &[]).expect("set guardian");
+    vote(&mut p, 0, 0, [9; 32], 100).unwrap();
+    vote(&mut p, 1, 0, [9; 32], 100).unwrap();
+    send(&mut p.s.svm, &[veto(guardian.pubkey())], &guardian, &[]).expect("guardian veto");
+    assert_eq!(
+        read_account::<Epoch>(&p.s.svm, &epoch_pda(0)).proposed_at,
+        0
+    );
+    let r = send(
+        &mut p.s.svm,
+        &[admin_ix(
+            p.config,
+            guardian.pubkey(),
+            sscre_protocol::instruction::SetRootQuorum { quorum: 3 },
+        )],
+        &guardian,
+        &[],
+    );
+    assert_anchor_error(r, u32::from(CommonError::NotAuthority));
 
     // Changing a vote away from the candidate drops the proposal.
     vote(&mut p, 0, 0, [2; 32], 100).unwrap();
@@ -591,6 +675,13 @@ fn epochs_are_rate_limited_decay_and_stop_at_an_empty_reserve() {
         err(SscreError::EpochTooSoon),
     );
     warp_by(&mut p.s.svm, DEFAULT_EPOCH_DURATION);
+    // Re-review B5: only the authority may start an epoch the reserve cannot fund in full.
+    let stranger = funded_keypair(&mut p.s.svm, 2);
+    let partial = start_ix(&p, 1, stranger.pubkey());
+    assert_anchor_error(
+        send(&mut p.s.svm, &[partial], &stranger, &[]),
+        err(SscreError::ReserveBelowBudget),
+    );
     start(&mut p, 1);
     assert_eq!(
         read_account::<Epoch>(&p.s.svm, &epoch_pda(1)).budget,
@@ -737,11 +828,156 @@ fn initialization_is_gated_and_fee_changes_are_timelocked_and_snapshotted() {
     let cfg: PoolConfig = read_account(&p.s.svm, &p.config);
     assert_eq!((cfg.fee_bps, cfg.fee_destination), (0, new_dest));
 
-    // The activated epoch keeps the 1% it was activated with; the fee goes to the new account.
-    p.fee_destination = new_dest;
+    // The activated epoch keeps the 1% it was activated with; the sweep pays the new account
+    // and refuses the old one.
     let relayer = funded_keypair(&mut p.s.svm, 2);
     let claim = claim_ix(&p, 0, &c, 1_000 * VCOIN, tree.proof(0), relayer.pubkey());
     send(&mut p.s.svm, &[claim], &relayer, &[&c.kp]).expect("claim");
     assert_eq!(token::balance(&p.s.svm, &c.token), 990 * VCOIN);
+    assert_eq!(token::balance(&p.s.svm, &fee_vault()), 10 * VCOIN);
+    let old = withdraw_fees_ix(&p);
+    assert!(send(&mut p.s.svm, &[old], &relayer, &[]).is_err());
+    p.fee_destination = new_dest;
+    let sweep = withdraw_fees_ix(&p);
+    send(&mut p.s.svm, &[sweep], &relayer, &[]).expect("withdraw fees");
     assert_eq!(token::balance(&p.s.svm, &new_dest), 10 * VCOIN);
+}
+
+/// Re-review B2: the configured quorum (default 2) is a floor. A root always needs a strict
+/// majority of the active oracles, so a minority of a larger set cannot settle one.
+#[test]
+fn a_root_needs_a_majority_of_the_active_oracles() {
+    let mut p = pool(BUDGET);
+    add_oracles(&mut p, 2); // 5 active, configured quorum still 2
+    assert_eq!(
+        read_account::<PoolConfig>(&p.s.svm, &p.config).root_quorum,
+        DEFAULT_ROOT_QUORUM
+    );
+    start(&mut p, 0);
+    warp_by(&mut p.s.svm, DEFAULT_EPOCH_DURATION);
+
+    vote(&mut p, 0, 0, [1; 32], 100).unwrap();
+    vote(&mut p, 1, 0, [1; 32], 100).unwrap();
+    assert_eq!(
+        read_account::<Epoch>(&p.s.svm, &epoch_pda(0)).proposed_at,
+        0,
+        "2 of 5 proposes nothing"
+    );
+    // A competing pair cannot propose either.
+    vote(&mut p, 3, 0, [2; 32], 100).unwrap();
+    vote(&mut p, 4, 0, [2; 32], 100).unwrap();
+    assert_eq!(
+        read_account::<Epoch>(&p.s.svm, &epoch_pda(0)).proposed_at,
+        0
+    );
+    vote(&mut p, 2, 0, [1; 32], 100).unwrap();
+    let e: Epoch = read_account(&p.s.svm, &epoch_pda(0));
+    assert_ne!(e.proposed_at, 0, "3 of 5 is a majority");
+    assert_eq!(e.proposed_root, [1; 32]);
+}
+
+/// Re-review B3: a proposal that lost its quorum (oracle removed, quorum raised) must not
+/// keep its old timestamp, and a re-registered oracle's old vote must not count.
+#[test]
+fn a_proposal_that_lost_quorum_restarts_its_dispute_delay() {
+    let mut p = pool(BUDGET);
+    let admin = p.s.admin.insecure_clone();
+    start(&mut p, 0);
+    warp_by(&mut p.s.svm, DEFAULT_EPOCH_DURATION);
+    vote(&mut p, 0, 0, [1; 32], 100).unwrap();
+    vote(&mut p, 1, 0, [1; 32], 100).unwrap();
+    let first = read_account::<Epoch>(&p.s.svm, &epoch_pda(0)).proposed_at;
+    assert_ne!(first, 0);
+
+    // The DAO removes oracle 0, adds it back and raises the quorum to all three.
+    let oracle0 = p.oracles[0].pubkey();
+    for data_ix in [
+        admin_ix(
+            p.config,
+            admin.pubkey(),
+            sscre_protocol::instruction::RemoveOracle { oracle: oracle0 },
+        ),
+        admin_ix(
+            p.config,
+            admin.pubkey(),
+            sscre_protocol::instruction::RegisterOracle { oracle: oracle0 },
+        ),
+        admin_ix(
+            p.config,
+            admin.pubkey(),
+            sscre_protocol::instruction::SetRootQuorum { quorum: 3 },
+        ),
+    ] {
+        send(&mut p.s.svm, &[data_ix], &admin, &[]).expect("oracle management");
+    }
+    // The old dispute delay has run out and oracle 0 is active again.
+    warp_by(
+        &mut p.s.svm,
+        DEFAULT_DISPUTE_DELAY.max(ORACLE_ACTIVATION_DELAY),
+    );
+    let act = activate_ix(&p, 0);
+    assert_anchor_error(
+        send(&mut p.s.svm, std::slice::from_ref(&act), &admin, &[]),
+        err(SscreError::QuorumLost),
+    );
+
+    // Oracle 2 agrees: still only 2 live votes, because oracle 0 voted under its old
+    // registration.
+    vote(&mut p, 2, 0, [1; 32], 100).unwrap();
+    assert_eq!(
+        read_account::<Epoch>(&p.s.svm, &epoch_pda(0)).proposed_at,
+        0
+    );
+    // Oracle 0 votes again: proposed anew, with a fresh dispute delay.
+    vote(&mut p, 0, 0, [1; 32], 100).unwrap();
+    let second = read_account::<Epoch>(&p.s.svm, &epoch_pda(0)).proposed_at;
+    assert!(second > first);
+    assert_anchor_error(
+        send(&mut p.s.svm, std::slice::from_ref(&act), &admin, &[]),
+        err(SscreError::DisputeDelayActive),
+    );
+    warp_by(&mut p.s.svm, DEFAULT_DISPUTE_DELAY);
+    send(&mut p.s.svm, &[act], &admin, &[]).expect("activate");
+}
+
+/// Re-review B4/B5: an epoch keeps the windows it started with, and cannot start before
+/// enough oracles exist to ever settle its root.
+#[test]
+fn epochs_snapshot_their_windows_and_need_oracles_to_start() {
+    let mut p = pool_without_oracles(BUDGET);
+    let admin = p.s.admin.insecure_clone();
+    let early = start_ix(&p, 0, admin.pubkey());
+    assert_anchor_error(
+        send(&mut p.s.svm, &[early], &admin, &[]),
+        err(SscreError::NotEnoughOracles),
+    );
+    add_oracles(&mut p, 3);
+    start(&mut p, 0);
+
+    // The DAO stretches both windows afterwards; epoch 0 is unaffected.
+    let params = PoolParams {
+        claim_window: MAX_CLAIM_WINDOW,
+        dispute_delay: MAX_DISPUTE_DELAY,
+        ..PoolParams::default()
+    };
+    let set = admin_ix(
+        p.config,
+        admin.pubkey(),
+        sscre_protocol::instruction::SetParams { params },
+    );
+    send(&mut p.s.svm, &[set], &admin, &[]).expect("set params");
+    let e: Epoch = read_account(&p.s.svm, &epoch_pda(0));
+    assert_eq!(
+        (e.claim_window, e.dispute_delay),
+        (DEFAULT_CLAIM_WINDOW, DEFAULT_DISPUTE_DELAY)
+    );
+
+    warp_by(&mut p.s.svm, DEFAULT_EPOCH_DURATION);
+    vote(&mut p, 0, 0, [1; 32], 100).unwrap();
+    vote(&mut p, 1, 0, [1; 32], 100).unwrap();
+    warp_by(&mut p.s.svm, DEFAULT_DISPUTE_DELAY);
+    let act = activate_ix(&p, 0);
+    send(&mut p.s.svm, &[act], &admin, &[]).expect("activates after the original delay");
+    let e: Epoch = read_account(&p.s.svm, &epoch_pda(0));
+    assert_eq!(e.claim_deadline - e.activated_at, DEFAULT_CLAIM_WINDOW);
 }

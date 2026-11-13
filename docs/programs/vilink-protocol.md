@@ -35,7 +35,7 @@ once (VL-2).
 - `initialize(fee_bps)`: upgrade authority only; VCoin mint pinned; fee 0.1–10%.
 - Fee and treasury: `propose_config` / `apply_config` / `cancel_config` (24h).
 - `set_enabled_actions`: immediate kill switch.
-- `set_paused`.
+- `set_paused`, `set_guardian` (an emergency key that may pause but never unpause).
 - Two-step authority.
 
 Removed: action types 3–7 (never executable), batches, and the unenforced dApp registry

@@ -57,6 +57,10 @@ pub struct Registrar {
     pub min_propose_score: u16,
     /// Sum of all deposits (receipt supply upper bound; drives MaxVoterWeightRecord).
     pub total_locked: u64,
+    /// Principal in deposits not yet deactivated after their lock ended. The max voter weight
+    /// is computed from this, so abandoned expired deposits cannot inflate it forever and
+    /// make percentage thresholds unreachable.
+    pub active_locked: u64,
     pub slash_nonce: u64,
     pub paused: bool,
     pub bump: u8,

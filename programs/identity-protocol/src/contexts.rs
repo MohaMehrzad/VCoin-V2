@@ -141,9 +141,10 @@ pub struct RevokeAttestation<'info> {
         close = rent_payer,
     )]
     pub attestation_link: Box<Account<'info, AttestationLink>>,
-    /// The owner's identity, if it still exists.
-    #[account(mut, seeds = [IDENTITY_SEED, attestation_link.owner.as_ref()], bump = identity.bump)]
-    pub identity: Option<Box<Account<'info, Identity>>>,
+    /// CHECK: the owner's Identity PDA, required so the level is always cleared with the
+    /// link. The handler deserializes it if it still exists.
+    #[account(mut, seeds = [IDENTITY_SEED, attestation_link.owner.as_ref()], bump)]
+    pub identity: UncheckedAccount<'info>,
     /// CHECK: bound by `has_one`.
     #[account(mut)]
     pub rent_payer: UncheckedAccount<'info>,

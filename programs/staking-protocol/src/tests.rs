@@ -36,12 +36,14 @@ fn locked_amount_counts_only_unexpired_deposits() {
         lock_start: 0,
         lock_end: 100,
         is_used: true,
+        is_active: true,
     };
     v.deposits[1] = DepositEntry {
         amount: 5,
         lock_start: 0,
         lock_end: 50,
         is_used: true,
+        is_active: true,
     };
     assert_eq!(v.total_amount(), 15);
     assert_eq!(v.locked_amount(60), 10);

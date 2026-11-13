@@ -10,12 +10,15 @@ pub const EPOCH_SEED: &[u8] = b"epoch";
 pub const EPOCH_VAULT_SEED: &[u8] = b"epoch-vault";
 #[constant]
 pub const CLAIM_SEED: &[u8] = b"claim";
+#[constant]
+pub const FEE_VAULT_SEED: &[u8] = b"fee-vault";
 
 pub const HOUR: i64 = 60 * 60;
 pub const DAY: i64 = 24 * HOUR;
 pub const BPS: u64 = 10_000;
 
-/// Up to 7 oracles; a root needs `root_quorum` (≥ 2) matching votes.
+/// Up to 7 oracles; a root needs matching votes from `root_quorum` (≥ 2) oracles and from a
+/// strict majority of the active ones, whichever is larger.
 pub const MAX_ORACLES: usize = 7;
 pub const MIN_ROOT_QUORUM: u8 = 2;
 /// A newly registered oracle can vote only after this delay.

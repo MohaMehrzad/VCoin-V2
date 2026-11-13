@@ -57,6 +57,11 @@ pub mod vilink_protocol {
         instructions::admin::set_paused(ctx, paused)
     }
 
+    /// Sets or clears the emergency guardian (may pause, never unpause).
+    pub fn set_guardian(ctx: Context<UpdateConfig>, guardian: Pubkey) -> Result<()> {
+        instructions::admin::set_guardian(ctx, guardian)
+    }
+
     pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::propose_authority(ctx, new_authority)
     }

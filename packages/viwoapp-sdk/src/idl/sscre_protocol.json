@@ -322,7 +322,7 @@
           "writable": true
         },
         {
-          "name": "fee_destination",
+          "name": "fee_vault",
           "writable": true,
           "relations": [
             "config"
@@ -629,6 +629,28 @@
           }
         },
         {
+          "name": "fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "fee_destination"
         },
         {
@@ -871,6 +893,58 @@
       "args": [
         {
           "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_guardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
           "type": "pubkey"
         }
       ]
@@ -1341,6 +1415,72 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "withdraw_fees",
+      "docs": [
+        "Sweeps collected claim fees to the configured fee account (permissionless)."
+      ],
+      "discriminator": [
+        198,
+        212,
+        171,
+        109,
+        144,
+        215,
+        174,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_vault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "fee_destination",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "vcoin_mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -1487,6 +1627,32 @@
         215,
         223,
         243
+      ]
+    },
+    {
+      "name": "FeesWithdrawn",
+      "discriminator": [
+        234,
+        15,
+        0,
+        119,
+        148,
+        241,
+        40,
+        21
+      ]
+    },
+    {
+      "name": "GuardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
       ]
     },
     {
@@ -1804,6 +1970,21 @@
     },
     {
       "code": 6031,
+      "name": "ReserveBelowBudget",
+      "msg": "Reserve holds less than the scheduled budget; only the authority may start a smaller epoch"
+    },
+    {
+      "code": 6032,
+      "name": "NotEnoughOracles",
+      "msg": "Fewer oracles are registered than the root quorum"
+    },
+    {
+      "code": 6033,
+      "name": "NothingToWithdraw",
+      "msg": "No fees to withdraw"
+    },
+    {
+      "code": 6034,
       "name": "Overflow",
       "msg": "Arithmetic overflow"
     }
@@ -1812,10 +1993,17 @@
     {
       "name": "AdminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1837,6 +2025,13 @@
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -1959,6 +2154,18 @@
             "type": "i64"
           },
           {
+            "name": "claim_window",
+            "docs": [
+              "`PoolParams` snapshot at start, so later parameter changes never move this epoch's",
+              "deadlines."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "dispute_delay",
+            "type": "i64"
+          },
+          {
             "name": "votes",
             "type": {
               "array": [
@@ -1990,6 +2197,13 @@
           {
             "name": "proposed_at",
             "type": "i64"
+          },
+          {
+            "name": "proposed_version",
+            "docs": [
+              "`PoolConfig::oracle_set_version` when the candidate was proposed."
+            ],
+            "type": "u64"
           },
           {
             "name": "root",
@@ -2166,6 +2380,37 @@
       }
     },
     {
+      "name": "FeesWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GuardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "NextEpochBudgetSet",
       "type": {
         "kind": "struct",
@@ -2251,6 +2496,10 @@
           {
             "name": "max_total_claim",
             "type": "u64"
+          },
+          {
+            "name": "voted_at",
+            "type": "i64"
           }
         ]
       }
@@ -2318,6 +2567,14 @@
             "type": "u16"
           },
           {
+            "name": "fee_vault",
+            "docs": [
+              "PDA `[\"fee-vault\"]`: claim fees collect here, so a claim never depends on an",
+              "outside account. Anyone may sweep it to `fee_destination`."
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "fee_destination",
             "type": "pubkey"
           },
@@ -2381,6 +2638,14 @@
             "type": "u8"
           },
           {
+            "name": "oracle_set_version",
+            "docs": [
+              "Bumped whenever the oracle set or the quorum changes; a proposed root is only valid",
+              "under the version that produced it."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "paused",
             "type": "bool"
           },
@@ -2402,6 +2667,10 @@
           {
             "name": "reserve_bump",
             "type": "u8"
+          },
+          {
+            "name": "fee_vault_bump",
+            "type": "u8"
           }
         ]
       }
@@ -2417,6 +2686,10 @@
           },
           {
             "name": "reserve_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_vault",
             "type": "pubkey"
           },
           {
@@ -2631,6 +2904,11 @@
       "name": "EPOCH_VAULT_SEED",
       "type": "bytes",
       "value": "[101, 112, 111, 99, 104, 45, 118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "FEE_VAULT_SEED",
+      "type": "bytes",
+      "value": "[102, 101, 101, 45, 118, 97, 117, 108, 116]"
     },
     {
       "name": "POOL_CONFIG_SEED",

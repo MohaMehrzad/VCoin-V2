@@ -32,6 +32,8 @@ page lists what an integrating app must get right.
 - Show users their gross amount and the fee (`claimFee(amount, epoch.feeBps)`).
 - Claims close 90 days after activation, plus any time the pool was paused.
 - A relayer can pay the claim-status rent: `claimIx({ payer })`.
+- A relayer that sponsors posts gets the rent back on delete: pass it as `rentPayer` to
+  `deleteContentIx` (read it from `ContentRecord.rentPayer`).
 
 ## Sessions
 

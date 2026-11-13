@@ -11,6 +11,15 @@ use crate::events::*;
 
 pub fn initialize(ctx: Context<Initialize>, vcoin_fee_per_tx: u64) -> Result<()> {
     require_upgrade_authority(&ctx.accounts.program_data, &ctx.accounts.authority.key())?;
+    // The fee token is the one VCoin mint, like in every other program that handles VCoin.
+    let vcoin_mint =
+        Pubkey::find_program_address(&[vcoin_token::constants::VCOIN_MINT_SEED], &vcoin_token::ID)
+            .0;
+    require_keys_eq!(
+        ctx.accounts.vcoin_mint.key(),
+        vcoin_mint,
+        GaslessError::InvalidVCoinMint
+    );
     validate_vcoin_mint(&ctx.accounts.vcoin_mint.to_account_info())?;
     require!(
         vcoin_fee_per_tx <= MAX_VCOIN_FEE_PER_TX,
@@ -113,7 +122,7 @@ pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config
         .admin
-        .require_authority(&ctx.accounts.authority.key())?;
+        .require_pause_rights(&ctx.accounts.authority.key(), paused)?;
     config.paused = paused;
     emit!(PauseChanged { paused });
     Ok(())
@@ -150,5 +159,13 @@ pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         previous,
         new_authority: admin.authority
     });
+    Ok(())
+}
+
+/// Sets or clears the emergency guardian, which may pause but never unpause.
+pub fn set_guardian(ctx: Context<UpdateConfig>, guardian: Pubkey) -> Result<()> {
+    let admin = &mut ctx.accounts.config.admin;
+    admin.set_guardian(&ctx.accounts.authority.key(), guardian)?;
+    emit!(GuardianSet { guardian });
     Ok(())
 }

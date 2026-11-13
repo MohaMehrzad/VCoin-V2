@@ -48,7 +48,7 @@ pub fn configure_governance(
     record.realm = registrar.realm;
     record.governing_token_mint = registrar.realm_governing_token_mint;
     record.max_voter_weight =
-        max_weight_for(registrar.total_locked, &registrar.weight).ok_or(StakingError::Overflow)?;
+        max_weight_for(registrar.active_locked, &registrar.weight).ok_or(StakingError::Overflow)?;
     record.max_voter_weight_expiry = Some(Clock::get()?.slot);
 
     emit!(GovernanceConfigured {
@@ -124,7 +124,7 @@ pub fn update_max_voter_weight_record(ctx: Context<UpdateMaxVoterWeightRecord>) 
     );
     let record = &mut ctx.accounts.max_voter_weight_record;
     record.max_voter_weight =
-        max_weight_for(registrar.total_locked, &registrar.weight).ok_or(StakingError::Overflow)?;
+        max_weight_for(registrar.active_locked, &registrar.weight).ok_or(StakingError::Overflow)?;
     record.max_voter_weight_expiry = Some(Clock::get()?.slot);
     Ok(())
 }

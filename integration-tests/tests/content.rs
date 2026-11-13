@@ -142,14 +142,13 @@ fn user(e: &mut Env, locked: u64) -> Keypair {
     } else {
         funded_keypair(&mut e.s.svm, 5)
     };
-    let stake = (locked > 0).then(|| voter_pda(&kp.pubkey()));
     let init = ix(
         content_registry::ID,
         content_registry::accounts::InitUserEnergy {
             config: config_pda(),
             user: kp.pubkey(),
             user_energy: energy_pda(&kp.pubkey()),
-            stake,
+            stake: voter_pda(&kp.pubkey()),
             payer: kp.pubkey(),
             system_program: system_program::ID,
         },
@@ -163,12 +162,10 @@ fn energy(e: &Env, user: &Pubkey) -> UserEnergy {
     read_account(&e.s.svm, &energy_pda(user))
 }
 
-#[allow(clippy::too_many_arguments)]
 fn post_ix(
     author: &Pubkey,
     signer: &Pubkey,
     session: Option<Pubkey>,
-    stake: Option<Pubkey>,
     id: [u8; 32],
     uri: &str,
     content_type: u8,
@@ -182,7 +179,7 @@ fn post_ix(
             signer: *signer,
             session,
             user_energy: energy_pda(author),
-            stake,
+            stake: voter_pda(author),
             content: content_pda(author, &id),
             payer: *payer,
             system_program: system_program::ID,
@@ -197,15 +194,10 @@ fn post_ix(
 }
 
 fn post(e: &mut Env, author: &Keypair, id: [u8; 32], content_type: u8) -> TransactionResult {
-    let stake =
-        e.s.svm
-            .get_account(&voter_pda(&author.pubkey()))
-            .map(|_| voter_pda(&author.pubkey()));
     let i = post_ix(
         &author.pubkey(),
         &author.pubkey(),
         None,
-        stake,
         id,
         "ipfs://x",
         content_type,
@@ -229,6 +221,7 @@ fn edit_ix(
             signer: *signer,
             session,
             user_energy: energy_pda(author),
+            stake: voter_pda(author),
             content: content_pda(author, &id),
         },
         content_registry::instruction::EditContent {
@@ -284,7 +277,6 @@ fn ids_are_per_author_costs_and_limits_apply_and_delete_closes() {
         &alice.pubkey(),
         &alice.pubkey(),
         None,
-        None,
         [4; 32],
         &long,
         0,
@@ -331,6 +323,7 @@ fn ids_are_per_author_costs_and_limits_apply_and_delete_closes() {
         content_registry::accounts::DeleteContent {
             content: content_pda(&alice.pubkey(), &id),
             author: alice.pubkey(),
+            rent_payer: alice.pubkey(),
         },
         content_registry::instruction::DeleteContent {},
     );
@@ -400,7 +393,6 @@ fn session_keys_post_and_edit_within_scope_only() {
         &alice.pubkey(),
         &session.pubkey(),
         sess,
-        None,
         id,
         "ipfs://s",
         0,
@@ -414,7 +406,6 @@ fn session_keys_post_and_edit_within_scope_only() {
     let p = post_ix(
         &alice.pubkey(),
         &session.pubkey(),
-        None,
         None,
         [9; 32],
         "ipfs://s",
@@ -440,7 +431,6 @@ fn session_keys_post_and_edit_within_scope_only() {
         &alice.pubkey(),
         &other.pubkey(),
         Some(session_pda(&other.pubkey(), &alice.pubkey())),
-        None,
         [10; 32],
         "u",
         0,
@@ -456,6 +446,7 @@ fn session_keys_post_and_edit_within_scope_only() {
         content_registry::accounts::DeleteContent {
             content: content_pda(&alice.pubkey(), &id),
             author: session.pubkey(),
+            rent_payer: relayer.pubkey(),
         },
         content_registry::instruction::DeleteContent {},
     );
@@ -466,7 +457,6 @@ fn session_keys_post_and_edit_within_scope_only() {
         &alice.pubkey(),
         &session.pubkey(),
         sess,
-        None,
         [11; 32],
         "u",
         0,
@@ -499,6 +489,7 @@ fn refund_ix(author: &Pubkey, id: [u8; 32]) -> Instruction {
             config: config_pda(),
             author: *author,
             user_energy: energy_pda(author),
+            stake: voter_pda(author),
             content: content_pda(author, &id),
         },
         content_registry::instruction::ClaimRefund {},
@@ -649,4 +640,106 @@ fn init_is_gated_oracle_changes_wait_and_pause_stops_posting() {
     );
     send(&mut e.s.svm, &[pause], &admin, &[]).expect("pause");
     assert_anchor_error(post(&mut e, &alice, [2; 32], 0), err(ContentError::Paused));
+}
+
+/// Re-review C2: a relayer that sponsors a post gets its rent back when the author deletes
+/// it, so posting and deleting through a sponsor earns nothing.
+#[test]
+fn deleting_a_sponsored_post_refunds_the_sponsor_not_the_author() {
+    let mut e = env();
+    let alice = user(&mut e, 0);
+    let relayer = funded_keypair(&mut e.s.svm, 5);
+    let id = [3u8; 32];
+    let p = post_ix(
+        &alice.pubkey(),
+        &alice.pubkey(),
+        None,
+        id,
+        "ipfs://sponsored",
+        0,
+        &relayer.pubkey(),
+    );
+    send(&mut e.s.svm, &[p], &relayer, &[&alice]).expect("sponsored post");
+    let record: ContentRecord = read_account(&e.s.svm, &content_pda(&alice.pubkey(), &id));
+    assert_eq!(record.rent_payer, relayer.pubkey());
+
+    let del = |rent_payer: Pubkey| {
+        ix(
+            content_registry::ID,
+            content_registry::accounts::DeleteContent {
+                content: content_pda(&alice.pubkey(), &id),
+                author: alice.pubkey(),
+                rent_payer,
+            },
+            content_registry::instruction::DeleteContent {},
+        )
+    };
+    let to_self = del(alice.pubkey());
+    assert_anchor_error(
+        send(&mut e.s.svm, &[to_self], &alice, &[]),
+        anchor_lang::error::ErrorCode::ConstraintHasOne as u32,
+    );
+    let (alice_before, relayer_before) = (
+        e.s.svm.get_balance(&alice.pubkey()).unwrap(),
+        e.s.svm.get_balance(&relayer.pubkey()).unwrap(),
+    );
+    send(&mut e.s.svm, &[del(relayer.pubkey())], &alice, &[]).expect("delete");
+    assert!(e.s.svm.get_balance(&relayer.pubkey()).unwrap() > relayer_before);
+    assert!(e.s.svm.get_balance(&alice.pubkey()).unwrap() <= alice_before);
+}
+
+/// Re-review C6/C7: the staking account is derived, not optional. A stranger cannot open a
+/// staker's energy account at tier 0, and an edit applies the author's current tier.
+#[test]
+fn the_stake_account_cannot_be_left_out_or_swapped() {
+    let mut e = env();
+    let whale = new_staker(&mut e.s, 5_000 * VCOIN);
+    let dep = deposit_ix(
+        &e.s,
+        &whale,
+        0,
+        5_000 * VCOIN,
+        staking_protocol::constants::MIN_LOCK_SECS,
+    );
+    send(&mut e.s.svm, &[dep], &whale.kp, &[]).expect("stake");
+    let griefer = funded_keypair(&mut e.s.svm, 5);
+    let open = |stake: Pubkey| {
+        ix(
+            content_registry::ID,
+            content_registry::accounts::InitUserEnergy {
+                config: config_pda(),
+                user: whale.kp.pubkey(),
+                user_energy: energy_pda(&whale.kp.pubkey()),
+                stake,
+                payer: griefer.pubkey(),
+                system_program: system_program::ID,
+            },
+            content_registry::instruction::InitUserEnergy {},
+        )
+    };
+    // Any account other than the whale's own Voter PDA is rejected.
+    let swapped = open(voter_pda(&griefer.pubkey()));
+    assert_anchor_error(
+        send(&mut e.s.svm, &[swapped], &griefer, &[]),
+        anchor_lang::error::ErrorCode::ConstraintSeeds as u32,
+    );
+    send(
+        &mut e.s.svm,
+        &[open(voter_pda(&whale.kp.pubkey()))],
+        &griefer,
+        &[],
+    )
+    .expect("opened by a stranger, at the real tier");
+    let en = energy(&e, &whale.kp.pubkey());
+    assert_eq!((en.tier, en.current_energy), (2, 800));
+
+    // After the lock ends, an edit alone drops the tier (it used to keep the old one).
+    let id = [1u8; 32];
+    post(&mut e, &whale.kp, id, 0).expect("post at tier 2");
+    warp_by(&mut e.s.svm, staking_protocol::constants::MIN_LOCK_SECS);
+    let edit = edit_ix(&whale.kp.pubkey(), &whale.kp.pubkey(), None, id, [2; 32]);
+    send(&mut e.s.svm, &[edit], &whale.kp, &[]).expect("edit");
+    let en = energy(&e, &whale.kp.pubkey());
+    assert_eq!((en.tier, en.max_energy), (0, 200));
+    assert!(en.current_energy <= 200);
 }

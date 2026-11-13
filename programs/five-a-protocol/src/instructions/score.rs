@@ -6,10 +6,11 @@ use crate::constants::*;
 use crate::contexts::*;
 use crate::errors::FiveAError;
 use crate::events::*;
-use crate::state::{OracleSubmission, ScoreValues};
+use crate::state::{OracleSubmission, PendingScoreUpdate, ScoreValues};
 
-/// An active oracle submits (or changes) its values for `user`. When `required_consensus`
-/// active oracles agree on identical values, they are applied and the round closes.
+/// An active oracle submits (or changes) its values for `user`. When enough active oracles
+/// (see `FiveAConfig::effective_consensus`) have live, identical submissions, the values
+/// are applied and the round closes.
 pub fn submit_score(ctx: Context<SubmitScore>, values: ScoreValues) -> Result<()> {
     let config = &ctx.accounts.config;
     require!(!config.paused, FiveAError::Paused);
@@ -42,13 +43,15 @@ pub fn submit_score(ctx: Context<SubmitScore>, values: ScoreValues) -> Result<()
         pending.rent_payer = oracle;
         pending.bump = ctx.bumps.pending;
     }
-    if pending.user != user || pending.opened_at == 0 || now > pending.expires_at {
+    if pending.opened_at == 0 {
         pending.submissions = [OracleSubmission::default(); MAX_ORACLES];
         pending.opened_at = now;
-        pending.expires_at = now
-            .checked_add(SCORE_UPDATE_EXPIRY)
-            .ok_or(FiveAError::Overflow)?;
     }
+    // Sliding window: every submission has its own clock, so the round is not anchored to
+    // whoever submitted first.
+    pending.expires_at = now
+        .checked_add(SCORE_UPDATE_EXPIRY)
+        .ok_or(FiveAError::Overflow)?;
     require_keys_eq!(
         ctx.accounts.rent_payer.key(),
         pending.rent_payer,
@@ -60,10 +63,14 @@ pub fn submit_score(ctx: Context<SubmitScore>, values: ScoreValues) -> Result<()
         None => pending
             .submissions
             .iter()
-            .position(|s| s.oracle == Pubkey::default() || !config.is_active_oracle(&s.oracle, now))
+            .position(|s| !PendingScoreUpdate::is_live(config, s, now))
             .ok_or(FiveAError::TooManyOracles)?,
     };
-    pending.submissions[slot] = OracleSubmission { oracle, values };
+    pending.submissions[slot] = OracleSubmission {
+        oracle,
+        values,
+        submitted_at: now,
+    };
     let support = pending.support(config, &values, now);
     emit!(ScoreSubmitted {
         user,
@@ -72,7 +79,7 @@ pub fn submit_score(ctx: Context<SubmitScore>, values: ScoreValues) -> Result<()
         support
     });
 
-    if support >= config.required_consensus {
+    if support >= config.effective_consensus(now) {
         score.authenticity = values.authenticity;
         score.accuracy = values.accuracy;
         score.agility = values.agility;

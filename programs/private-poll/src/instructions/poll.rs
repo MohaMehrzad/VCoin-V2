@@ -53,7 +53,7 @@ pub fn create_poll(
         PollError::CreatorWeightTooLow
     );
     let max_weight = poll_weight(
-        max_weight_for(registrar.total_locked, &registrar.weight).ok_or(PollError::Overflow)?,
+        max_weight_for(registrar.active_locked, &registrar.weight).ok_or(PollError::Overflow)?,
     );
     let quorum_weight = (max_weight as u128 * params.quorum_bps as u128 / BPS as u128) as u64;
 
@@ -67,6 +67,7 @@ pub fn create_poll(
     poll.reveal_deadline = end_time
         .checked_add(params.reveal_window_secs)
         .ok_or(PollError::Overflow)?;
+    poll.pause_accum_at_creation = config.pause_accum;
     poll.weight_params = registrar.weight;
     poll.quorum_weight = quorum_weight;
     poll.pass_bps = params.pass_bps;
@@ -177,7 +178,10 @@ pub fn submit_share(
         PollError::PollAlreadyFinal
     );
     require!(now >= poll.end_time, PollError::VotingNotEnded);
-    require!(now < poll.reveal_deadline, PollError::RevealClosed);
+    require!(
+        now < poll.effective_reveal_deadline(&ctx.accounts.config, now),
+        PollError::RevealClosed
+    );
     let committee = &poll.committee;
     require!(
         member_index >= 1 && member_index <= committee.size,
@@ -282,6 +286,8 @@ pub fn finalize_poll(
 /// Anyone may expire a poll whose reveal window closed without enough shares; it can
 /// never pass afterwards.
 pub fn expire_poll(ctx: Context<SettlePoll>) -> Result<()> {
+    // Members cannot post shares while paused, so nothing may expire meanwhile.
+    require!(!ctx.accounts.config.paused, PollError::Paused);
     let now = now()?;
     let poll_key = ctx.accounts.poll.key();
     let poll = &mut ctx.accounts.poll;
@@ -289,7 +295,10 @@ pub fn expire_poll(ctx: Context<SettlePoll>) -> Result<()> {
         poll.outcome == PollOutcome::Open,
         PollError::PollAlreadyFinal
     );
-    require!(now >= poll.reveal_deadline, PollError::RevealStillOpen);
+    require!(
+        now >= poll.effective_reveal_deadline(&ctx.accounts.config, now),
+        PollError::RevealStillOpen
+    );
     require!(
         poll.voter_count > 0 && poll.shares_submitted() < poll.committee.threshold as u32,
         PollError::FinalizeInstead

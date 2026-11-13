@@ -46,3 +46,9 @@ pub struct MetadataUpdated {
     pub field: crate::state::MetadataField,
     pub value: String,
 }
+
+/// The emergency guardian may pause (never unpause); `Pubkey::default()` = none.
+#[event]
+pub struct GuardianSet {
+    pub guardian: Pubkey,
+}

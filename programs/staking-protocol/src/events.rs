@@ -122,3 +122,17 @@ pub struct SlashDestinationChanged {
     pub previous: Pubkey,
     pub new_destination: Pubkey,
 }
+
+/// The emergency guardian may pause (never unpause); `Pubkey::default()` = none.
+#[event]
+pub struct GuardianSet {
+    pub guardian: Pubkey,
+}
+
+#[event]
+pub struct DepositDeactivated {
+    pub owner: Pubkey,
+    pub index: u8,
+    pub amount: u64,
+    pub active_locked: u64,
+}

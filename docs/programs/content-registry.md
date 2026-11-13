@@ -14,7 +14,9 @@ Program id `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV`. [API](../API.md#conten
 Other instructions:
 
 - **`edit_content`.** Costs 5 energy, bumps the version and emits the previous and new hash.
-- **`delete_content`.** Closes the record and refunds its rent.
+- **`delete_content`.** Closes the record and returns its rent to whoever paid it: the author,
+  or the relayer that sponsored the post (`ContentRecord.rent_payer`). Posting through a
+  sponsor and deleting earns nothing.
 - **Signing.** Posts and edits may be signed by a gasless session key for the author (scope
   CONTENT). Deletes and refund claims need the wallet.
 
@@ -22,8 +24,12 @@ Other instructions:
 
 `UserEnergy` `["user-energy", user]` holds energy, the daily post count and refunds.
 
-- **Tier.** Derived from VCoin locked in staking-protocol (the user's `Voter`, read with
-  `seeds::program`) and refreshed on every post. Users cannot choose it (CR-01).
+- **Tier.** Derived from VCoin locked in staking-protocol and refreshed on every post, edit
+  and refund claim. Users cannot choose it (CR-01). The user's `Voter` address is a required,
+  derived account in every instruction that uses the tier: it cannot be left out to keep an
+  old tier, and a stranger opening someone's energy account (`init_user_energy` is
+  permissionless) gets that user's real tier. A wallet that never staked has no account at
+  that address and is tier 0.
 
   | Tier | Locked VCoin | Max energy | Regeneration per hour | Posts per day |
   |---|---|---|---|---|
@@ -46,6 +52,6 @@ Other instructions:
 
 - `initialize(engagement_oracle)`: upgrade authority only.
 - Oracle changes: `propose_oracle` / `apply_oracle` / `cancel_oracle`.
-- `set_paused`.
+- `set_paused`, `set_guardian` (an emergency key that may pause but never unpause).
 - Two-step authority.
 - No global counters (CR-05).

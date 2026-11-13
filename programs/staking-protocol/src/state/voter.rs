@@ -11,6 +11,9 @@ pub struct DepositEntry {
     pub lock_start: i64,
     pub lock_end: i64,
     pub is_used: bool,
+    /// Counted in `Registrar::active_locked` (the base of the max voter weight). Cleared by
+    /// `deactivate_expired` or a withdrawal once the lock has ended; set again by a relock.
+    pub is_active: bool,
 }
 
 /// Per-owner deposits, PDA `["voter", owner]`.

@@ -53,7 +53,9 @@ accounts.
    - set `slash_destination` to the DAO treasury's VCoin token account;
    - this creates the MaxVoterWeightRecord.
 3. **Create governances** with these suggested settings:
-   - community threshold: % of max voter weight (max ≈ 2× total locked);
+   - community threshold: % of max voter weight. The max is about 2× the locked VCoin in
+     deposits that have not been deactivated; run `deactivate_expired` for expired deposits
+     so abandoned stake does not inflate it;
    - `min_community_weight_to_create_proposal` ≥ 1,000 VCoin of weight;
    - hold-up ≥ 48h, and 7 days for program upgrades and treasury;
    - council veto enabled, with a cool-off period.
@@ -63,20 +65,27 @@ accounts.
 
 | Program | Initialize | Then |
 |---|---|---|
-| private-poll | `initialize_config(params)` | DKG ceremony among 3–5 committee members using `zk-voting-sdk::dkg` over authenticated channels, then `set_committee` |
-| five-a | `initialize` | `register_oracle` × ≥ 2 (active after 24h); `set_required_consensus` |
-| sscre | `initialize_pool(params, first_epoch_budget, fee_bps ≤ 100)` | fund the reserve vault; `register_oracle` × ≥ 2; quorum ≥ 2 |
+| private-poll | `initialize_config(params)` | DKG ceremony among 3–5 committee members using `zk-voting-sdk::dkg` over authenticated channels (agree on a fresh session id; every member runs `finish`, which checks each dealer's proof of knowledge), publish the dealings, then `set_committee` |
+| five-a | `initialize` | `register_oracle` × ≥ 2 (active after 24h); `set_required_consensus` (a majority of active oracles is always required too) |
+| sscre | `initialize_pool(params, first_epoch_budget, fee_bps ≤ 100)` | fund the reserve vault; `register_oracle` × ≥ 2 (epochs cannot start with fewer than the quorum); quorum ≥ 2; `set_guardian` |
 | gasless | `initialize(vcoin_fee_per_tx)` | point the Kora relayer at it (see `relayer-kora.md`) |
 | identity | `initialize` with the USDC mint (6 decimals) and the treasury USDC account | `add_attester` |
 | content-registry | `initialize(engagement_oracle)` | — |
 | vilink | `initialize(fee_bps)` with the treasury VCoin account | — |
 
-## 5. Hand every authority to the DAO
+## 5. Set the guardians, then hand every authority to the DAO
+
+First, for each program that has one (`set_guardian`: vcoin-token, staking, private-poll,
+sscre, five-a, gasless, identity, content-registry, vilink), set the guardian to the council
+multisig. It can pause and veto a rewards root at once; it cannot unpause or change anything
+(see ARCHITECTURE.md, "Emergency guardian"). This matters most for sscre: without a guardian a
+24h dispute delay is shorter than any DAO vote, so set one or raise `dispute_delay`.
 
 For each program, `propose_authority(governance_pda)`. After 24h, a DAO proposal executes
 `accept_authority`, signed by the governance PDA through `ExecuteTransaction`. From then on:
 
-- every pause, parameter, oracle, fee and slashing change is a DAO vote plus its hold-up;
+- every unpause, parameter, oracle, fee and slashing change is a DAO vote plus its hold-up
+  (the guardian can still pause at once);
 - the deployer key keeps only the upgrade authority.
 
 Move the upgrade authority to the DAO as well, with
@@ -85,7 +94,11 @@ once the team is ready to give up hotfixes.
 
 ## 6. Verify
 
-- Read each config. Its `admin.authority` must be the governance PDA, with no pending transfer.
+- Read each config. Its `admin.authority` must be the governance PDA, with no pending transfer,
+  and `admin.guardian` must be the council multisig.
+- Before anything else, check that nobody initialized a program ahead of you: every
+  `initialize` is restricted to the upgrade authority, and vevcoin-token's works even if its
+  mint address was sent lamports in advance.
 - Run a small staking deposit and a Realms vote with the plugin.
 - Run a test private poll end to end on devnet.
 - Run an SSCRE epoch with a tiny budget and two oracles.

@@ -14,7 +14,7 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
-idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build", "vcoin-common/idl-build"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build", "vcoin-common/idl-build", "vcoin-token/idl-build"]
 anchor-debug = []
 custom-heap = []
 custom-panic = []
@@ -23,6 +23,7 @@ custom-panic = []
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true, features = ["token_2022", "token_2022_extensions"] }
 vcoin-common = { workspace = true }
+vcoin-token = { path = "../vcoin-token", features = ["no-entrypoint"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

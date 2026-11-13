@@ -54,6 +54,9 @@ pub struct PoolConfig {
     /// PDA `["reserve-vault"]`: the undistributed rewards (e.g. the 350M allocation).
     pub reserve_vault: Pubkey,
     pub fee_bps: u16,
+    /// PDA `["fee-vault"]`: claim fees collect here, so a claim never depends on an
+    /// outside account. Anyone may sweep it to `fee_destination`.
+    pub fee_vault: Pubkey,
     pub fee_destination: Pubkey,
     /// Timelocked fee change (`pending_fee_eta == 0` = none).
     pub pending_fee_bps: u16,
@@ -67,12 +70,16 @@ pub struct PoolConfig {
     pub last_epoch_start: i64,
     pub oracles: [OracleEntry; MAX_ORACLES],
     pub root_quorum: u8,
+    /// Bumped whenever the oracle set or the quorum changes; a proposed root is only valid
+    /// under the version that produced it.
+    pub oracle_set_version: u64,
     pub paused: bool,
     pub paused_since: i64,
     /// Total seconds spent paused, so deadlines can be extended by downtime (SSC-05).
     pub pause_accum: i64,
     pub bump: u8,
     pub reserve_bump: u8,
+    pub fee_vault_bump: u8,
 }
 
 impl PoolConfig {
@@ -91,6 +98,30 @@ impl PoolConfig {
                 .oracles
                 .iter()
                 .any(|o| o.key == *key && o.active_from <= now)
+    }
+
+    pub fn active_oracles(&self, now: i64) -> usize {
+        self.oracles
+            .iter()
+            .filter(|o| o.key != Pubkey::default() && o.active_from <= now)
+            .count()
+    }
+
+    /// Votes a candidate needs: the configured quorum, and never less than a strict
+    /// majority of the active oracles, so two candidates can never both qualify and a
+    /// minority cannot settle a root on its own.
+    pub fn effective_quorum(&self, now: i64) -> u8 {
+        let majority = (self.active_oracles(now) / 2 + 1) as u8; // ≤ MAX_ORACLES / 2 + 1
+        self.root_quorum.max(majority)
+    }
+
+    /// A vote counts if its oracle is registered and active, and the vote was cast under
+    /// the oracle's current registration (a removed and re-added oracle must vote again).
+    pub fn vote_counts(&self, vote: &OracleVote, now: i64) -> bool {
+        vote.oracle != Pubkey::default()
+            && self.oracles.iter().any(|o| {
+                o.key == vote.oracle && o.active_from <= now && vote.voted_at >= o.active_from
+            })
     }
 
     /// Paused seconds so far, including a pause in progress.
@@ -112,6 +143,7 @@ pub struct OracleVote {
     pub oracle: Pubkey,
     pub root: [u8; 32],
     pub max_total_claim: u64,
+    pub voted_at: i64,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
@@ -135,11 +167,17 @@ pub struct Epoch {
     pub start_ts: i64,
     pub end_ts: i64,
     pub pause_accum_at_start: i64,
+    /// `PoolParams` snapshot at start, so later parameter changes never move this epoch's
+    /// deadlines.
+    pub claim_window: i64,
+    pub dispute_delay: i64,
     pub votes: [OracleVote; MAX_ORACLES],
     /// Candidate that reached quorum (`proposed_at == 0` = none).
     pub proposed_root: [u8; 32],
     pub proposed_max_total: u64,
     pub proposed_at: i64,
+    /// `PoolConfig::oracle_set_version` when the candidate was proposed.
+    pub proposed_version: u64,
     pub root: [u8; 32],
     pub max_total_claim: u64,
     /// Fee snapshot at activation, so every claimant of an epoch pays the same rate.
@@ -159,7 +197,7 @@ pub struct Epoch {
 impl Epoch {
     pub const LEN: usize = 8 + Self::INIT_SPACE;
 
-    /// Matching votes for `(root, max_total)` from oracles still registered and active.
+    /// Matching votes for `(root, max_total)` that still count (see `vote_counts`).
     pub fn count_votes(
         &self,
         config: &PoolConfig,
@@ -170,11 +208,18 @@ impl Epoch {
         self.votes
             .iter()
             .filter(|v| {
-                v.root == *root
-                    && v.max_total_claim == max_total
-                    && config.is_active_oracle(&v.oracle, now)
+                v.root == *root && v.max_total_claim == max_total && config.vote_counts(v, now)
             })
             .count() as u8
+    }
+
+    /// The proposed candidate still stands: same oracle set and quorum as when it was
+    /// proposed, and it still has the votes.
+    pub fn proposal_stands(&self, config: &PoolConfig, now: i64) -> bool {
+        self.proposed_at != 0
+            && self.proposed_version == config.oracle_set_version
+            && self.count_votes(config, &self.proposed_root, self.proposed_max_total, now)
+                >= config.effective_quorum(now)
     }
 
     /// Claims close at activation + window, extended by any pause since activation.
@@ -189,7 +234,7 @@ impl Epoch {
     /// A root must activate before end + window (extended by pauses), or the budget returns.
     pub fn root_deadline(&self, config: &PoolConfig, now: i64) -> i64 {
         self.end_ts
-            .saturating_add(config.params.claim_window)
+            .saturating_add(self.claim_window)
             .saturating_add(
                 config
                     .paused_total(now)

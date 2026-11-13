@@ -82,3 +82,9 @@ pub struct AuthorityTransferred {
     pub previous: Pubkey,
     pub new_authority: Pubkey,
 }
+
+/// The emergency guardian may pause (never unpause); `Pubkey::default()` = none.
+#[event]
+pub struct GuardianSet {
+    pub guardian: Pubkey,
+}

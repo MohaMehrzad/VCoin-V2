@@ -369,7 +369,7 @@ fn levels_move_both_ways_expire_and_can_be_revoked() {
             identity_protocol::accounts::RevokeAttestation {
                 config: config_pda(),
                 attestation_link: pda(&[ATTESTATION_SEED, id.as_ref()]),
-                identity: Some(identity_pda(&alice.pubkey())),
+                identity: identity_pda(&alice.pubkey()),
                 rent_payer: alice.pubkey(),
                 revoker,
             },
@@ -490,7 +490,7 @@ fn subscriptions_extend_prorate_and_refuse_active_downgrades() {
         start + 2 * SUBSCRIPTION_DURATION
     );
 
-    // Upgrade with 20 of 35 remaining days credited… capped at a full period of the old price.
+    // Upgrade with 35 days of tier 1 left: their value (35/30 of 4 USDC) is credited.
     let before = usdc_balance(&e.svm, &e.treasury);
     buy(&mut e, 3, 59 * USDC).expect("upgrade");
     let s: Subscription = read_account(&e.svm, &sub);
@@ -576,4 +576,139 @@ fn initialization_is_gated_and_payment_changes_are_timelocked() {
         (cfg.prices, cfg.treasury_token),
         ([USDC, 2 * USDC, 3 * USDC], new_treasury)
     );
+}
+
+/// Re-review C3/C5: only the attester that issued an id may refresh it (so it keeps the
+/// right to revoke), and a revocation always reaches the identity, or works without one.
+#[test]
+fn only_the_issuer_refreshes_a_link_and_revocation_always_clears_the_level() {
+    let mut e = env();
+    let admin = e.admin.insecure_clone();
+    let issuer = e.attester.insecure_clone();
+    let alice = user_with_identity(&mut e, "alice");
+    let bob = user_with_identity(&mut e, "bob");
+    let year = now(&e.svm) + 365 * DAY;
+    let id = [42u8; 32];
+    link(&mut e, &alice, id, CLAIM_KYC, year).expect("issued");
+
+    let lenient = funded_keypair(&mut e.svm, 5);
+    let add = admin_ix(
+        admin.pubkey(),
+        identity_protocol::instruction::AddAttester {
+            attester: lenient.pubkey(),
+        },
+    );
+    send(&mut e.svm, &[add], &admin, &[]).expect("second attester");
+    let takeover = link_ix(
+        &alice.pubkey(),
+        &lenient.pubkey(),
+        id,
+        CLAIM_KYC | CLAIM_BIOMETRIC | CLAIM_UNIQUE_HUMAN,
+        year,
+    );
+    assert_anchor_error(
+        send(&mut e.svm, &[takeover], &alice, &[&lenient]),
+        err(IdentityError::AttesterMismatch),
+    );
+    link(&mut e, &alice, id, CLAIM_KYC | CLAIM_BIOMETRIC, year).expect("issuer refreshes");
+    assert_eq!(effective(&e, &alice.pubkey()), LEVEL_FULL);
+
+    let revoke = |identity: Pubkey| {
+        ix(
+            identity_protocol::ID,
+            identity_protocol::accounts::RevokeAttestation {
+                config: config_pda(),
+                attestation_link: pda(&[ATTESTATION_SEED, id.as_ref()]),
+                identity,
+                rent_payer: alice.pubkey(),
+                revoker: issuer.pubkey(),
+            },
+            identity_protocol::instruction::RevokeAttestation {},
+        )
+    };
+    // The identity is derived from the link: it cannot be left out or swapped.
+    let wrong = revoke(identity_pda(&bob.pubkey()));
+    assert_anchor_error(
+        send(&mut e.svm, &[wrong], &issuer, &[]),
+        anchor_lang::error::ErrorCode::ConstraintSeeds as u32,
+    );
+    send(
+        &mut e.svm,
+        &[revoke(identity_pda(&alice.pubkey()))],
+        &issuer,
+        &[],
+    )
+    .expect("revoke");
+    let a: Identity = read_account(&e.svm, &identity_pda(&alice.pubkey()));
+    assert_eq!((a.level, a.level_expires_at), (LEVEL_NONE, 0));
+
+    // An attestation outlives a closed identity; it can still be revoked.
+    link(&mut e, &alice, id, CLAIM_KYC, year).expect("issued again");
+    let close = ix(
+        identity_protocol::ID,
+        identity_protocol::accounts::CloseIdentity {
+            identity: identity_pda(&alice.pubkey()),
+            username_record: pda(&[USERNAME_SEED, b"alice"]),
+            owner: alice.pubkey(),
+        },
+        identity_protocol::instruction::CloseIdentity {},
+    );
+    send(&mut e.svm, &[close], &alice, &[]).expect("close identity");
+    warp_by(&mut e.svm, 1);
+    send(
+        &mut e.svm,
+        &[revoke(identity_pda(&alice.pubkey()))],
+        &issuer,
+        &[],
+    )
+    .expect("revoke without an identity");
+    assert!(e
+        .svm
+        .get_account(&pda(&[ATTESTATION_SEED, id.as_ref()]))
+        .is_none_or(|x| x.lamports == 0));
+}
+
+/// Re-review C4: prepaid time worth more than the new tier's price is carried over at the
+/// price ratio instead of being cut to one period.
+#[test]
+fn an_upgrade_never_drops_prepaid_time() {
+    let mut e = env();
+    let admin = e.admin.insecure_clone();
+    let user = funded_keypair(&mut e.svm, 5);
+    let usdc = e.usdc;
+    let wallet = ata(&mut e.svm, &admin, &usdc, &user.pubkey());
+    let mint_to = spl_token::instruction::mint_to(
+        &spl_token::ID,
+        &e.usdc,
+        &wallet,
+        &admin.pubkey(),
+        &[],
+        100 * USDC,
+    )
+    .unwrap();
+    send(&mut e.svm, &[mint_to], &admin, &[]).expect("fund user");
+    let sub = pda(&[SUBSCRIPTION_SEED, user.pubkey().as_ref()]);
+
+    let start = now(&e.svm);
+    for _ in 0..4 {
+        let i = subscribe_ix(&e, &user.pubkey(), wallet, 1, 4 * USDC);
+        send(&mut e.svm, &[i], &user, &[]).expect("tier 1");
+        warp_by(&mut e.svm, 1);
+    }
+    assert_eq!(
+        read_account::<Subscription>(&e.svm, &sub).expires_at,
+        start + 4 * SUBSCRIPTION_DURATION
+    );
+
+    // 16 USDC of tier 1 left; tier 2 costs 12. Free upgrade, about 40 days of tier 2.
+    let before = usdc_balance(&e.svm, &e.treasury);
+    let i = subscribe_ix(&e, &user.pubkey(), wallet, 2, 0);
+    send(&mut e.svm, &[i], &user, &[]).expect("free upgrade");
+    assert_eq!(usdc_balance(&e.svm, &e.treasury), before);
+    let s: Subscription = read_account(&e.svm, &sub);
+    let t = now(&e.svm);
+    let remaining = (start + 4 * SUBSCRIPTION_DURATION - t) as u128;
+    let carried = (remaining * 4 / 12) as i64;
+    assert_eq!((s.tier, s.expires_at), (2, t + carried));
+    assert!(carried > SUBSCRIPTION_DURATION);
 }

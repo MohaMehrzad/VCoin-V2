@@ -350,6 +350,62 @@ export type VcoinToken = {
       ]
     },
     {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  99,
+                  111,
+                  105,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103,
+                  45,
+                  118,
+                  50
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "setPaused",
       "docs": [
         "Pauses or resumes `mint_tokens`."
@@ -541,6 +597,19 @@ export type VcoinToken = {
       ]
     },
     {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
+      ]
+    },
+    {
       "name": "metadataUpdated",
       "discriminator": [
         132,
@@ -629,10 +698,17 @@ export type VcoinToken = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -654,6 +730,13 @@ export type VcoinToken = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -705,6 +788,21 @@ export type VcoinToken = {
           },
           {
             "name": "newAuthority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
             "type": "pubkey"
           }
         ]

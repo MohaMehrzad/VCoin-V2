@@ -142,6 +142,7 @@ describe("SDK instructions on the real programs", () => {
         config: sdk.pda.poolConfig(),
         vcoinMint: sdk.vcoinMint(),
         reserveVault: sdk.pda.reserveVault(),
+        feeVault: sdk.pda.sscreFeeVault(),
         feeDestination,
         program: sdk.PROGRAM_IDS.sscre,
         programData: Harness.programData(sdk.PROGRAM_IDS.sscre),
@@ -174,11 +175,17 @@ describe("SDK instructions on the real programs", () => {
     for (const c of claimants) {
       const token = await fundVcoin(h, c.publicKey, 0n);
       const { amount, proof } = tree.proofFor(c.publicKey);
-      const ix = await sdk.claimIx(p, { epochIndex: 0n, claimant: c.publicKey, claimantToken: token, amount, proof, feeDestination, payer: relayer.publicKey });
+      const ix = await sdk.claimIx(p, { epochIndex: 0n, claimant: c.publicKey, claimantToken: token, amount, proof, payer: relayer.publicKey });
       h.send([ix], [relayer, c]);
       expect(h.tokenBalance(token)).toBe(amount - sdk.claimFee(amount, 100));
     }
     const epoch = p.sscre.coder.accounts.decode("epoch", h.accountData(sdk.pda.epoch(0n))!);
     expect(BigInt(epoch.totalClaimed.toString())).toBe(tree.total);
+
+    // Fees collect in the program's vault; anyone sweeps them to the fee account.
+    const fees = sdk.claimFee(tree.total, 100);
+    expect(h.tokenBalance(sdk.pda.sscreFeeVault())).toBe(fees);
+    h.send([await sdk.withdrawFeesIx(p, feeDestination)], [relayer]);
+    expect(h.tokenBalance(feeDestination)).toBe(fees);
   });
 });

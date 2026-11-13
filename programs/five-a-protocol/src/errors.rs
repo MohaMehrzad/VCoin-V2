@@ -46,6 +46,8 @@ pub enum FiveAError {
     VouchExpired,
     #[msg("The vouch has not expired")]
     VouchNotExpired,
+    #[msg("Signer is not the vouchee of this vouch")]
+    NotVouchee,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

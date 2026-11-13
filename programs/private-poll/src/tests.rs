@@ -21,6 +21,8 @@ fn account_lens_match_borsh_size() {
         params: PollParams::default(),
         poll_count: 0,
         paused: false,
+        paused_since: 0,
+        pause_accum: 0,
         bump: 0,
     }
     .serialize(&mut buf)

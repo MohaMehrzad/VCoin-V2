@@ -15,8 +15,10 @@ fn now() -> Result<i64> {
     Ok(Clock::get()?.unix_timestamp)
 }
 
-/// Funds epoch `epoch_count` with `min(next_epoch_budget, reserve)` and decays the schedule.
-/// Epochs start at most once per `epoch_duration`.
+/// Funds epoch `epoch_count` with the scheduled budget and decays the schedule. Epochs
+/// start at most once per `epoch_duration`. Anyone may crank this when the reserve covers
+/// the whole budget; only the authority may start a smaller (final) epoch, so a stranger
+/// cannot burn a schedule step on a part-funded reserve.
 pub fn start_epoch(ctx: Context<StartEpoch>) -> Result<()> {
     let config = &mut ctx.accounts.config;
     require!(!config.paused, SscreError::Paused);
@@ -28,10 +30,17 @@ pub fn start_epoch(ctx: Context<StartEpoch>) -> Result<()> {
             .ok_or(SscreError::Overflow)?;
         require!(now >= next_start, SscreError::EpochTooSoon);
     }
-    let budget = config
-        .next_epoch_budget
-        .min(ctx.accounts.reserve_vault.amount);
+    require!(
+        config.registered_oracles() >= config.root_quorum as usize,
+        SscreError::NotEnoughOracles
+    );
+    let reserve = ctx.accounts.reserve_vault.amount;
+    let budget = config.next_epoch_budget.min(reserve);
     require!(budget > 0, SscreError::ReserveEmpty);
+    require!(
+        reserve >= config.next_epoch_budget || ctx.accounts.payer.key() == config.admin.authority,
+        SscreError::ReserveBelowBudget
+    );
 
     let bump = [config.bump];
     let seeds: &[&[u8]] = &[POOL_CONFIG_SEED, &bump];
@@ -59,6 +68,8 @@ pub fn start_epoch(ctx: Context<StartEpoch>) -> Result<()> {
         .checked_add(config.params.epoch_duration)
         .ok_or(SscreError::Overflow)?;
     epoch.pause_accum_at_start = config.pause_accum;
+    epoch.claim_window = config.params.claim_window;
+    epoch.dispute_delay = config.params.dispute_delay;
     epoch.votes = [OracleVote::default(); MAX_ORACLES];
     epoch.state = EpochState::Voting;
     epoch.rent_payer = ctx.accounts.payer.key();
@@ -85,9 +96,11 @@ pub fn start_epoch(ctx: Context<StartEpoch>) -> Result<()> {
     Ok(())
 }
 
-/// One changeable vote per active oracle, after the epoch ends. When `root_quorum` votes
-/// agree on `(root, max_total_claim)`, that candidate is proposed and the dispute delay
-/// starts; if it later loses quorum the proposal is dropped.
+/// One changeable vote per active oracle, after the epoch ends. When enough votes (see
+/// `PoolConfig::effective_quorum`) agree on `(root, max_total_claim)`, that candidate is
+/// proposed and the dispute delay starts. A proposal that lost its votes, or was made under
+/// an older oracle set or quorum, is dropped first, so it can only come back with a fresh
+/// dispute delay.
 pub fn vote_root(ctx: Context<VoteRoot>, root: [u8; 32], max_total_claim: u64) -> Result<()> {
     let config = &ctx.accounts.config;
     require!(!config.paused, SscreError::Paused);
@@ -109,37 +122,43 @@ pub fn vote_root(ctx: Context<VoteRoot>, root: [u8; 32], max_total_claim: u64) -
         SscreError::InvalidRoot
     );
 
+    // Drop a proposal that no longer stands *before* this vote is counted: a vote that
+    // restores a lost quorum must restart the dispute delay, not inherit the old one.
+    if epoch.proposed_at != 0 && !epoch.proposal_stands(config, now) {
+        epoch.proposed_at = 0;
+    }
+
     let vote = OracleVote {
         oracle,
         root,
         max_total_claim,
+        voted_at: now,
     };
     let slot = match epoch.votes.iter().position(|v| v.oracle == oracle) {
         Some(i) => i,
         None => epoch
             .votes
             .iter()
-            .position(|v| v.oracle == Pubkey::default() || !config.is_active_oracle(&v.oracle, now))
+            .position(|v| !config.vote_counts(v, now))
             .ok_or(SscreError::TooManyOracles)?,
     };
     epoch.votes[slot] = vote;
 
-    if epoch.proposed_at != 0 {
-        let (proposed, max) = (epoch.proposed_root, epoch.proposed_max_total);
-        if epoch.count_votes(config, &proposed, max, now) < config.root_quorum {
-            epoch.proposed_at = 0;
-        }
+    // The oracle may have just moved its vote away from the proposed candidate.
+    if epoch.proposed_at != 0 && !epoch.proposal_stands(config, now) {
+        epoch.proposed_at = 0;
     }
     let support = epoch.count_votes(config, &root, max_total_claim, now);
-    if support >= config.root_quorum && epoch.proposed_at == 0 {
+    if support >= config.effective_quorum(now) && epoch.proposed_at == 0 {
         epoch.proposed_root = root;
         epoch.proposed_max_total = max_total_claim;
         epoch.proposed_at = now;
+        epoch.proposed_version = config.oracle_set_version;
         emit!(RootProposed {
             index: epoch.index,
             root,
             max_total_claim,
-            claimable_at: now.saturating_add(config.params.dispute_delay),
+            claimable_at: now.saturating_add(epoch.dispute_delay),
         });
     }
     emit!(RootVoted {
@@ -152,12 +171,14 @@ pub fn vote_root(ctx: Context<VoteRoot>, root: [u8; 32], max_total_claim: u64) -
     Ok(())
 }
 
-/// The DAO discards the proposed root and every vote; oracles must vote again.
+/// The authority (DAO) or the emergency guardian discards the proposed root and every vote;
+/// oracles must vote again and the dispute delay restarts. The guardian exists because a
+/// DAO vote takes longer than the dispute delay. Not blocked by a pause.
 pub fn veto_root(ctx: Context<VetoRoot>) -> Result<()> {
     ctx.accounts
         .config
         .admin
-        .require_authority(&ctx.accounts.authority.key())?;
+        .require_authority_or_guardian(&ctx.accounts.authority.key())?;
     let epoch = &mut ctx.accounts.epoch;
     require!(epoch.state == EpochState::Voting, SscreError::NotVoting);
     let vetoed = epoch.proposed_root;
@@ -180,7 +201,7 @@ pub fn activate_root(ctx: Context<ActivateRoot>) -> Result<()> {
     require!(epoch.proposed_at != 0, SscreError::NoProposedRoot);
     let claimable_at = epoch
         .proposed_at
-        .checked_add(config.params.dispute_delay)
+        .checked_add(epoch.dispute_delay)
         .ok_or(SscreError::Overflow)?;
     require!(now >= claimable_at, SscreError::DisputeDelayActive);
     require!(
@@ -188,17 +209,14 @@ pub fn activate_root(ctx: Context<ActivateRoot>) -> Result<()> {
         SscreError::RootDeadlinePassed
     );
     let (root, max_total) = (epoch.proposed_root, epoch.proposed_max_total);
-    require!(
-        epoch.count_votes(config, &root, max_total, now) >= config.root_quorum,
-        SscreError::QuorumLost
-    );
+    require!(epoch.proposal_stands(config, now), SscreError::QuorumLost);
 
     epoch.root = root;
     epoch.max_total_claim = max_total;
     epoch.fee_bps = config.fee_bps;
     epoch.activated_at = now;
     epoch.claim_deadline = now
-        .checked_add(config.params.claim_window)
+        .checked_add(epoch.claim_window)
         .ok_or(SscreError::Overflow)?;
     epoch.pause_accum_at_activation = config.paused_total(now);
     epoch.state = EpochState::Active;
@@ -211,7 +229,7 @@ pub fn activate_root(ctx: Context<ActivateRoot>) -> Result<()> {
     Ok(())
 }
 
-/// Claims `amount` (gross) for the signer. The fee (rounded up) goes to the fee account.
+/// Claims `amount` (gross) for the signer. The fee (rounded up) goes to the fee vault.
 pub fn claim(ctx: Context<Claim>, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
     let config = &ctx.accounts.config;
     require!(!config.paused, SscreError::Paused);
@@ -246,7 +264,7 @@ pub fn claim(ctx: Context<Claim>, amount: u64, proof: Vec<[u8; 32]>) -> Result<(
     let decimals = ctx.accounts.vcoin_mint.decimals;
     for (to, value) in [
         (ctx.accounts.claimant_token.to_account_info(), net),
-        (ctx.accounts.fee_destination.to_account_info(), fee),
+        (ctx.accounts.fee_vault.to_account_info(), fee),
     ] {
         if value == 0 {
             continue;
@@ -286,6 +304,35 @@ pub fn claim(ctx: Context<Claim>, amount: u64, proof: Vec<[u8; 32]>) -> Result<(
         gross: amount,
         fee,
         total_claimed: total
+    });
+    Ok(())
+}
+
+/// Anyone sweeps the collected claim fees to the configured fee account. If that account
+/// is ever closed, only this sweep waits for a new one (`propose_fee`); claims keep working.
+pub fn withdraw_fees(ctx: Context<WithdrawFees>) -> Result<()> {
+    let config = &ctx.accounts.config;
+    let amount = ctx.accounts.fee_vault.amount;
+    require!(amount > 0, SscreError::NothingToWithdraw);
+    let bump = [config.bump];
+    let seeds: &[&[u8]] = &[POOL_CONFIG_SEED, &bump];
+    transfer_checked(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.fee_vault.to_account_info(),
+                mint: ctx.accounts.vcoin_mint.to_account_info(),
+                to: ctx.accounts.fee_destination.to_account_info(),
+                authority: config.to_account_info(),
+            },
+            &[seeds],
+        ),
+        amount,
+        ctx.accounts.vcoin_mint.decimals,
+    )?;
+    emit!(FeesWithdrawn {
+        amount,
+        destination: ctx.accounts.fee_destination.key(),
     });
     Ok(())
 }

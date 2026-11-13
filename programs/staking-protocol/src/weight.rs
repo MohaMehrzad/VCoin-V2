@@ -62,6 +62,7 @@ mod tests {
             lock_start: 0,
             lock_end,
             is_used: true,
+            is_active: true,
         }
     }
 

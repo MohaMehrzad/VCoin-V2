@@ -19,10 +19,11 @@ The programs remove single-key control wherever they can. The remaining trust is
 | Role | Can do | Cannot do | Check |
 |---|---|---|---|
 | Upgrade authority | Upgrade programs; run each program's one-time `initialize` | Anything else once authority is handed over | Move it to the DAO when hotfixes are no longer needed |
-| Program authority (the Realms governance PDA after launch) | Pause; set parameters within on-chain bounds; manage oracles and attesters; propose slashes | Act without a passed vote plus hold-up; skip the 24h fee, treasury, oracle and authority timelocks | Realms thresholds, hold-up and council veto |
-| 5A oracles | Set reputation scores; evaluate vouches | Apply a score alone (needs `required_consensus` ≥ 2 matching submissions) | Removal by the DAO; 24h activation of new oracles |
-| SSCRE oracles | Propose an epoch's merkle root | Pay more than the epoch's escrowed budget; activate without quorum; skip the dispute delay | DAO `veto_root`; per-epoch vaults; clawback |
-| Decryption committee | Decrypt poll totals (t-of-n) | Decrypt a single ballot unless t members collude; forge a tally (it is verified on-chain) | Feldman-verified DKG keys registered by the DAO |
+| Program authority (the Realms governance PDA after launch) | Pause and unpause; set parameters within on-chain bounds; manage oracles and attesters; propose slashes; set the guardian | Act without a passed vote plus hold-up; skip the 24h fee, treasury, oracle and authority timelocks | Realms thresholds, hold-up and council veto |
+| Guardian (optional per program; a council multisig) | Pause at once; veto a proposed SSCRE root | Unpause; move funds; change any parameter, oracle, fee or key | The authority unpauses and can replace it; pauses never block stake withdrawals and extend claim and reveal deadlines |
+| 5A oracles | Set reputation scores; evaluate vouches | Apply a score alone or as a minority (needs `required_consensus` ≥ 2 and a majority of active oracles) | Removal by the DAO; 24h activation of new oracles |
+| SSCRE oracles | Propose an epoch's merkle root | Pay more than the epoch's escrowed budget; activate without a quorum (≥ 2 and a majority of active oracles); skip the dispute delay; keep a proposal alive across an oracle-set change | `veto_root` by the DAO or the guardian; per-epoch vaults; clawback |
+| Decryption committee | Decrypt poll totals (t-of-n) | Decrypt a single ballot unless t members collude; forge a tally (it is verified on-chain); bias the election key toward one member (every dealer proves knowledge of its contribution) | Feldman-verified DKG keys registered by the DAO; DKG dealings published for anyone to re-check |
 | Identity attesters | Grant verification levels | Grant levels after removal (`effective_level` drops to 0); reuse one attestation across wallets | `revoke_attestation`; expiry |
 | Engagement oracle | Report engagement (energy refunds only) | Move tokens | 24h-timelocked rotation |
 | Relayer (off-chain) | Pay fees and rent; charge VCoin up to the user-signed `max_fee` | Use sessions for transfers, tips, claims, staking or votes | Session scope bits, ≤ 24h validity |

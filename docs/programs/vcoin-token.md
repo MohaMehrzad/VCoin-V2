@@ -18,7 +18,8 @@ The VCoin mint and its supply control.
 | Who | Instruction |
 |---|---|
 | Upgrade authority, once | `initialize(name, symbol, uri)`: creates the config, the mint and its metadata |
-| Authority | `mint_tokens(amount)`, `update_metadata(field, value)`, `set_paused`, `propose_authority` / `cancel_authority_transfer` |
+| Authority | `mint_tokens(amount)`, `update_metadata(field, value)`, `set_paused`, `set_guardian`, `propose_authority` / `cancel_authority_transfer` |
+| Guardian (optional emergency key) | `set_paused(true)` only |
 | New authority, after 24h | `accept_authority` |
 
 Pausing stops minting only. Holders' transfers are plain Token-2022 transfers that no program

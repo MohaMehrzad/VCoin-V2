@@ -33,6 +33,7 @@ describe("builders produce the IDL's instructions", () => {
   test("staking", async () => {
     const owner = key();
     expectMatchesIdl(await sdk.createVoterIx(p, owner), "staking", "create_voter");
+    expectMatchesIdl(await sdk.deactivateExpiredIx(p, owner, 0), "staking", "deactivate_expired");
     const dep = await sdk.depositIx(p, { owner, index: 0, amount: 5n * sdk.VCOIN, lockSecs: sdk.MIN_LOCK_SECS });
     expectMatchesIdl(dep, "staking", "deposit");
     expect(dep.keys[1].pubkey).toEqual(sdk.pda.voter(owner));
@@ -70,26 +71,35 @@ describe("builders produce the IDL's instructions", () => {
       claimantToken: key(),
       amount: 10n,
       proof: [new Uint8Array(32)],
-      feeDestination: key(),
       payer: key(),
     });
     expectMatchesIdl(claim, "sscre", "claim");
     await expect(
-      sdk.claimIx(p, { epochIndex: 0n, claimant: key(), claimantToken: key(), amount: 1n, proof: Array(33).fill(new Uint8Array(32)), feeDestination: key(), payer: key() }),
+      sdk.claimIx(p, { epochIndex: 0n, claimant: key(), claimantToken: key(), amount: 1n, proof: Array(33).fill(new Uint8Array(32)), payer: key() }),
     ).rejects.toThrow("proof too long");
+    expect(claim.keys[6].pubkey).toEqual(sdk.pda.sscreFeeVault());
     expectMatchesIdl(await sdk.startEpochIx(p, 0n, key()), "sscre", "start_epoch");
+    expectMatchesIdl(await sdk.withdrawFeesIx(p, key()), "sscre", "withdraw_fees");
   });
 
   test("content with and without a session", async () => {
     const author = key();
     const id = new Uint8Array(32).fill(4);
-    const own = await sdk.createContentIx(p, { author, trackingId: id, contentHash: id, uri: "ipfs://x", contentType: 0, hasStake: false });
+    const own = await sdk.createContentIx(p, { author, trackingId: id, contentHash: id, uri: "ipfs://x", contentType: 0 });
     expectMatchesIdl(own, "content", "create_content");
     expect(own.keys[3].pubkey).toEqual(sdk.PROGRAM_IDS.content); // optional session = None
     const session = key();
-    const bySession = await sdk.createContentIx(p, { author, signer: session, trackingId: id, contentHash: id, uri: "u", contentType: 0, hasStake: true });
+    const bySession = await sdk.createContentIx(p, { author, signer: session, trackingId: id, contentHash: id, uri: "u", contentType: 0 });
     expect(bySession.keys[3].pubkey).toEqual(sdk.pda.session(sdk.PROGRAM_IDS.content, session, author));
     expect(bySession.keys[5].pubkey).toEqual(sdk.pda.voter(author));
+    expect(own.keys[5].pubkey).toEqual(sdk.pda.voter(author)); // always passed, never optional
+    expectMatchesIdl(await sdk.editContentIx(p, { author, trackingId: id, contentHash: id, uri: "u" }), "content", "edit_content");
+    expectMatchesIdl(await sdk.claimRefundIx(p, author, id), "content", "claim_refund");
+    const sponsor = key();
+    const del = await sdk.deleteContentIx(p, author, id, sponsor);
+    expectMatchesIdl(del, "content", "delete_content");
+    expect(del.keys[2].pubkey).toEqual(sponsor);
+    expectMatchesIdl(await sdk.initUserEnergyIx(p, author, author), "content", "init_user_energy");
   });
 
   test("vilink, identity, five-a, gasless", async () => {

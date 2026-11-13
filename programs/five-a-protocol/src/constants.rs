@@ -24,15 +24,17 @@ pub const AGILITY_WEIGHT: u16 = 1500;
 pub const ACTIVITY_WEIGHT: u16 = 2500;
 pub const APPROVED_WEIGHT: u16 = 1500;
 
-/// Oracles: up to 7 registered; a score applies when `required_consensus` (2..=5) of the
-/// active ones submit identical values (audit 5A-01).
+/// Oracles: up to 7 registered; a score applies when identical values are submitted by
+/// `required_consensus` (2..=5) of the active ones and by a strict majority of them,
+/// whichever is larger (audit 5A-01).
 pub const MAX_ORACLES: usize = 7;
 pub const MIN_CONSENSUS: u8 = 2;
 pub const MAX_CONSENSUS: u8 = 5;
 pub const DEFAULT_CONSENSUS: u8 = 2;
 /// A newly registered oracle counts only after this delay.
 pub const ORACLE_ACTIVATION_DELAY: i64 = DAY;
-/// An update round that has not reached consensus resets after this long.
+/// A submission counts toward consensus for this long (a sliding window per oracle, so no
+/// single oracle's timing decides which submissions are still alive).
 pub const SCORE_UPDATE_EXPIRY: i64 = 60 * 60;
 /// Minimum time between two applied updates for the same user.
 pub const MIN_SCORE_UPDATE_INTERVAL: i64 = 60 * 60;
@@ -43,7 +45,7 @@ pub const MIN_VOUCHER_SCORE: u16 = 6000;
 pub const MAX_VOUCHEE_SCORE: u16 = 4999;
 /// At evaluation, the vouchee's composite must reach this for the vouch to succeed.
 pub const VOUCH_SUCCESS_SCORE: u16 = 5000;
-/// Vouches a user can receive in total.
+/// Live vouches a user can hold at once; the vouchee may decline any of them.
 pub const MAX_VOUCHES_RECEIVED: u8 = 3;
 pub const VOUCH_EVALUATION_PERIOD: i64 = 90 * DAY;
 pub const MAX_VOUCH_AGE: i64 = 365 * DAY;

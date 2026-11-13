@@ -11,11 +11,12 @@ Program id `6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu`. [API](../API.md#staki
   - `slash_destination`;
   - `WeightParams`;
   - 5A gates;
-  - `total_locked`;
+  - `total_locked` (all principal in the vault) and `active_locked` (principal in deposits
+    not yet deactivated after their lock ended);
   - the slash nonce.
 - **Vault** `["vault"]`: VCoin held for all deposits.
-- **`Voter`** `["voter", owner]`: up to 8 deposits `{amount, lock_start, lock_end}` and
-  `pending_slashes`.
+- **`Voter`** `["voter", owner]`: up to 8 deposits `{amount, lock_start, lock_end, is_active}`
+  and `pending_slashes`.
 - **Realms records:**
   - `VoterWeightRecord` `["voter-weight-record", owner]`;
   - `MaxVoterWeightRecord` `["max-voter-weight-record"]`.
@@ -40,9 +41,17 @@ It is worth 0 if `lock_end − t < min_lock_remaining_to_vote`.
 | `saturation` | 4 years |
 | `min_lock_remaining_to_vote` | 4 days |
 
-Weight is linear, so splitting tokens across wallets gains nothing (audit GOV-02). The max record
-is `total_locked × (baseline + max_extra)`, an upper bound. Set Realms percentage thresholds with
-that in mind.
+Weight is linear, so splitting tokens across wallets gains nothing (audit GOV-02).
+
+The max record is `active_locked × (baseline + max_extra)`, an upper bound on the weight that can
+be cast. Set Realms percentage thresholds with that in mind.
+
+A deposit whose lock has ended has no voting weight. It leaves `active_locked` when its owner
+withdraws from it, or when anyone calls `deactivate_expired(index)` on it, and it comes back if
+the owner relocks it with `extend_lock`. Without this, stake that is expired but never
+withdrawn (lost keys, inactive holders) would inflate the max forever and could make percentage
+thresholds unreachable. Run the crank for expired deposits before an important vote; the SDK
+has `deactivateExpiredIx`.
 
 ## Flows
 
@@ -51,7 +60,8 @@ that in mind.
   - It credits exactly what the vault received and mints the receipt into the owner's veVCoin
     associated token account.
   - Adding to a live slot keeps the later lock end.
-- **`extend_lock`.** Moves a lock end later only.
+- **`extend_lock`.** Moves a lock end later only. Relocking an expired deposit reactivates it.
+- **`deactivate_expired`.** Permissionless; see [Weight](#weight).
 - **`withdraw`.**
   - Only after `lock_end`.
   - Never paused.
@@ -77,6 +87,7 @@ that in mind.
 - `set_gate_params`: scores of at most 10000.
 - `set_slash_destination`.
 - `set_paused`: deposits and extensions only.
+- `set_guardian`: an emergency key that may pause but never unpause.
 - Two-step authority.
 
 Initialization (`create_registrar`) is restricted to the upgrade authority and checks that the

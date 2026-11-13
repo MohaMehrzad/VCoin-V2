@@ -50,7 +50,13 @@ pub fn check_committee_shape(threshold: u8, size: u8) -> ZkResult<()> {
 
 /// Feldman check: `member_pk == Σ_k index^k · A_k`, with the 1-based `member_index`.
 pub fn verify_feldman(commitments: &[Point], member_index: u8, member_pk: &Point) -> ZkResult<()> {
-    if commitments.is_empty() || member_index == 0 || member_index > MAX_COMMITTEE {
+    // At most MAX_COMMITTEE coefficients, so the powers below stay tiny (≤ 5^4) and a
+    // direct caller cannot overflow them with an over-long list.
+    if commitments.is_empty()
+        || commitments.len() > MAX_COMMITTEE as usize
+        || member_index == 0
+        || member_index > MAX_COMMITTEE
+    {
         return Err(ZkError::InvalidCommittee);
     }
     check_public_key(member_pk)?;

@@ -66,7 +66,7 @@ pub fn set_paused(ctx: Context<UpdateRegistrar>, paused: bool) -> Result<()> {
     let registrar = &mut ctx.accounts.registrar;
     registrar
         .admin
-        .require_authority(&ctx.accounts.authority.key())?;
+        .require_pause_rights(&ctx.accounts.authority.key(), paused)?;
     registrar.paused = paused;
     emit!(PauseChanged { paused });
     Ok(())
@@ -119,5 +119,13 @@ pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         previous,
         new_authority: admin.authority
     });
+    Ok(())
+}
+
+/// Sets or clears the emergency guardian, which may pause but never unpause.
+pub fn set_guardian(ctx: Context<UpdateRegistrar>, guardian: Pubkey) -> Result<()> {
+    let admin = &mut ctx.accounts.registrar.admin;
+    admin.set_guardian(&ctx.accounts.authority.key(), guardian)?;
+    emit!(GuardianSet { guardian });
     Ok(())
 }

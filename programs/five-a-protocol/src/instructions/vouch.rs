@@ -1,6 +1,7 @@
 //! Vouching: reputation-only (no stake, no reward). An established user (score ≥ 60%)
 //! vouches for a new or low-score user; after 90 days an oracle records whether the vouchee
-//! reached 50%; after a year an unevaluated vouch expires. Every outcome frees the slot.
+//! reached 50%; after a year an unevaluated vouch expires. The vouchee may decline a vouch
+//! at any time. Every outcome frees the voucher's slot and the vouchee's.
 
 use anchor_lang::prelude::*;
 
@@ -80,8 +81,11 @@ fn settle(ctx: &mut CloseVouch, outcome: VouchOutcome, vouchee_score: u16) -> Re
         VouchOutcome::Succeeded => &mut stats.successful_vouches,
         VouchOutcome::Failed => &mut stats.failed_vouches,
         VouchOutcome::Expired => &mut stats.expired_vouches,
+        VouchOutcome::Declined => &mut stats.declined_vouches,
     };
     *counter = counter.checked_add(1).ok_or(FiveAError::Overflow)?;
+    let status = &mut ctx.vouchee_status;
+    status.vouches_received = status.vouches_received.saturating_sub(1);
     emit!(VouchClosed {
         voucher: ctx.vouch_record.voucher,
         vouchee: ctx.vouch_record.vouchee,
@@ -130,4 +134,10 @@ pub fn expire_vouch(ctx: Context<CloseVouch>) -> Result<()> {
         FiveAError::VouchNotExpired
     );
     settle(ctx.accounts, VouchOutcome::Expired, 0)
+}
+
+/// The vouchee turns a vouch down (nobody can be vouched for against their will, and an
+/// unwanted vouch cannot occupy one of their slots). Works while paused: it only removes.
+pub fn decline_vouch(ctx: Context<DeclineVouch>) -> Result<()> {
+    settle(&mut ctx.accounts.close, VouchOutcome::Declined, 0)
 }

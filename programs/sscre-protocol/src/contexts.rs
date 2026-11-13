@@ -23,6 +23,16 @@ pub struct InitializePool<'info> {
         token::token_program = token_program,
     )]
     pub reserve_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(
+        init,
+        payer = authority,
+        seeds = [FEE_VAULT_SEED],
+        bump,
+        token::mint = vcoin_mint,
+        token::authority = config,
+        token::token_program = token_program,
+    )]
+    pub fee_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(token::mint = vcoin_mint, token::token_program = token_program)]
     pub fee_destination: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ SscreError::InvalidProgramData)]
@@ -123,10 +133,11 @@ pub struct ActivateRoot<'info> {
     pub epoch: Box<Account<'info, Epoch>>,
 }
 
-/// The claimant signs; `payer` (e.g. a relayer) funds the claim-status rent (SSC-07).
+/// The claimant signs; `payer` (e.g. a relayer) funds the claim-status rent (SSC-07). The
+/// fee goes to the program's own fee vault, so no outside account can block a claim.
 #[derive(Accounts)]
 pub struct Claim<'info> {
-    #[account(seeds = [POOL_CONFIG_SEED], bump = config.bump, has_one = vcoin_mint, has_one = fee_destination)]
+    #[account(seeds = [POOL_CONFIG_SEED], bump = config.bump, has_one = vcoin_mint, has_one = fee_vault)]
     pub config: Box<Account<'info, PoolConfig>>,
     #[account(mut, seeds = [EPOCH_SEED, &epoch.index.to_le_bytes()], bump = epoch.bump, has_one = vault)]
     pub epoch: Box<Account<'info, Epoch>>,
@@ -137,7 +148,7 @@ pub struct Claim<'info> {
     #[account(mut, token::mint = vcoin_mint, token::authority = claimant, token::token_program = token_program)]
     pub claimant_token: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut)]
-    pub fee_destination: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fee_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
         init,
         payer = payer,
@@ -150,6 +161,25 @@ pub struct Claim<'info> {
     pub payer: Signer<'info>,
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
+}
+
+/// Permissionless: sweeps collected fees to the configured fee account.
+#[derive(Accounts)]
+pub struct WithdrawFees<'info> {
+    #[account(
+        seeds = [POOL_CONFIG_SEED],
+        bump = config.bump,
+        has_one = vcoin_mint,
+        has_one = fee_vault,
+        has_one = fee_destination,
+    )]
+    pub config: Box<Account<'info, PoolConfig>>,
+    #[account(mut)]
+    pub fee_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(mut)]
+    pub fee_destination: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub vcoin_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub token_program: Program<'info, Token2022>,
 }
 
 /// Permissionless after the deadline: unclaimed funds return to the reserve.

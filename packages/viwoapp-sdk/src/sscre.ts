@@ -97,7 +97,10 @@ export function claimFee(amount: bigint, feeBps: number): bigint {
   return (amount * BigInt(feeBps) + 9_999n) / 10_000n;
 }
 
-/** Claims for `claimant` (who signs); `payer` (e.g. a relayer) funds the claim marker. */
+/**
+ * Claims for `claimant` (who signs); `payer` (e.g. a relayer) funds the claim marker. The fee
+ * goes to the program's own fee vault, so a claim depends on no outside account.
+ */
 export async function claimIx(
   p: Programs,
   args: {
@@ -106,7 +109,6 @@ export async function claimIx(
     claimantToken: PublicKey;
     amount: bigint;
     proof: Uint8Array[];
-    feeDestination: PublicKey;
     payer: PublicKey;
   },
 ): Promise<TransactionInstruction> {
@@ -121,7 +123,7 @@ export async function claimIx(
       vcoinMint: vcoinMint(),
       claimant: args.claimant,
       claimantToken: args.claimantToken,
-      feeDestination: args.feeDestination,
+      feeVault: pda.sscreFeeVault(),
       claimStatus: pda.claimStatus(epoch, args.claimant),
       payer: args.payer,
       tokenProgram: TOKEN_2022_PROGRAM_ID,
@@ -130,7 +132,24 @@ export async function claimIx(
     .instruction();
 }
 
-/** Permissionless: funds epoch `index` from the reserve. */
+/** Permissionless: sweeps collected claim fees to the pool's configured fee account. */
+export function withdrawFeesIx(p: Programs, feeDestination: PublicKey): Promise<TransactionInstruction> {
+  return p.sscre.methods
+    .withdrawFees()
+    .accountsStrict({
+      config: pda.poolConfig(),
+      feeVault: pda.sscreFeeVault(),
+      feeDestination,
+      vcoinMint: vcoinMint(),
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+    })
+    .instruction();
+}
+
+/**
+ * Funds epoch `index` from the reserve. Anyone may call it when the reserve covers the
+ * scheduled budget; only the pool authority may start a smaller one.
+ */
 export function startEpochIx(p: Programs, index: bigint, payer: PublicKey): Promise<TransactionInstruction> {
   return p.sscre.methods
     .startEpoch()

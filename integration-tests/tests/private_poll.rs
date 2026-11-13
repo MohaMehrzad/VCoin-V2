@@ -33,6 +33,8 @@ const DAY: i64 = 24 * 60 * 60;
 const VOTING: i64 = 3 * DAY;
 const THRESHOLD: u8 = 3;
 const SIZE: u8 = 5;
+/// Identifies the DKG run in these tests.
+const SESSION: [u8; 32] = [9u8; 32];
 
 fn perr(e: PollError) -> u32 {
     6000 + e as u32
@@ -60,14 +62,14 @@ fn ballot_pda(poll: &Pubkey, owner: &Pubkey) -> Pubkey {
 
 fn dkg() -> Vec<KeyShare> {
     let dealers: Vec<Dealer> = (1..=SIZE)
-        .map(|i| Dealer::new(i, THRESHOLD, SIZE, &mut OsRng).unwrap())
+        .map(|i| Dealer::new(i, THRESHOLD, SIZE, &SESSION, &mut OsRng).unwrap())
         .collect();
     let dealings: Vec<PublicDealing> = dealers.iter().map(Dealer::public_dealing).collect();
     (1..=SIZE)
         .map(|i| {
             let shares: Vec<ShareMessage> =
                 dealers.iter().map(|d| d.share_for(i).unwrap()).collect();
-            finish(i, THRESHOLD, &dealings, &shares).unwrap()
+            finish(i, THRESHOLD, &SESSION, &dealings, &shares).unwrap()
         })
         .collect()
 }
@@ -719,6 +721,59 @@ fn without_enough_shares_a_poll_expires_and_an_empty_poll_is_rejected() {
     assert_eq!(
         read_account::<Poll>(&s.svm, &empty).outcome,
         PollOutcome::Rejected
+    );
+}
+
+/// Re-review A3: shares cannot be posted while paused, so a pause during the reveal window
+/// must neither expire the poll nor eat the committee's time.
+#[test]
+fn a_pause_during_the_reveal_window_cannot_expire_a_decryptable_poll() {
+    let mut s = setup();
+    let c = install(&mut s);
+    let creator = staker(&mut s, 1_000 * VCOIN);
+    let poll = open_poll(&mut s, &creator, Pubkey::new_unique());
+    let st = staker(&mut s, 300 * VCOIN);
+    vote_in(&mut s, &poll, &st, Choice::For);
+    warp_by(&mut s.svm, VOTING);
+    submit_shares(&mut s, &c, &poll, &[1, 2]);
+
+    let admin = s.admin.insecure_clone();
+    let set_paused = |paused: bool| {
+        ix(
+            private_poll::ID,
+            private_poll::accounts::UpdateConfig {
+                config: config_pda(),
+                authority: admin.pubkey(),
+            },
+            private_poll::instruction::SetPaused { paused },
+        )
+    };
+    let expire = ix(
+        private_poll::ID,
+        private_poll::accounts::SettlePoll {
+            config: config_pda(),
+            poll,
+        },
+        private_poll::instruction::ExpirePoll {},
+    );
+    let reveal = PollParams::default().reveal_window_secs;
+
+    // Paused for longer than the whole reveal window.
+    send(&mut s.svm, &[set_paused(true)], &admin, &[]).expect("pause");
+    warp_by(&mut s.svm, 2 * reveal);
+    let r = send(&mut s.svm, std::slice::from_ref(&expire), &admin, &[]);
+    assert_anchor_error(r, perr(PollError::Paused));
+    send(&mut s.svm, &[set_paused(false)], &admin, &[]).expect("unpause");
+
+    // The deadline moved by the downtime: still not expirable, and the third share lands.
+    let r = send(&mut s.svm, std::slice::from_ref(&expire), &admin, &[]);
+    assert_anchor_error(r, perr(PollError::RevealStillOpen));
+    submit_shares(&mut s, &c, &poll, &[3]);
+    let tally = settle(&mut s, &poll);
+    assert!(tally[0] > 0);
+    assert_eq!(
+        read_account::<Poll>(&s.svm, &poll).outcome,
+        PollOutcome::Passed
     );
 }
 

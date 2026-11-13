@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use gasless_protocol::{constants::SESSION_SEED, state::SessionToken};
-use staking_protocol::{constants::VOTER_SEED, state::Voter};
+use staking_protocol::constants::VOTER_SEED;
 
 use crate::constants::*;
 use crate::errors::ContentError;
@@ -40,7 +40,8 @@ pub struct ApplyOracle<'info> {
     pub config: Box<Account<'info, RegistryConfig>>,
 }
 
-/// Anyone may open a user's energy account; its tier comes from the user's staking deposits.
+/// Anyone may open a user's energy account; its tier comes from the user's staking deposits,
+/// which must be passed.
 #[derive(Accounts)]
 pub struct InitUserEnergy<'info> {
     #[account(seeds = [REGISTRY_CONFIG_SEED], bump = config.bump)]
@@ -49,9 +50,11 @@ pub struct InitUserEnergy<'info> {
     pub user: UncheckedAccount<'info>,
     #[account(init, payer = payer, space = UserEnergy::LEN, seeds = [USER_ENERGY_SEED, user.key().as_ref()], bump)]
     pub user_energy: Box<Account<'info, UserEnergy>>,
-    /// The user's staking deposits; omitted = tier 0.
-    #[account(seeds = [VOTER_SEED, user.key().as_ref()], bump = stake.bump, seeds::program = staking_protocol::ID)]
-    pub stake: Option<Box<Account<'info, Voter>>>,
+    /// CHECK: the user's staking `Voter` PDA (address enforced here). Always required, so
+    /// the tier can be neither understated by a third party nor left stale by the user; a
+    /// wallet that never staked simply has no account there (tier 0).
+    #[account(seeds = [VOTER_SEED, user.key().as_ref()], bump, seeds::program = staking_protocol::ID)]
+    pub stake: UncheckedAccount<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -74,9 +77,11 @@ pub struct CreateContent<'info> {
     pub session: Option<Box<Account<'info, SessionToken>>>,
     #[account(mut, seeds = [USER_ENERGY_SEED, author.key().as_ref()], bump = user_energy.bump)]
     pub user_energy: Box<Account<'info, UserEnergy>>,
-    /// The author's staking deposits; refreshes the tier on every post. Omitted = tier 0.
-    #[account(seeds = [VOTER_SEED, author.key().as_ref()], bump = stake.bump, seeds::program = staking_protocol::ID)]
-    pub stake: Option<Box<Account<'info, Voter>>>,
+    /// CHECK: the author's staking `Voter` PDA (address enforced here). Always required, so
+    /// the tier can be neither understated by a third party nor left stale by the author; a
+    /// wallet that never staked simply has no account there (tier 0).
+    #[account(seeds = [VOTER_SEED, author.key().as_ref()], bump, seeds::program = staking_protocol::ID)]
+    pub stake: UncheckedAccount<'info>,
     #[account(
         init,
         payer = payer,
@@ -105,6 +110,11 @@ pub struct EditContent<'info> {
     pub session: Option<Box<Account<'info, SessionToken>>>,
     #[account(mut, seeds = [USER_ENERGY_SEED, author.key().as_ref()], bump = user_energy.bump)]
     pub user_energy: Box<Account<'info, UserEnergy>>,
+    /// CHECK: the author's staking `Voter` PDA (address enforced here). Always required, so
+    /// the tier can be neither understated by a third party nor left stale by the author; a
+    /// wallet that never staked simply has no account there (tier 0).
+    #[account(seeds = [VOTER_SEED, author.key().as_ref()], bump, seeds::program = staking_protocol::ID)]
+    pub stake: UncheckedAccount<'info>,
     #[account(
         mut,
         seeds = [CONTENT_RECORD_SEED, author.key().as_ref(), content.tracking_id.as_ref()],
@@ -114,7 +124,8 @@ pub struct EditContent<'info> {
     pub content: Box<Account<'info, ContentRecord>>,
 }
 
-/// Main wallet only; closes the record (rent to the author, audit CR-11).
+/// Main wallet only; closes the record. The rent returns to whoever paid it (the author, or
+/// the relayer that sponsored the post), so deleting sponsored posts earns nothing.
 #[derive(Accounts)]
 pub struct DeleteContent<'info> {
     #[account(
@@ -122,11 +133,14 @@ pub struct DeleteContent<'info> {
         seeds = [CONTENT_RECORD_SEED, author.key().as_ref(), content.tracking_id.as_ref()],
         bump = content.bump,
         has_one = author,
-        close = author,
+        has_one = rent_payer,
+        close = rent_payer,
     )]
     pub content: Box<Account<'info, ContentRecord>>,
-    #[account(mut)]
     pub author: Signer<'info>,
+    /// CHECK: bound by `has_one`; receives the record's rent.
+    #[account(mut)]
+    pub rent_payer: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -149,6 +163,11 @@ pub struct ClaimRefund<'info> {
     pub author: Signer<'info>,
     #[account(mut, seeds = [USER_ENERGY_SEED, author.key().as_ref()], bump = user_energy.bump)]
     pub user_energy: Box<Account<'info, UserEnergy>>,
+    /// CHECK: the author's staking `Voter` PDA (address enforced here). Always required, so
+    /// the tier can be neither understated by a third party nor left stale by the author; a
+    /// wallet that never staked simply has no account there (tier 0).
+    #[account(seeds = [VOTER_SEED, author.key().as_ref()], bump, seeds::program = staking_protocol::ID)]
+    pub stake: UncheckedAccount<'info>,
     #[account(
         mut,
         seeds = [CONTENT_RECORD_SEED, author.key().as_ref(), content.tracking_id.as_ref()],

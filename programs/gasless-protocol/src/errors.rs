@@ -30,4 +30,6 @@ pub enum GaslessError {
     ZeroAmount,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("VCoin mint must be the vcoin-token program's mint PDA")]
+    InvalidVCoinMint,
 }

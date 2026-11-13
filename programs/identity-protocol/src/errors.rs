@@ -42,6 +42,8 @@ pub enum IdentityError {
     NoPendingChange,
     #[msg("Payment change timelock still active")]
     TimelockActive,
+    #[msg("Only the attester that issued this attestation may refresh it")]
+    AttesterMismatch,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

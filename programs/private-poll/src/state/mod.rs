@@ -74,11 +74,24 @@ pub struct PollConfig {
     pub params: PollParams,
     pub poll_count: u64,
     pub paused: bool,
+    pub paused_since: i64,
+    /// Total seconds spent paused, so reveal deadlines can be extended by downtime.
+    pub pause_accum: i64,
     pub bump: u8,
 }
 
 impl PollConfig {
     pub const LEN: usize = 8 + Self::INIT_SPACE;
+
+    /// Paused seconds so far, including a pause in progress.
+    pub fn paused_total(&self, now: i64) -> i64 {
+        self.pause_accum
+            + if self.paused {
+                now.saturating_sub(self.paused_since)
+            } else {
+                0
+            }
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
@@ -120,11 +133,25 @@ pub struct Poll {
     pub tally: [u64; NUM_CHOICES],
     pub finalized_at: i64,
     pub consumed: bool,
+    /// `PollConfig::pause_accum` when the poll was created.
+    pub pause_accum_at_creation: i64,
     pub bump: u8,
 }
 
 impl Poll {
     pub const LEN: usize = 8 + Self::INIT_SPACE;
+
+    /// The reveal window closes at `reveal_deadline` plus any time the program was paused
+    /// since the poll was created: shares cannot be posted while paused, so a pause must
+    /// never let a decryptable poll expire. The voting window is *not* extended, because
+    /// weights are fixed at `end_time`.
+    pub fn effective_reveal_deadline(&self, config: &PollConfig, now: i64) -> i64 {
+        self.reveal_deadline.saturating_add(
+            config
+                .paused_total(now)
+                .saturating_sub(self.pause_accum_at_creation),
+        )
+    }
 
     pub fn shares_submitted(&self) -> u32 {
         self.shares_bitmap.count_ones()

@@ -151,9 +151,13 @@ pub fn is_valid_username(name: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
 }
 
-/// Cost of buying `tier` for 30 days given the current subscription: same tier extends from
-/// max(now, expiry); an upgrade credits the unused time of the current tier; a downgrade
-/// while active is refused (`None`) (audit ID-05).
+/// Cost of buying `tier` given the current subscription, and the new expiry: same tier
+/// extends from max(now, expiry) by 30 days; an upgrade credits the unused time of the
+/// current tier; a downgrade while active is refused (`None`) (audit ID-05).
+///
+/// An upgrade normally costs `price − credit` for 30 days. If the prepaid time is worth a
+/// full period of the new tier or more, the upgrade is free and the time carries over at
+/// the price ratio, so no paid value is ever dropped.
 pub fn subscription_quote(
     current: &Subscription,
     tier: u8,
@@ -174,8 +178,18 @@ pub fn subscription_quote(
     if tier < active {
         return None;
     }
-    let remaining = (current.expires_at - now) as u128;
-    let credit = remaining * prices[active as usize - 1] as u128 / SUBSCRIPTION_DURATION as u128;
-    let cost = (price as u128).saturating_sub(credit) as u64;
-    Some((cost, now.checked_add(SUBSCRIPTION_DURATION)?))
+    let remaining = (current.expires_at - now) as u128; // active, so > 0
+    let active_price = prices[active as usize - 1] as u128;
+    let credit = remaining * active_price / SUBSCRIPTION_DURATION as u128;
+    if credit < price as u128 {
+        let cost = (price as u128 - credit) as u64;
+        return Some((cost, now.checked_add(SUBSCRIPTION_DURATION)?));
+    }
+    let carried = if price == 0 {
+        remaining
+    } else {
+        remaining * active_price / price as u128
+    };
+    let carried = i64::try_from(carried).ok()?.max(SUBSCRIPTION_DURATION);
+    Some((0, now.checked_add(carried)?))
 }

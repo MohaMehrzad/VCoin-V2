@@ -277,6 +277,68 @@ export type ContentRegistry = {
           }
         },
         {
+          "name": "stake",
+          "docs": [
+            "the tier can be neither understated by a third party nor left stale by the author; a",
+            "wallet that never staked simply has no account there (tier 0)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "author"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                77,
+                175,
+                130,
+                234,
+                236,
+                183,
+                242,
+                140,
+                88,
+                220,
+                16,
+                6,
+                145,
+                239,
+                100,
+                212,
+                48,
+                93,
+                96,
+                72,
+                241,
+                157,
+                52,
+                146,
+                186,
+                137,
+                103,
+                17,
+                16,
+                165,
+                22,
+                226
+              ]
+            }
+          }
+        },
+        {
           "name": "content",
           "writable": true,
           "pda": {
@@ -495,9 +557,9 @@ export type ContentRegistry = {
         {
           "name": "stake",
           "docs": [
-            "The author's staking deposits; refreshes the tier on every post. Omitted = tier 0."
+            "the tier can be neither understated by a third party nor left stale by the author; a",
+            "wallet that never staked simply has no account there (tier 0)."
           ],
-          "optional": true,
           "pda": {
             "seeds": [
               {
@@ -679,8 +741,14 @@ export type ContentRegistry = {
         },
         {
           "name": "author",
-          "writable": true,
           "signer": true,
+          "relations": [
+            "content"
+          ]
+        },
+        {
+          "name": "rentPayer",
+          "writable": true,
           "relations": [
             "content"
           ]
@@ -869,6 +937,68 @@ export type ContentRegistry = {
           }
         },
         {
+          "name": "stake",
+          "docs": [
+            "the tier can be neither understated by a third party nor left stale by the author; a",
+            "wallet that never staked simply has no account there (tier 0)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "author"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                77,
+                175,
+                130,
+                234,
+                236,
+                183,
+                242,
+                140,
+                88,
+                220,
+                16,
+                6,
+                145,
+                239,
+                100,
+                212,
+                48,
+                93,
+                96,
+                72,
+                241,
+                157,
+                52,
+                146,
+                186,
+                137,
+                103,
+                17,
+                16,
+                165,
+                22,
+                226
+              ]
+            }
+          }
+        },
+        {
           "name": "content",
           "writable": true,
           "pda": {
@@ -995,9 +1125,9 @@ export type ContentRegistry = {
         {
           "name": "stake",
           "docs": [
-            "The user's staking deposits; omitted = tier 0."
+            "the tier can be neither understated by a third party nor left stale by the user; a",
+            "wallet that never staked simply has no account there (tier 0)."
           ],
-          "optional": true,
           "pda": {
             "seeds": [
               {
@@ -1241,6 +1371,62 @@ export type ContentRegistry = {
       ]
     },
     {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "setPaused",
       "discriminator": [
         91,
@@ -1435,19 +1621,6 @@ export type ContentRegistry = {
         195,
         145
       ]
-    },
-    {
-      "name": "voter",
-      "discriminator": [
-        241,
-        93,
-        35,
-        191,
-        254,
-        147,
-        17,
-        202
-      ]
     }
   ],
   "events": [
@@ -1566,6 +1739,19 @@ export type ContentRegistry = {
         109,
         222,
         172
+      ]
+    },
+    {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
       ]
     },
     {
@@ -1751,10 +1937,17 @@ export type ContentRegistry = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1776,6 +1969,13 @@ export type ContentRegistry = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -2027,6 +2227,13 @@ export type ContentRegistry = {
             "type": "bool"
           },
           {
+            "name": "rentPayer",
+            "docs": [
+              "Paid the record's rent and gets it back on delete."
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -2043,33 +2250,6 @@ export type ContentRegistry = {
           },
           {
             "name": "edited"
-          }
-        ]
-      }
-    },
-    {
-      "name": "depositEntry",
-      "docs": [
-        "One locked deposit."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "lockStart",
-            "type": "i64"
-          },
-          {
-            "name": "lockEnd",
-            "type": "i64"
-          },
-          {
-            "name": "isUsed",
-            "type": "bool"
           }
         ]
       }
@@ -2131,6 +2311,21 @@ export type ContentRegistry = {
           {
             "name": "engagementCount",
             "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
           }
         ]
       }
@@ -2393,45 +2588,6 @@ export type ContentRegistry = {
           {
             "name": "refundedToday",
             "type": "u16"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "voter",
-      "docs": [
-        "Per-owner deposits, PDA `[\"voter\", owner]`."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "pubkey"
-          },
-          {
-            "name": "deposits",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "depositEntry"
-                  }
-                },
-                8
-              ]
-            }
-          },
-          {
-            "name": "pendingSlashes",
-            "docs": [
-              "Open slash requests against this voter; withdrawals are frozen while > 0."
-            ],
-            "type": "u8"
           },
           {
             "name": "bump",

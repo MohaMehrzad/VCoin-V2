@@ -36,6 +36,7 @@ export const SEEDS = {
   ballot: idlSeed("privatePoll", "BALLOT_SEED"),
   poolConfig: idlSeed("sscre", "POOL_CONFIG_SEED"),
   reserveVault: idlSeed("sscre", "RESERVE_VAULT_SEED"),
+  sscreFeeVault: idlSeed("sscre", "FEE_VAULT_SEED"),
   epoch: idlSeed("sscre", "EPOCH_SEED"),
   epochVault: idlSeed("sscre", "EPOCH_VAULT_SEED"),
   claim: idlSeed("sscre", "CLAIM_SEED"),
@@ -95,6 +96,8 @@ export const pda = {
   // sscre
   poolConfig: () => find([SEEDS.poolConfig], id.sscre),
   reserveVault: () => find([SEEDS.reserveVault], id.sscre),
+  /** Claim fees collect here until `withdrawFeesIx` sweeps them. */
+  sscreFeeVault: () => find([SEEDS.sscreFeeVault], id.sscre),
   epoch: (index: bigint | number) => find([SEEDS.epoch, u64Le(index)], id.sscre),
   epochVault: (index: bigint | number) => find([SEEDS.epochVault, u64Le(index)], id.sscre),
   claimStatus: (epoch: PublicKey, claimant: PublicKey) =>

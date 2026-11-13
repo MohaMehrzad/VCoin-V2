@@ -5,6 +5,7 @@
 //! it receives; metadata-only mint), STK-03 (1:1 receipt never drifts), pause never
 //! traps withdrawals, NonTransferable receipt.
 
+use anchor_lang::prelude::Pubkey;
 use anchor_lang::system_program;
 use anchor_spl::token_2022::spl_token_2022;
 use integration_tests::solana_sdk::{signature::Signer, transaction::Transaction};
@@ -297,4 +298,170 @@ fn close_voter_requires_an_empty_voter_and_refunds_rent() {
         "rent refunded"
     );
     let _ = system_program::ID;
+}
+
+/// Re-review A1: lamports sent to the (publicly derivable) veVCoin mint PDA before
+/// initialization must not block it.
+#[test]
+fn vevcoin_initializes_even_if_its_mint_address_was_pre_funded() {
+    let mut s = deploy();
+    s.svm.airdrop(&s.vevcoin_mint, 1_000_000).unwrap();
+    init_tokens(&mut s);
+    assert_eq!(token::supply(&s.svm, &s.vevcoin_mint), 0);
+    // Over-funded beyond rent works too.
+    let mut s = deploy();
+    s.svm.airdrop(&s.vevcoin_mint, LAMPORTS_PER_SOL).unwrap();
+    init_tokens(&mut s);
+    assert_eq!(token::supply(&s.svm, &s.vevcoin_mint), 0);
+}
+
+/// Re-review A2: a deposit whose lock ended has no voting weight, so it must stop counting
+/// toward the max voter weight; otherwise abandoned stakes make thresholds unreachable.
+#[test]
+fn expired_deposits_stop_counting_toward_the_max_weight() {
+    let mut s = setup();
+    let short = new_staker(&mut s, 100 * VCOIN);
+    let long = new_staker(&mut s, 100 * VCOIN);
+    let ixn = deposit_ix(&s, &short, 0, 100 * VCOIN, MIN_LOCK_SECS);
+    send(&mut s.svm, &[ixn], &short.kp, &[]).unwrap();
+    let ixn = deposit_ix(&s, &long, 0, 100 * VCOIN, MAX_LOCK_SECS);
+    send(&mut s.svm, &[ixn], &long.kp, &[]).unwrap();
+    let r = registrar(&s);
+    assert_eq!(
+        (r.total_locked, r.active_locked),
+        (200 * VCOIN, 200 * VCOIN)
+    );
+
+    let deactivate = ix(
+        staking_protocol::ID,
+        staking_protocol::accounts::DeactivateExpired {
+            registrar: s.registrar,
+            voter: short.voter,
+        },
+        staking_protocol::instruction::DeactivateExpired { index: 0 },
+    );
+    let anyone = funded_keypair(&mut s.svm, 1);
+    assert_anchor_error(
+        send(&mut s.svm, std::slice::from_ref(&deactivate), &anyone, &[]),
+        staking_err(StakingError::StillLocked),
+    );
+
+    warp_by(&mut s.svm, MIN_LOCK_SECS);
+    send(&mut s.svm, std::slice::from_ref(&deactivate), &anyone, &[]).expect("permissionless");
+    let r = registrar(&s);
+    assert_eq!(
+        (r.total_locked, r.active_locked),
+        (200 * VCOIN, 100 * VCOIN)
+    );
+    assert!(!voter(&s, &short).deposits[0].is_active);
+    warp_by(&mut s.svm, 1);
+    assert_anchor_error(
+        send(&mut s.svm, std::slice::from_ref(&deactivate), &anyone, &[]),
+        staking_err(StakingError::AlreadyDeactivated),
+    );
+
+    // Relocking gives the deposit weight again, so it counts again.
+    let extend = ix(
+        staking_protocol::ID,
+        staking_protocol::accounts::ExtendLock {
+            registrar: s.registrar,
+            voter: short.voter,
+            owner: short.kp.pubkey(),
+        },
+        staking_protocol::instruction::ExtendLock {
+            index: 0,
+            lock_secs: MIN_LOCK_SECS,
+        },
+    );
+    send(&mut s.svm, &[extend], &short.kp, &[]).unwrap();
+    assert_eq!(registrar(&s).active_locked, 200 * VCOIN);
+    assert!(voter(&s, &short).deposits[0].is_active);
+
+    // A withdrawal without a prior crank deactivates the whole (expired) deposit once.
+    warp_by(&mut s.svm, MIN_LOCK_SECS);
+    let ixn = withdraw_ix(&s, &short, 0, 40 * VCOIN);
+    send(&mut s.svm, &[ixn], &short.kp, &[]).unwrap();
+    let r = registrar(&s);
+    assert_eq!(
+        (r.total_locked, r.active_locked),
+        (160 * VCOIN, 100 * VCOIN)
+    );
+    let ixn = withdraw_ix(&s, &short, 0, 60 * VCOIN);
+    send(&mut s.svm, &[ixn], &short.kp, &[]).unwrap();
+    let r = registrar(&s);
+    assert_eq!(
+        (r.total_locked, r.active_locked),
+        (100 * VCOIN, 100 * VCOIN)
+    );
+}
+
+/// Re-review B1: the guardian gives the DAO a fast emergency stop. It can pause, but only
+/// the authority can unpause or change the guardian.
+#[test]
+fn guardian_can_pause_but_never_unpause() {
+    let mut s = setup();
+    let admin = s.admin.insecure_clone();
+    let guardian = funded_keypair(&mut s.svm, 1);
+    let stranger = funded_keypair(&mut s.svm, 1);
+    let update = |authority: Pubkey| staking_protocol::accounts::UpdateRegistrar {
+        registrar: s.registrar,
+        authority,
+    };
+    let set_paused = |authority: Pubkey, paused: bool| {
+        ix(
+            staking_protocol::ID,
+            update(authority),
+            staking_protocol::instruction::SetPaused { paused },
+        )
+    };
+    let set_guardian = |authority: Pubkey, guardian: Pubkey| {
+        ix(
+            staking_protocol::ID,
+            update(authority),
+            staking_protocol::instruction::SetGuardian { guardian },
+        )
+    };
+
+    // No guardian yet: nobody but the authority may pause, and the default key is no guardian.
+    let ixn = set_paused(guardian.pubkey(), true);
+    assert_anchor_error(
+        send(&mut s.svm, &[ixn], &guardian, &[]),
+        u32::from(CommonError::NotAuthorityOrGuardian),
+    );
+    let ixn = set_guardian(guardian.pubkey(), guardian.pubkey());
+    assert_anchor_error(
+        send(&mut s.svm, &[ixn], &guardian, &[]),
+        u32::from(CommonError::NotAuthority),
+    );
+
+    let ixn = set_guardian(admin.pubkey(), guardian.pubkey());
+    send(&mut s.svm, &[ixn], &admin, &[]).unwrap();
+    assert_eq!(registrar(&s).admin.guardian, guardian.pubkey());
+
+    let ixn = set_paused(stranger.pubkey(), true);
+    assert_anchor_error(
+        send(&mut s.svm, &[ixn], &stranger, &[]),
+        u32::from(CommonError::NotAuthorityOrGuardian),
+    );
+    let ixn = set_paused(guardian.pubkey(), true);
+    send(&mut s.svm, &[ixn], &guardian, &[]).expect("guardian pauses");
+    assert!(registrar(&s).paused);
+    let ixn = set_paused(guardian.pubkey(), false);
+    assert_anchor_error(
+        send(&mut s.svm, &[ixn], &guardian, &[]),
+        u32::from(CommonError::NotAuthority),
+    );
+    let ixn = set_paused(admin.pubkey(), false);
+    send(&mut s.svm, &[ixn], &admin, &[]).expect("authority unpauses");
+    assert!(!registrar(&s).paused);
+
+    // The authority can remove the guardian.
+    let ixn = set_guardian(admin.pubkey(), Pubkey::default());
+    send(&mut s.svm, &[ixn], &admin, &[]).unwrap();
+    warp_by(&mut s.svm, 1);
+    let ixn = set_paused(guardian.pubkey(), true);
+    assert_anchor_error(
+        send(&mut s.svm, &[ixn], &guardian, &[]),
+        u32::from(CommonError::NotAuthorityOrGuardian),
+    );
 }

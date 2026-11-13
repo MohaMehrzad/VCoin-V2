@@ -18,6 +18,12 @@ done.**
 - **v3 (branch `audit-remediation`):** addresses every finding. [`FIX-TRACKER.md`](FIX-TRACKER.md)
   maps each finding ID to the commit that fixed or removed it and to the test that proves it. The
   design changes, and the reasons for them, are in [`CHANGELOG.md`](CHANGELOG.md).
+- **Re-review of v3 (2026-11-13):** because v3 is a rewrite, it was reviewed again from scratch
+  by three independent passes. They found 22 new issues in the rewritten code: no Critical,
+  2 High (a rewards-root veto that could never land in time, and a rogue-key attack on the
+  committee's key generation), 6 Medium and 14 Low. All are fixed and tested; they are listed
+  at the end of `FIX-TRACKER.md`. A rewrite that needed a second pass to catch two High issues
+  is exactly why the external audit below is not optional.
 
 ## What v3 verifies
 
@@ -39,6 +45,8 @@ done.**
   - SSCRE oracles;
   - the engagement oracle;
   - identity attesters;
-  - the decryption committee's DKG ceremony.
+  - the decryption committee's DKG ceremony (the programs cannot see it: its checks, including
+    the proof that rules out a rogue election key, run in `zk-voting-sdk`);
+  - the guardian key of each program (it can pause and veto a rewards root at once).
 - **Deployment:** execute the [deploy runbook](docs/offchain/deploy-runbook.md), including
   handing every program authority to the Realms DAO.

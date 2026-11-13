@@ -160,6 +160,162 @@ export type FiveAProtocol = {
       "args": []
     },
     {
+      "name": "declineVouch",
+      "docs": [
+        "The vouchee declines a vouch made for them."
+      ],
+      "discriminator": [
+        179,
+        206,
+        212,
+        152,
+        129,
+        254,
+        67,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "close",
+          "accounts": [
+            {
+              "name": "config",
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      102,
+                      105,
+                      118,
+                      101,
+                      45,
+                      97,
+                      45,
+                      99,
+                      111,
+                      110,
+                      102,
+                      105,
+                      103
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "vouchRecord",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      45,
+                      114,
+                      101,
+                      99,
+                      111,
+                      114,
+                      100
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.voucher",
+                    "account": "vouchRecord"
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.vouchee",
+                    "account": "vouchRecord"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "voucher",
+              "writable": true,
+              "relations": [
+                "vouchRecord"
+              ]
+            },
+            {
+              "name": "voucherStats",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      101,
+                      114,
+                      45,
+                      115,
+                      116,
+                      97,
+                      116,
+                      115
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.voucher",
+                    "account": "vouchRecord"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "voucheeStatus",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      45,
+                      115,
+                      116,
+                      97,
+                      116,
+                      117,
+                      115
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.vouchee",
+                    "account": "vouchRecord"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "vouchee",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "evaluateVouch",
       "discriminator": [
         42,
@@ -268,6 +424,36 @@ export type FiveAProtocol = {
                   {
                     "kind": "account",
                     "path": "vouch_record.voucher",
+                    "account": "vouchRecord"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "voucheeStatus",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      45,
+                      115,
+                      116,
+                      97,
+                      116,
+                      117,
+                      115
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.vouchee",
                     "account": "vouchRecord"
                   }
                 ]
@@ -391,6 +577,36 @@ export type FiveAProtocol = {
               {
                 "kind": "account",
                 "path": "vouch_record.voucher",
+                "account": "vouchRecord"
+              }
+            ]
+          }
+        },
+        {
+          "name": "voucheeStatus",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  117,
+                  99,
+                  104,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  117,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vouch_record.vouchee",
                 "account": "vouchRecord"
               }
             ]
@@ -609,6 +825,60 @@ export type FiveAProtocol = {
       "args": [
         {
           "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  118,
+                  101,
+                  45,
+                  97,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
           "type": "pubkey"
         }
       ]
@@ -1201,6 +1471,19 @@ export type FiveAProtocol = {
       ]
     },
     {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
+      ]
+    },
+    {
       "name": "oracleRegistered",
       "discriminator": [
         97,
@@ -1418,6 +1701,11 @@ export type FiveAProtocol = {
     },
     {
       "code": 6022,
+      "name": "notVouchee",
+      "msg": "Signer is not the vouchee of this vouch"
+    },
+    {
+      "code": 6023,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     }
@@ -1426,10 +1714,17 @@ export type FiveAProtocol = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1451,6 +1746,13 @@ export type FiveAProtocol = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -1577,6 +1879,21 @@ export type FiveAProtocol = {
       }
     },
     {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "oracleEntry",
       "type": {
         "kind": "struct",
@@ -1642,6 +1959,10 @@ export type FiveAProtocol = {
                 "name": "scoreValues"
               }
             }
+          },
+          {
+            "name": "submittedAt",
+            "type": "i64"
           }
         ]
       }
@@ -1663,8 +1984,9 @@ export type FiveAProtocol = {
       "docs": [
         "One update round for a user, PDA `[\"pending-score\", user]`. Each oracle has one",
         "changeable submission; competing value sets are tallied independently, so a dishonest",
-        "first submission cannot block honest ones (audit 5A-04). Closed (rent to the opener)",
-        "when a value set reaches consensus or the expired round is cleaned up."
+        "first submission cannot block honest ones (audit 5A-04). Each submission lives for",
+        "`SCORE_UPDATE_EXPIRY` on its own clock. Closed (rent to the opener) when a value set",
+        "reaches consensus or once every submission has lapsed."
       ],
       "type": {
         "kind": "struct",
@@ -1692,6 +2014,9 @@ export type FiveAProtocol = {
           },
           {
             "name": "expiresAt",
+            "docs": [
+              "When the newest submission lapses; the round can be closed after it."
+            ],
             "type": "i64"
           },
           {
@@ -1859,7 +2184,8 @@ export type FiveAProtocol = {
     {
       "name": "userVouchStatus",
       "docs": [
-        "PDA `[\"vouch-status\", vouchee]`."
+        "PDA `[\"vouch-status\", vouchee]`. `vouches_received` counts live vouches: it goes down",
+        "when one is evaluated, expires or is declined."
       ],
       "type": {
         "kind": "struct",
@@ -1940,6 +2266,9 @@ export type FiveAProtocol = {
           },
           {
             "name": "expired"
+          },
+          {
+            "name": "declined"
           }
         ]
       }
@@ -1998,6 +2327,10 @@ export type FiveAProtocol = {
           },
           {
             "name": "expiredVouches",
+            "type": "u32"
+          },
+          {
+            "name": "declinedVouches",
             "type": "u32"
           },
           {

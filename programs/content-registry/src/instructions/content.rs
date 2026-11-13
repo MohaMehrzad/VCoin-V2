@@ -29,10 +29,27 @@ fn authorize(
     session.verify(author, signer, &crate::ID, SCOPE_CONTENT, now)
 }
 
-fn stake_tier(stake: &Option<Box<Account<Voter>>>, now: i64) -> u8 {
-    stake
-        .as_ref()
-        .map_or(0, |v| tier_for_locked(v.locked_amount(now)))
+/// Tier from the user's staking `Voter` PDA (its address is checked by the accounts
+/// struct). No account there means the wallet never staked: tier 0.
+fn stake_tier(stake: &UncheckedAccount, now: i64) -> Result<u8> {
+    let info = stake.to_account_info();
+    if info.owner != &staking_protocol::ID || info.data_is_empty() {
+        return Ok(0);
+    }
+    let voter = Voter::try_deserialize(&mut &info.try_borrow_data()?[..])?;
+    Ok(tier_for_locked(voter.locked_amount(now)))
+}
+
+/// Applies the user's current staking tier (settling regeneration at the old rate first).
+fn refresh_tier(energy: &mut UserEnergy, tier: u8, now: i64) {
+    if tier != energy.tier {
+        emit!(TierChanged {
+            user: energy.user,
+            old_tier: energy.tier,
+            new_tier: tier
+        });
+    }
+    energy.set_tier(tier, now);
 }
 
 fn spend(energy: &mut UserEnergy, cost: u16) -> Result<()> {
@@ -52,7 +69,7 @@ fn spend(energy: &mut UserEnergy, cost: u16) -> Result<()> {
 pub fn init_user_energy(ctx: Context<InitUserEnergy>) -> Result<()> {
     require!(!ctx.accounts.config.paused, ContentError::Paused);
     let now = now()?;
-    let tier = stake_tier(&ctx.accounts.stake, now);
+    let tier = stake_tier(&ctx.accounts.stake, now)?;
     let energy = &mut ctx.accounts.user_energy;
     energy.user = ctx.accounts.user.key();
     energy.bump = ctx.bumps.user_energy;
@@ -84,16 +101,9 @@ pub fn create_content(
         .get(content_type as usize)
         .ok_or(ContentError::InvalidContentType)?;
 
-    let tier = stake_tier(&ctx.accounts.stake, now);
+    let tier = stake_tier(&ctx.accounts.stake, now)?;
     let energy = &mut ctx.accounts.user_energy;
-    if tier != energy.tier {
-        emit!(TierChanged {
-            user: author,
-            old_tier: energy.tier,
-            new_tier: tier
-        });
-    }
-    energy.set_tier(tier, now);
+    refresh_tier(energy, tier, now);
     energy.roll_day(now);
     require!(
         energy.posts_today < DAILY_POST_CAP[tier as usize],
@@ -117,6 +127,7 @@ pub fn create_content(
     record.energy_spent = cost;
     record.engagement_count = 0;
     record.refund_claimed = false;
+    record.rent_payer = ctx.accounts.payer.key();
     record.bump = ctx.bumps.content;
     emit!(ContentCreated {
         author,
@@ -137,8 +148,10 @@ pub fn edit_content(ctx: Context<EditContent>, content_hash: [u8; 32], uri: Stri
     authorize(&author, &signer, &ctx.accounts.session, now)?;
     require!(uri.len() <= MAX_URI_LEN, ContentError::UriTooLong);
 
+    // Edits use the author's current tier, not the one from their last post.
+    let tier = stake_tier(&ctx.accounts.stake, now)?;
     let energy = &mut ctx.accounts.user_energy;
-    energy.regenerate(now);
+    refresh_tier(energy, tier, now);
     spend(energy, EDIT_COST)?;
 
     let record = &mut ctx.accounts.content;
@@ -208,8 +221,9 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
     require!(percent > 0, ContentError::RefundNotReady);
     let amount = (record.energy_spent as u32 * percent as u32 / 100) as u16;
 
+    let tier = stake_tier(&ctx.accounts.stake, now)?;
     let energy = &mut ctx.accounts.user_energy;
-    energy.regenerate(now);
+    refresh_tier(energy, tier, now);
     energy.roll_day(now);
     let refunded = energy
         .refunded_today

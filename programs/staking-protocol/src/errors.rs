@@ -58,6 +58,8 @@ pub enum StakingError {
     SlashWindowClosed,
     #[msg("Slash request has not expired yet")]
     SlashNotExpired,
+    #[msg("Deposit is already inactive")]
+    AlreadyDeactivated,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

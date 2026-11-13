@@ -6,7 +6,7 @@ use crate::constants::*;
 use crate::contexts::*;
 use crate::errors::IdentityError;
 use crate::events::*;
-use crate::state::{is_valid_username, level_for_claims};
+use crate::state::{is_valid_username, level_for_claims, Identity};
 
 pub fn create_identity(
     ctx: Context<CreateIdentity>,
@@ -97,6 +97,12 @@ pub fn link_attestation(
         link.bump = ctx.bumps.attestation_link;
     }
     require_keys_eq!(link.owner, owner, IdentityError::AttestationAlreadyLinked);
+    // A refresh must come from the attester that issued this id: another attester could
+    // otherwise take the link over and strip the issuer's right to revoke it.
+    require!(
+        link.attester == Pubkey::default() || link.attester == attester,
+        IdentityError::AttesterMismatch
+    );
     let level = level_for_claims(claims);
     link.attester = attester;
     link.claims = claims;
@@ -131,7 +137,12 @@ pub fn revoke_attestation(ctx: Context<RevokeAttestation>) -> Result<()> {
         revoker == link.attester || revoker == ctx.accounts.config.admin.authority,
         IdentityError::NotRevoker
     );
-    if let Some(identity) = ctx.accounts.identity.as_mut() {
+    // The identity PDA is always passed (it is derived from the link), so a revocation can
+    // never close the link and leave the level standing. It may have been closed already.
+    let info = ctx.accounts.identity.to_account_info();
+    if info.owner == &crate::ID && !info.data_is_empty() {
+        let mut data = info.try_borrow_mut_data()?;
+        let mut identity = Identity::try_deserialize(&mut &data[..])?;
         if identity.attestation_id == link.attestation_id {
             identity.level = LEVEL_NONE;
             identity.claims = 0;
@@ -139,6 +150,7 @@ pub fn revoke_attestation(ctx: Context<RevokeAttestation>) -> Result<()> {
             identity.attestation_id = [0u8; 32];
             identity.level_expires_at = 0;
             identity.updated_at = Clock::get()?.unix_timestamp;
+            identity.try_serialize(&mut &mut data[..])?;
         }
     }
     emit!(AttestationRevoked {

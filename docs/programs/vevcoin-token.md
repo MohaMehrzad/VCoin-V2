@@ -8,7 +8,9 @@ veVCoin is a **receipt**, not a voting token. It mirrors staked principal 1:1 an
 to compute weight.
 
 - **Mint.** PDA `["vevcoin-mint"]`, Token-2022 with NonTransferable and PermanentDelegate set to
-  the config PDA `["vevcoin-config"]`.
+  the config PDA `["vevcoin-config"]`. `initialize` also works if someone sent lamports to the
+  mint address beforehand (it tops up, allocates and assigns instead of creating), so nobody
+  can block the deployment that way.
 - **Minting and burning.** `mint_vevcoin` / `burn_vevcoin` accept only the staking registrar PDA
   (`["registrar"]` of staking-protocol) as signer. That address is fixed at initialization, with
   no setter (audit VEV-02).

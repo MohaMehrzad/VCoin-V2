@@ -80,6 +80,11 @@ pub mod sscre_protocol {
         instructions::admin::set_paused(ctx, paused)
     }
 
+    /// Sets or clears the emergency guardian (may pause, never unpause).
+    pub fn set_guardian(ctx: Context<UpdateConfig>, guardian: Pubkey) -> Result<()> {
+        instructions::admin::set_guardian(ctx, guardian)
+    }
+
     pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::propose_authority(ctx, new_authority)
     }
@@ -111,6 +116,11 @@ pub mod sscre_protocol {
 
     pub fn claim(ctx: Context<Claim>, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
         instructions::epoch::claim(ctx, amount, proof)
+    }
+
+    /// Sweeps collected claim fees to the configured fee account (permissionless).
+    pub fn withdraw_fees(ctx: Context<WithdrawFees>) -> Result<()> {
+        instructions::epoch::withdraw_fees(ctx)
     }
 
     pub fn clawback(ctx: Context<Clawback>) -> Result<()> {

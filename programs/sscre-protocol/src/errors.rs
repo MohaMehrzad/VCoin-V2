@@ -64,6 +64,12 @@ pub enum SscreError {
     NoPendingFee,
     #[msg("Fee change timelock still active")]
     FeeTimelockActive,
+    #[msg("Reserve holds less than the scheduled budget; only the authority may start a smaller epoch")]
+    ReserveBelowBudget,
+    #[msg("Fewer oracles are registered than the root quorum")]
+    NotEnoughOracles,
+    #[msg("No fees to withdraw")]
+    NothingToWithdraw,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

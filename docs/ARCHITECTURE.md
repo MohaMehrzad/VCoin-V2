@@ -64,33 +64,38 @@ Shared crates:
 
 **Rewards (SSCRE).**
 
-1. Once per epoch, a crank moves `min(budget, reserve)` into a dedicated epoch vault. The budget
-   decays 2% per epoch.
+1. Once per epoch, a crank moves the scheduled budget into a dedicated epoch vault. The budget
+   decays 2% per epoch. Only the authority may start an epoch the reserve cannot fund in full.
 2. After the epoch ends, oracles vote on `(root, max_total_claim ≤ budget)`.
-3. When a quorum agrees, a 24h dispute window starts, during which the DAO may veto.
-4. Once activated, users claim gross amounts (a fee of up to 1%, rounded up) for 90 days. The
-   window is extended by any pause.
+3. When the quorum (at least 2, and a majority of the active oracles) agrees, a 24h dispute
+   window starts. The DAO or the emergency guardian may veto during it.
+4. Once activated, users claim gross amounts (a fee of up to 1%, rounded up, into the
+   program's fee vault) for 90 days. The window is extended by any pause.
 5. The remainder returns to the reserve.
 
 **Reputation (5A).**
 
 - Up to 7 oracles, each active 24h after registration.
-- A user's score changes only when `required_consensus` (≥ 2) of them submit identical values
-  within an hour. Competing values are tallied separately.
+- A user's score changes only when `required_consensus` (≥ 2) of them, and a majority of the
+  active ones, submit identical values within an hour of each other. Competing values are
+  tallied separately.
 - Vouching is reputation-only. An established user vouches for a newcomer, an oracle records the
-  outcome at 90 days, and unevaluated vouches expire after a year.
+  outcome at 90 days, and unevaluated vouches expire after a year. The newcomer can decline.
 
 **Identity.**
 
 - A unique username and a DID hash per wallet.
 - Verification levels come from attestations co-signed by trusted attesters, and lapse on
   expiry or attester removal. One attestation binds to one wallet.
-- USDC subscriptions extend, prorate upgrades and refuse downgrades while active.
+- USDC subscriptions extend, prorate upgrades (never dropping prepaid value) and refuse
+  downgrades while active.
 
 **Content.**
 
 - Proof-of-existence records keyed by `(author, tracking_id)`.
-- Energy tiers follow staked VCoin, and regeneration keeps its partial progress.
+- Energy tiers follow staked VCoin on every post, edit and refund, and regeneration keeps its
+  partial progress.
+- A post's rent returns to whoever paid it (the author or a sponsoring relayer).
 - Engagement reported by an oracle refunds up to 100% of the energy, within 7 days.
 - A session key may post and edit.
 
@@ -126,3 +131,20 @@ Every program's config holds an `AdminState`:
 - at launch it moves to the Realms governance PDA (see the deploy runbook).
 
 Fee, treasury, oracle and payment changes are additionally timelocked by 24h inside the programs.
+
+## Emergency guardian
+
+Once the authorities belong to the DAO, every admin action takes a vote plus a hold-up, which
+is days. Some stops cannot wait that long. Each program's config therefore has an optional
+`guardian` key next to the authority (`set_guardian`, authority only; unset by default):
+
+| The guardian can | The guardian cannot |
+|---|---|
+| Pause the program (`set_paused(true)`) | Unpause |
+| Veto a proposed rewards root (`sscre::veto_root`) | Move funds, change parameters, oracles, fees or attesters |
+| | Change the authority or itself |
+
+The authority can unpause and replace or remove the guardian at any time, so the guardian can
+delay the protocol but not capture it. Pauses never block withdrawals of stake, and deadlines
+that matter (reward claims, poll reveals) are extended by the time spent paused. A council
+multisig is the intended holder.

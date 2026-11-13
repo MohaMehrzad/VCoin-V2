@@ -99,7 +99,7 @@ pub struct MoveStake<'info> {
 
 #[derive(Accounts)]
 pub struct ExtendLock<'info> {
-    #[account(seeds = [REGISTRAR_SEED], bump = registrar.bump)]
+    #[account(mut, seeds = [REGISTRAR_SEED], bump = registrar.bump)]
     pub registrar: Box<Account<'info, Registrar>>,
     #[account(mut, seeds = [VOTER_SEED, owner.key().as_ref()], bump = voter.bump, has_one = owner)]
     pub voter: Box<Account<'info, Voter>>,
@@ -311,4 +311,13 @@ pub struct SetSlashDestination<'info> {
     #[account(token::mint = vcoin_mint, token::token_program = token_program)]
     pub slash_destination: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_program: Program<'info, Token2022>,
+}
+
+/// Permissionless: stops an expired deposit from counting toward the max voter weight.
+#[derive(Accounts)]
+pub struct DeactivateExpired<'info> {
+    #[account(mut, seeds = [REGISTRAR_SEED], bump = registrar.bump)]
+    pub registrar: Box<Account<'info, Registrar>>,
+    #[account(mut, seeds = [VOTER_SEED, voter.owner.as_ref()], bump = voter.bump)]
+    pub voter: Box<Account<'info, Voter>>,
 }

@@ -61,6 +61,11 @@ pub mod vcoin_token {
         instructions::admin::set_paused::handler(ctx, paused)
     }
 
+    /// Sets or clears the emergency guardian (may pause, never unpause).
+    pub fn set_guardian(ctx: Context<UpdateConfig>, guardian: Pubkey) -> Result<()> {
+        instructions::admin::set_paused::set_guardian(ctx, guardian)
+    }
+
     /// Starts a 24h two-step authority transfer.
     pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
         instructions::admin::authority::propose(ctx, new_authority)

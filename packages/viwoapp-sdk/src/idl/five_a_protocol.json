@@ -154,6 +154,162 @@
       "args": []
     },
     {
+      "name": "decline_vouch",
+      "docs": [
+        "The vouchee declines a vouch made for them."
+      ],
+      "discriminator": [
+        179,
+        206,
+        212,
+        152,
+        129,
+        254,
+        67,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "close",
+          "accounts": [
+            {
+              "name": "config",
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      102,
+                      105,
+                      118,
+                      101,
+                      45,
+                      97,
+                      45,
+                      99,
+                      111,
+                      110,
+                      102,
+                      105,
+                      103
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "vouch_record",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      45,
+                      114,
+                      101,
+                      99,
+                      111,
+                      114,
+                      100
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.voucher",
+                    "account": "VouchRecord"
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.vouchee",
+                    "account": "VouchRecord"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "voucher",
+              "writable": true,
+              "relations": [
+                "vouch_record"
+              ]
+            },
+            {
+              "name": "voucher_stats",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      101,
+                      114,
+                      45,
+                      115,
+                      116,
+                      97,
+                      116,
+                      115
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.voucher",
+                    "account": "VouchRecord"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "vouchee_status",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      45,
+                      115,
+                      116,
+                      97,
+                      116,
+                      117,
+                      115
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.vouchee",
+                    "account": "VouchRecord"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "vouchee",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "evaluate_vouch",
       "discriminator": [
         42,
@@ -262,6 +418,36 @@
                   {
                     "kind": "account",
                     "path": "vouch_record.voucher",
+                    "account": "VouchRecord"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "vouchee_status",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "const",
+                    "value": [
+                      118,
+                      111,
+                      117,
+                      99,
+                      104,
+                      45,
+                      115,
+                      116,
+                      97,
+                      116,
+                      117,
+                      115
+                    ]
+                  },
+                  {
+                    "kind": "account",
+                    "path": "vouch_record.vouchee",
                     "account": "VouchRecord"
                   }
                 ]
@@ -385,6 +571,36 @@
               {
                 "kind": "account",
                 "path": "vouch_record.voucher",
+                "account": "VouchRecord"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vouchee_status",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  117,
+                  99,
+                  104,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  117,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vouch_record.vouchee",
                 "account": "VouchRecord"
               }
             ]
@@ -603,6 +819,60 @@
       "args": [
         {
           "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_guardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  118,
+                  101,
+                  45,
+                  97,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
           "type": "pubkey"
         }
       ]
@@ -1195,6 +1465,19 @@
       ]
     },
     {
+      "name": "GuardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
+      ]
+    },
+    {
       "name": "OracleRegistered",
       "discriminator": [
         97,
@@ -1412,6 +1695,11 @@
     },
     {
       "code": 6022,
+      "name": "NotVouchee",
+      "msg": "Signer is not the vouchee of this vouch"
+    },
+    {
+      "code": 6023,
       "name": "Overflow",
       "msg": "Arithmetic overflow"
     }
@@ -1420,10 +1708,17 @@
     {
       "name": "AdminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1445,6 +1740,13 @@
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -1571,6 +1873,21 @@
       }
     },
     {
+      "name": "GuardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "OracleEntry",
       "type": {
         "kind": "struct",
@@ -1636,6 +1953,10 @@
                 "name": "ScoreValues"
               }
             }
+          },
+          {
+            "name": "submitted_at",
+            "type": "i64"
           }
         ]
       }
@@ -1657,8 +1978,9 @@
       "docs": [
         "One update round for a user, PDA `[\"pending-score\", user]`. Each oracle has one",
         "changeable submission; competing value sets are tallied independently, so a dishonest",
-        "first submission cannot block honest ones (audit 5A-04). Closed (rent to the opener)",
-        "when a value set reaches consensus or the expired round is cleaned up."
+        "first submission cannot block honest ones (audit 5A-04). Each submission lives for",
+        "`SCORE_UPDATE_EXPIRY` on its own clock. Closed (rent to the opener) when a value set",
+        "reaches consensus or once every submission has lapsed."
       ],
       "type": {
         "kind": "struct",
@@ -1686,6 +2008,9 @@
           },
           {
             "name": "expires_at",
+            "docs": [
+              "When the newest submission lapses; the round can be closed after it."
+            ],
             "type": "i64"
           },
           {
@@ -1853,7 +2178,8 @@
     {
       "name": "UserVouchStatus",
       "docs": [
-        "PDA `[\"vouch-status\", vouchee]`."
+        "PDA `[\"vouch-status\", vouchee]`. `vouches_received` counts live vouches: it goes down",
+        "when one is evaluated, expires or is declined."
       ],
       "type": {
         "kind": "struct",
@@ -1934,6 +2260,9 @@
           },
           {
             "name": "Expired"
+          },
+          {
+            "name": "Declined"
           }
         ]
       }
@@ -1992,6 +2321,10 @@
           },
           {
             "name": "expired_vouches",
+            "type": "u32"
+          },
+          {
+            "name": "declined_vouches",
             "type": "u32"
           },
           {

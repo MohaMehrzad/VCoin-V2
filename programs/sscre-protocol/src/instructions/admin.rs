@@ -11,6 +11,16 @@ use crate::errors::SscreError;
 use crate::events::*;
 use crate::state::{OracleEntry, PoolParams};
 
+/// Any change to the oracle set or the quorum voids roots proposed under the old one: the
+/// oracles vote again and the dispute delay restarts.
+fn bump_oracle_set_version(config: &mut crate::state::PoolConfig) -> Result<()> {
+    config.oracle_set_version = config
+        .oracle_set_version
+        .checked_add(1)
+        .ok_or(SscreError::Overflow)?;
+    Ok(())
+}
+
 fn vcoin_mint_address() -> Pubkey {
     Pubkey::find_program_address(&[vcoin_token::constants::VCOIN_MINT_SEED], &vcoin_token::ID).0
 }
@@ -40,6 +50,7 @@ pub fn initialize_pool(
     config.vcoin_mint = ctx.accounts.vcoin_mint.key();
     config.reserve_vault = ctx.accounts.reserve_vault.key();
     config.fee_bps = fee_bps;
+    config.fee_vault = ctx.accounts.fee_vault.key();
     config.fee_destination = ctx.accounts.fee_destination.key();
     config.pending_fee_bps = 0;
     config.pending_fee_destination = Pubkey::default();
@@ -51,15 +62,18 @@ pub fn initialize_pool(
     config.last_epoch_start = 0;
     config.oracles = [OracleEntry::default(); MAX_ORACLES];
     config.root_quorum = DEFAULT_ROOT_QUORUM;
+    config.oracle_set_version = 0;
     config.paused = false;
     config.paused_since = 0;
     config.pause_accum = 0;
     config.bump = ctx.bumps.config;
     config.reserve_bump = ctx.bumps.reserve_vault;
+    config.fee_vault_bump = ctx.bumps.fee_vault;
 
     emit!(PoolInitialized {
         authority,
         reserve_vault: config.reserve_vault,
+        fee_vault: config.fee_vault,
         first_epoch_budget,
         fee_bps
     });
@@ -90,6 +104,7 @@ pub fn register_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()>
         key: oracle,
         active_from,
     };
+    bump_oracle_set_version(config)?;
     emit!(OracleRegistered {
         oracle,
         active_from
@@ -97,7 +112,8 @@ pub fn register_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()>
     Ok(())
 }
 
-/// Removes an oracle immediately; its votes stop counting. The quorum must stay reachable.
+/// Removes an oracle immediately; its votes stop counting (also if it is registered again
+/// later). The quorum must stay reachable.
 pub fn remove_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config
@@ -113,6 +129,7 @@ pub fn remove_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()> {
         config.registered_oracles() >= config.root_quorum as usize,
         SscreError::InvalidQuorum
     );
+    bump_oracle_set_version(config)?;
     emit!(OracleRemoved { oracle });
     Ok(())
 }
@@ -128,6 +145,7 @@ pub fn set_root_quorum(ctx: Context<UpdateConfig>, quorum: u8) -> Result<()> {
         SscreError::InvalidQuorum
     );
     config.root_quorum = quorum;
+    bump_oracle_set_version(config)?;
     emit!(RootQuorumSet { quorum });
     Ok(())
 }
@@ -155,7 +173,8 @@ pub fn set_next_epoch_budget(ctx: Context<UpdateConfig>, budget: u64) -> Result<
     Ok(())
 }
 
-/// Schedules a fee change (≤ 1%) and/or new fee account, applicable after 24h.
+/// Schedules a fee change (≤ 1%) and/or a new account for `withdraw_fees`, applicable
+/// after 24h.
 pub fn propose_fee(ctx: Context<ProposeFee>, fee_bps: u16) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config
@@ -211,7 +230,7 @@ pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config
         .admin
-        .require_authority(&ctx.accounts.authority.key())?;
+        .require_pause_rights(&ctx.accounts.authority.key(), paused)?;
     let now = Clock::get()?.unix_timestamp;
     if paused && !config.paused {
         config.paused_since = now;
@@ -255,5 +274,13 @@ pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         previous,
         new_authority: admin.authority
     });
+    Ok(())
+}
+
+/// Sets or clears the emergency guardian, which may pause but never unpause.
+pub fn set_guardian(ctx: Context<UpdateConfig>, guardian: Pubkey) -> Result<()> {
+    let admin = &mut ctx.accounts.config.admin;
+    admin.set_guardian(&ctx.accounts.authority.key(), guardian)?;
+    emit!(GuardianSet { guardian });
     Ok(())
 }

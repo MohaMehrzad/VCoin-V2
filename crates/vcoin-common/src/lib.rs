@@ -60,12 +60,21 @@ pub enum CommonError {
     ForbiddenMintExtension,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("Signer is neither the authority nor the guardian")]
+    NotAuthorityOrGuardian,
 }
 
-/// Authority with a two-step, time-locked transfer.
+/// Authority with a two-step, time-locked transfer, plus an optional emergency guardian.
 ///
 /// `propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`
 /// (new authority). The current authority can `cancel` at any time before acceptance.
+///
+/// After launch the authority is a Realms governance PDA, which needs a vote and a hold-up
+/// (days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council
+/// governance) exists so an emergency stop is possible within minutes: it may **pause**
+/// (never unpause) and use program-specific stop actions such as vetoing a rewards root.
+/// It cannot move funds, change parameters or keep the protocol paused against the
+/// authority, which can unpause and replace it.
 #[derive(
     AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq, Eq, InitSpace,
 )]
@@ -75,6 +84,8 @@ pub struct AdminState {
     pub pending_authority: Pubkey,
     /// Unix time the pending transfer was proposed (0 when none).
     pub pending_since: i64,
+    /// Emergency guardian (`Pubkey::default()` = none).
+    pub guardian: Pubkey,
 }
 
 impl AdminState {
@@ -83,7 +94,37 @@ impl AdminState {
             authority,
             pending_authority: Pubkey::default(),
             pending_since: 0,
+            guardian: Pubkey::default(),
         }
+    }
+
+    pub fn is_guardian(&self, signer: &Pubkey) -> bool {
+        self.guardian != Pubkey::default() && *signer == self.guardian
+    }
+
+    pub fn require_authority_or_guardian(&self, signer: &Pubkey) -> Result<()> {
+        require!(
+            *signer == self.authority || self.is_guardian(signer),
+            CommonError::NotAuthorityOrGuardian
+        );
+        Ok(())
+    }
+
+    /// Who may set the pause flag: pausing is open to the authority and the guardian,
+    /// unpausing to the authority only.
+    pub fn require_pause_rights(&self, signer: &Pubkey, paused: bool) -> Result<()> {
+        if paused {
+            self.require_authority_or_guardian(signer)
+        } else {
+            self.require_authority(signer)
+        }
+    }
+
+    /// Sets or clears (`Pubkey::default()`) the guardian. Authority only.
+    pub fn set_guardian(&mut self, signer: &Pubkey, guardian: Pubkey) -> Result<()> {
+        self.require_authority(signer)?;
+        self.guardian = guardian;
+        Ok(())
     }
 
     pub fn has_pending(&self) -> bool {

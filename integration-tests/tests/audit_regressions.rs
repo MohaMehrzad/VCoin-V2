@@ -24,6 +24,7 @@ fn deposit(amount: u64, lock_secs: i64) -> DepositEntry {
         lock_start: T0,
         lock_end: T0 + lock_secs,
         is_used: true,
+        is_active: true,
     }
 }
 
@@ -91,12 +92,13 @@ fn gov09_a_staker_below_the_realms_threshold_cannot_propose() {
 #[test]
 fn zk01_honest_sdk_ballots_verify_with_the_onchain_verifier() {
     use zk_voting_sdk::*;
+    const SESSION: [u8; 32] = [9u8; 32];
     let dealers: Vec<Dealer> = (1..=3)
-        .map(|i| Dealer::new(i, 3, 3, &mut OsRng).unwrap())
+        .map(|i| Dealer::new(i, 3, 3, &SESSION, &mut OsRng).unwrap())
         .collect();
     let dealings: Vec<PublicDealing> = dealers.iter().map(Dealer::public_dealing).collect();
     let shares: Vec<ShareMessage> = dealers.iter().map(|d| d.share_for(1).unwrap()).collect();
-    let key = finish(1, 3, &dealings, &shares).unwrap();
+    let key = finish(1, 3, &SESSION, &dealings, &shares).unwrap();
     for i in 0..20u8 {
         let ctx = BallotContext {
             program_id: private_poll::ID.to_bytes(),

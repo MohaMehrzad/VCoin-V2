@@ -6,7 +6,7 @@ use anchor_lang::{prelude::Pubkey, system_program};
 use five_a_protocol::{
     constants::*,
     errors::FiveAError,
-    state::{FiveAConfig, ScoreValues, UserScore, VoucherStats},
+    state::{FiveAConfig, ScoreValues, UserScore, UserVouchStatus, VoucherStats},
 };
 use integration_tests::solana_sdk::{instruction::Instruction, signature::Keypair, signer::Signer};
 use integration_tests::*;
@@ -273,11 +273,11 @@ fn expired_rounds_reset_and_return_rent_to_the_opener() {
     assert_anchor_error(r, err(FiveAError::RoundNotExpired));
     warp_by(&mut f.svm, SCORE_UPDATE_EXPIRY + 1);
 
-    // A late submission resets the round: oracle 0's stale vote no longer pairs with it.
+    // Oracle 0's submission has lapsed, so a late matching one no longer pairs with it.
     let o1 = f.oracles[1].pubkey();
     let r = submit(&mut f, 1, &user, flat(2_000), &o1);
     assert_anchor_error(r, err(FiveAError::WrongRentPayer));
-    submit(&mut f, 1, &user, flat(2_000), &opener).expect("reset round");
+    submit(&mut f, 1, &user, flat(2_000), &opener).expect("late submission");
     assert_eq!(
         read_account::<UserScore>(&f.svm, &score_pda(&user)).update_count,
         0,
@@ -417,6 +417,7 @@ fn close_vouch_accounts(
         vouch_record: pda(&[VOUCH_RECORD_SEED, voucher.as_ref(), vouchee.as_ref()]),
         voucher: *voucher,
         voucher_stats: pda(&[VOUCHER_STATS_SEED, voucher.as_ref()]),
+        vouchee_status: pda(&[VOUCH_STATUS_SEED, vouchee.as_ref()]),
     }
 }
 
@@ -521,4 +522,117 @@ fn vouching_is_for_newcomers_evaluated_by_oracles_and_always_frees_its_slot() {
         (1, 0, 3)
     );
     send_vouch(&mut f, &voucher, &Pubkey::new_unique()).expect("slot freed");
+}
+
+/// Re-review B7: every submission has its own one-hour clock. An oracle that submits early
+/// (with other values) no longer decides when the honest submissions are wiped.
+#[test]
+fn submissions_use_a_sliding_window_not_the_first_submitters_clock() {
+    let mut f = five_a();
+    let user = Pubkey::new_unique();
+    let opener = f.oracles[2].pubkey();
+    submit(&mut f, 2, &user, flat(9_999), &opener).expect("early, different values");
+    warp_by(&mut f.svm, SCORE_UPDATE_EXPIRY - 600);
+    submit(&mut f, 0, &user, flat(4_000), &opener).expect("honest 1");
+    warp_by(&mut f.svm, 1_200); // past the opener's hour, 20 minutes after honest 1
+    submit(&mut f, 1, &user, flat(4_000), &opener).expect("honest 2");
+    assert_eq!(
+        read_account::<UserScore>(&f.svm, &score_pda(&user)).composite_score,
+        4_000
+    );
+}
+
+/// Re-review B2: `required_consensus` (default 2) is a floor; with five active oracles a
+/// score needs three matching submissions.
+#[test]
+fn a_score_needs_a_majority_of_the_active_oracles() {
+    let mut f = five_a();
+    let admin = f.admin.insecure_clone();
+    for _ in 0..2 {
+        let o = funded_keypair(&mut f.svm, 10);
+        let reg = admin_ix(
+            admin.pubkey(),
+            five_a_protocol::instruction::RegisterOracle { oracle: o.pubkey() },
+        );
+        send(&mut f.svm, &[reg], &admin, &[]).expect("register oracle");
+        f.oracles.push(o);
+    }
+    warp_by(&mut f.svm, ORACLE_ACTIVATION_DELAY);
+    assert_eq!(
+        read_account::<FiveAConfig>(&f.svm, &config_pda()).required_consensus,
+        DEFAULT_CONSENSUS
+    );
+
+    let user = Pubkey::new_unique();
+    let opener = f.oracles[0].pubkey();
+    submit(&mut f, 0, &user, flat(9_000), &opener).unwrap();
+    submit(&mut f, 1, &user, flat(9_000), &opener).unwrap();
+    assert_eq!(
+        read_account::<UserScore>(&f.svm, &score_pda(&user)).update_count,
+        0,
+        "2 of 5 sets nothing"
+    );
+    submit(&mut f, 2, &user, flat(9_000), &opener).unwrap();
+    let score: UserScore = read_account(&f.svm, &score_pda(&user));
+    assert_eq!((score.update_count, score.composite_score), (1, 9_000));
+}
+
+/// Re-review B8: nobody is vouched for against their will, and a closed vouch frees the
+/// vouchee's slot as well as the voucher's.
+#[test]
+fn a_vouchee_can_decline_and_closed_vouches_free_its_slots() {
+    let mut f = five_a();
+    let vouchers: Vec<Keypair> = (0..4).map(|_| funded_keypair(&mut f.svm, 5)).collect();
+    for v in &vouchers {
+        set_score(&mut f, &v.pubkey(), 6_000);
+    }
+    let vouchee = funded_keypair(&mut f.svm, 1);
+    let status = |f: &FiveA| -> UserVouchStatus {
+        read_account(
+            &f.svm,
+            &pda(&[VOUCH_STATUS_SEED, vouchee.pubkey().as_ref()]),
+        )
+    };
+    for v in &vouchers[..3] {
+        send(
+            &mut f.svm,
+            &[vouch_ix(&v.pubkey(), &vouchee.pubkey())],
+            v,
+            &[],
+        )
+        .expect("vouch");
+    }
+    assert_eq!(status(&f).vouches_received, MAX_VOUCHES_RECEIVED);
+    let fourth = vouch_ix(&vouchers[3].pubkey(), &vouchee.pubkey());
+    assert_anchor_error(
+        send(&mut f.svm, std::slice::from_ref(&fourth), &vouchers[3], &[]),
+        err(FiveAError::VoucheeFullyVouched),
+    );
+
+    let decline = |signer: &Pubkey| {
+        ix(
+            five_a_protocol::ID,
+            five_a_protocol::accounts::DeclineVouch {
+                close: close_vouch_accounts(&vouchers[0].pubkey(), &vouchee.pubkey()),
+                vouchee: *signer,
+            },
+            five_a_protocol::instruction::DeclineVouch {},
+        )
+    };
+    let stranger = funded_keypair(&mut f.svm, 1);
+    assert_anchor_error(
+        send(&mut f.svm, &[decline(&stranger.pubkey())], &stranger, &[]),
+        err(FiveAError::NotVouchee),
+    );
+    send(&mut f.svm, &[decline(&vouchee.pubkey())], &vouchee, &[]).expect("decline");
+    assert_eq!(status(&f).vouches_received, MAX_VOUCHES_RECEIVED - 1);
+    let s = stats(&f, &vouchers[0].pubkey());
+    assert_eq!(
+        (s.declined_vouches, s.failed_vouches, s.vouches_active),
+        (1, 0, 0)
+    );
+
+    warp_by(&mut f.svm, 1);
+    send(&mut f.svm, &[fourth], &vouchers[3], &[]).expect("slot freed");
+    assert_eq!(status(&f).vouches_received, MAX_VOUCHES_RECEIVED);
 }

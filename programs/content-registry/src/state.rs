@@ -111,6 +111,8 @@ pub struct ContentRecord {
     pub energy_spent: u16,
     pub engagement_count: u32,
     pub refund_claimed: bool,
+    /// Paid the record's rent and gets it back on delete.
+    pub rent_payer: Pubkey,
     pub bump: u8,
 }
 

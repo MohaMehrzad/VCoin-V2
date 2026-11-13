@@ -75,8 +75,15 @@ pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) 
     require!(credited > 0, StakingError::NothingReceived);
 
     let entry = &mut accs.voter.deposits[i];
+    let mut activated = credited;
     if entry.is_used {
         require!(entry.lock_end > now, StakingError::DepositExpired);
+        if !entry.is_active {
+            activated = activated
+                .checked_add(entry.amount)
+                .ok_or(StakingError::Overflow)?;
+            entry.is_active = true;
+        }
         entry.amount = entry
             .amount
             .checked_add(credited)
@@ -88,9 +95,15 @@ pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) 
             lock_start: now,
             lock_end: requested_end,
             is_used: true,
+            is_active: true,
         };
     }
     let lock_end = entry.lock_end;
+    accs.registrar.active_locked = accs
+        .registrar
+        .active_locked
+        .checked_add(activated)
+        .ok_or(StakingError::Overflow)?;
     accs.registrar.total_locked = accs
         .registrar
         .total_locked
@@ -121,6 +134,15 @@ pub fn extend_lock(ctx: Context<ExtendLock>, index: u8, lock_secs: i64) -> Resul
     require!(new_end > entry.lock_end, StakingError::LockNotExtended);
     let old_end = entry.lock_end;
     entry.lock_end = new_end;
+    if !entry.is_active {
+        // Relocking a deactivated (expired) deposit gives it weight again.
+        entry.is_active = true;
+        let registrar = &mut ctx.accounts.registrar;
+        registrar.active_locked = registrar
+            .active_locked
+            .checked_add(entry.amount)
+            .ok_or(StakingError::Overflow)?;
+    }
     emit!(LockExtended {
         owner: ctx.accounts.owner.key(),
         index,
@@ -164,6 +186,15 @@ pub fn withdraw(ctx: Context<Withdraw>, index: u8, amount: u64) -> Result<()> {
     burn_receipt(receipt_accounts(accs), &signer, amount)?;
 
     let entry = &mut accs.voter.deposits[i];
+    if entry.is_active {
+        // The lock has ended, so the whole deposit stops counting toward the max weight.
+        entry.is_active = false;
+        accs.registrar.active_locked = accs
+            .registrar
+            .active_locked
+            .checked_sub(entry.amount)
+            .ok_or(StakingError::Overflow)?;
+    }
     entry.amount -= amount; // amount <= entry.amount checked above
     if entry.amount == 0 {
         *entry = DepositEntry::default();
@@ -179,6 +210,31 @@ pub fn withdraw(ctx: Context<Withdraw>, index: u8, amount: u64) -> Result<()> {
         index,
         amount,
         total_locked: accs.registrar.total_locked
+    });
+    Ok(())
+}
+
+/// Anyone may mark a deposit whose lock has ended as inactive: it has no voting weight, so it
+/// must stop counting toward the max voter weight (re-review A2). A relock reactivates it.
+pub fn deactivate_expired(ctx: Context<DeactivateExpired>, index: u8) -> Result<()> {
+    let i = check_index(index)?;
+    let now = Clock::get()?.unix_timestamp;
+    let entry = &mut ctx.accounts.voter.deposits[i];
+    require!(entry.is_used, StakingError::DepositNotUsed);
+    require!(now >= entry.lock_end, StakingError::StillLocked);
+    require!(entry.is_active, StakingError::AlreadyDeactivated);
+    entry.is_active = false;
+    let amount = entry.amount;
+    let registrar = &mut ctx.accounts.registrar;
+    registrar.active_locked = registrar
+        .active_locked
+        .checked_sub(amount)
+        .ok_or(StakingError::Overflow)?;
+    emit!(DepositDeactivated {
+        owner: ctx.accounts.voter.owner,
+        index,
+        amount,
+        active_locked: registrar.active_locked,
     });
     Ok(())
 }

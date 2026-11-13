@@ -189,6 +189,48 @@ fn initialize_is_gated_to_the_upgrade_authority() {
     );
 }
 
+/// Re-review B9: the fee token must be the VCoin mint itself, not any Token-2022 mint that
+/// happens to pass the extension checks.
+#[test]
+fn initialize_rejects_a_look_alike_mint() {
+    let mut env = deployed();
+    let admin = env.s.admin.insecure_clone();
+    let fake = Keypair::new();
+    let ixs = [
+        solana_system_interface::instruction::create_account(
+            &admin.pubkey(),
+            &fake.pubkey(),
+            svm(&mut env).minimum_balance_for_rent_exemption(82),
+            82,
+            &spl_token_2022::ID,
+        ),
+        spl_token_2022::instruction::initialize_mint2(
+            &spl_token_2022::ID,
+            &fake.pubkey(),
+            &admin.pubkey(),
+            None,
+            9,
+        )
+        .unwrap(),
+    ];
+    send(svm(&mut env), &ixs, &admin, &[&fake]).expect("look-alike mint");
+    let treasury =
+        token::create_token_account(svm(&mut env), &admin, &fake.pubkey(), &admin.pubkey());
+    let mut ixn = init_ix(
+        &env.s,
+        admin.pubkey(),
+        env.config,
+        env.fee_vault,
+        treasury,
+        VCOIN,
+    );
+    ixn.accounts[2].pubkey = fake.pubkey(); // vcoin_mint
+    assert_anchor_error(
+        send(svm(&mut env), &[ixn], &admin, &[]),
+        gerr(GaslessError::InvalidVCoinMint),
+    );
+}
+
 #[test]
 fn relayer_pays_for_a_session_of_a_wallet_with_zero_sol() {
     let mut env = setup();

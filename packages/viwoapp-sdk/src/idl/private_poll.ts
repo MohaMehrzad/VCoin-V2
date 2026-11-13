@@ -1134,6 +1134,58 @@ export type PrivatePoll = {
       ]
     },
     {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "setPaused",
       "discriminator": [
         91,
@@ -1479,6 +1531,19 @@ export type PrivatePoll = {
       ]
     },
     {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
+      ]
+    },
+    {
       "name": "pauseChanged",
       "discriminator": [
         238,
@@ -1723,10 +1788,17 @@ export type PrivatePoll = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1748,6 +1820,13 @@ export type PrivatePoll = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -2032,6 +2111,29 @@ export type PrivatePoll = {
           {
             "name": "isUsed",
             "type": "bool"
+          },
+          {
+            "name": "isActive",
+            "docs": [
+              "Counted in `Registrar::active_locked` (the base of the max voter weight). Cleared by",
+              "`deactivate_expired` or a withdrawal once the lock has ended; set again by a relock."
+            ],
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
           }
         ]
       }
@@ -2210,6 +2312,13 @@ export type PrivatePoll = {
             "type": "bool"
           },
           {
+            "name": "pauseAccumAtCreation",
+            "docs": [
+              "`PollConfig::pause_accum` when the poll was created."
+            ],
+            "type": "i64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -2265,6 +2374,17 @@ export type PrivatePoll = {
           {
             "name": "paused",
             "type": "bool"
+          },
+          {
+            "name": "pausedSince",
+            "type": "i64"
+          },
+          {
+            "name": "pauseAccum",
+            "docs": [
+              "Total seconds spent paused, so reveal deadlines can be extended by downtime."
+            ],
+            "type": "i64"
           },
           {
             "name": "bump",
@@ -2537,6 +2657,15 @@ export type PrivatePoll = {
             "name": "totalLocked",
             "docs": [
               "Sum of all deposits (receipt supply upper bound; drives MaxVoterWeightRecord)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "activeLocked",
+            "docs": [
+              "Principal in deposits not yet deactivated after their lock ended. The max voter weight",
+              "is computed from this, so abandoned expired deposits cannot inflate it forever and",
+              "make percentage thresholds unreachable."
             ],
             "type": "u64"
           },

@@ -627,6 +627,75 @@ export type StakingProtocol = {
       "args": []
     },
     {
+      "name": "deactivateExpired",
+      "docs": [
+        "Marks an expired deposit inactive so it stops counting toward the max voter weight."
+      ],
+      "discriminator": [
+        161,
+        129,
+        114,
+        115,
+        201,
+        239,
+        157,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter.owner",
+                "account": "voter"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "deposit",
       "docs": [
         "Locks VCoin into deposit slot `index` for at least `lock_secs` seconds."
@@ -1116,6 +1185,7 @@ export type StakingProtocol = {
       "accounts": [
         {
           "name": "registrar",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1390,6 +1460,56 @@ export type StakingProtocol = {
         {
           "name": "minProposeScore",
           "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "registrar",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  97,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
         }
       ]
     },
@@ -2028,6 +2148,19 @@ export type StakingProtocol = {
       ]
     },
     {
+      "name": "depositDeactivated",
+      "discriminator": [
+        46,
+        190,
+        51,
+        109,
+        220,
+        81,
+        47,
+        52
+      ]
+    },
+    {
       "name": "deposited",
       "discriminator": [
         111,
@@ -2064,6 +2197,19 @@ export type StakingProtocol = {
         57,
         158,
         250
+      ]
+    },
+    {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
       ]
     },
     {
@@ -2348,6 +2494,11 @@ export type StakingProtocol = {
     },
     {
       "code": 6027,
+      "name": "alreadyDeactivated",
+      "msg": "Deposit is already inactive"
+    },
+    {
+      "code": 6028,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     }
@@ -2356,10 +2507,17 @@ export type StakingProtocol = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -2381,6 +2539,13 @@ export type StakingProtocol = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -2438,6 +2603,30 @@ export type StakingProtocol = {
       }
     },
     {
+      "name": "depositDeactivated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "activeLocked",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "depositEntry",
       "docs": [
         "One locked deposit."
@@ -2459,6 +2648,14 @@ export type StakingProtocol = {
           },
           {
             "name": "isUsed",
+            "type": "bool"
+          },
+          {
+            "name": "isActive",
+            "docs": [
+              "Counted in `Registrar::active_locked` (the base of the max voter weight). Cleared by",
+              "`deactivate_expired` or a withdrawal once the lock has ended; set again by a relock."
+            ],
             "type": "bool"
           }
         ]
@@ -2523,6 +2720,21 @@ export type StakingProtocol = {
           },
           {
             "name": "slashDestination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
             "type": "pubkey"
           }
         ]
@@ -2683,6 +2895,15 @@ export type StakingProtocol = {
             "name": "totalLocked",
             "docs": [
               "Sum of all deposits (receipt supply upper bound; drives MaxVoterWeightRecord)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "activeLocked",
+            "docs": [
+              "Principal in deposits not yet deactivated after their lock ended. The max voter weight",
+              "is computed from this, so abandoned expired deposits cannot inflate it forever and",
+              "make percentage thresholds unreachable."
             ],
             "type": "u64"
           },

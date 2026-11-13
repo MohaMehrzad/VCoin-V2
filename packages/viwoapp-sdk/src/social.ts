@@ -57,14 +57,18 @@ export function tierForLocked(locked: bigint): number {
   return TIER_THRESHOLDS.filter((t) => locked >= t).length;
 }
 
-export function initUserEnergyIx(p: Programs, user: PublicKey, payer: PublicKey, hasStake: boolean): Promise<TransactionInstruction> {
+/**
+ * Opens `user`'s energy account. The staking voter address is always passed (the program
+ * reads the tier from it; a wallet that never staked has no account there and gets tier 0).
+ */
+export function initUserEnergyIx(p: Programs, user: PublicKey, payer: PublicKey): Promise<TransactionInstruction> {
   return p.content.methods
     .initUserEnergy()
     .accountsStrict({
       config: pda.registryConfig(),
       user,
       userEnergy: pda.userEnergy(user),
-      stake: hasStake ? pda.voter(user) : null,
+      stake: pda.voter(user),
       payer,
       systemProgram: SystemProgram.programId,
     })
@@ -72,8 +76,8 @@ export function initUserEnergyIx(p: Programs, user: PublicKey, payer: PublicKey,
 }
 
 /**
- * Posts as `author`. `signer` is the author or a CONTENT session key for the author; pass the
- * staking voter (`hasStake`) to keep the energy tier current.
+ * Posts as `author`. `signer` is the author or a CONTENT session key for the author. `payer`
+ * funds the record's rent and gets it back if the author deletes the post.
  */
 export function createContentIx(
   p: Programs,
@@ -85,7 +89,6 @@ export function createContentIx(
     contentHash: Uint8Array;
     uri: string;
     contentType: number;
-    hasStake: boolean;
   },
 ): Promise<TransactionInstruction> {
   const signer = args.signer ?? args.author;
@@ -97,7 +100,7 @@ export function createContentIx(
       signer,
       session: signer.equals(args.author) ? null : pda.session(PROGRAM_IDS.content, signer, args.author),
       userEnergy: pda.userEnergy(args.author),
-      stake: args.hasStake ? pda.voter(args.author) : null,
+      stake: pda.voter(args.author),
       content: pda.contentRecord(args.author, args.trackingId),
       payer: args.payer ?? signer,
       systemProgram: SystemProgram.programId,
@@ -118,15 +121,25 @@ export function editContentIx(
       signer,
       session: signer.equals(args.author) ? null : pda.session(PROGRAM_IDS.content, signer, args.author),
       userEnergy: pda.userEnergy(args.author),
+      stake: pda.voter(args.author),
       content: pda.contentRecord(args.author, args.trackingId),
     })
     .instruction();
 }
 
-export function deleteContentIx(p: Programs, author: PublicKey, trackingId: Uint8Array): Promise<TransactionInstruction> {
+/**
+ * Deletes a post (main wallet only). `rentPayer` must be the account that paid for the
+ * record (`ContentRecord.rentPayer`): the author, or the relayer that sponsored the post.
+ */
+export function deleteContentIx(
+  p: Programs,
+  author: PublicKey,
+  trackingId: Uint8Array,
+  rentPayer: PublicKey = author,
+): Promise<TransactionInstruction> {
   return p.content.methods
     .deleteContent()
-    .accountsStrict({ content: pda.contentRecord(author, trackingId), author })
+    .accountsStrict({ content: pda.contentRecord(author, trackingId), author, rentPayer })
     .instruction();
 }
 
@@ -137,6 +150,7 @@ export function claimRefundIx(p: Programs, author: PublicKey, trackingId: Uint8A
       config: pda.registryConfig(),
       author,
       userEnergy: pda.userEnergy(author),
+      stake: pda.voter(author),
       content: pda.contentRecord(author, trackingId),
     })
     .instruction();

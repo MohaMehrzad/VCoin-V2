@@ -223,7 +223,7 @@ fn pause_blocks_minting_and_only_the_authority_can_toggle_it() {
     );
     assert_anchor_error(
         send(&mut env.svm, &[ixn], &attacker, &[]),
-        common(CommonError::NotAuthority),
+        common(CommonError::NotAuthorityOrGuardian),
     );
 
     let ixn = update_config_ix(

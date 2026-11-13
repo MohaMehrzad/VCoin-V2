@@ -117,11 +117,15 @@ pub fn execute_slash(ctx: Context<ExecuteSlash>) -> Result<()> {
     // Take from deposits in slot order, locked or not (withdrawals were frozen since proposal).
     let voter = &mut ctx.accounts.voter;
     let mut remaining = requested;
+    let mut active_taken = 0u64;
     for entry in voter.deposits.iter_mut().filter(|d| d.is_used) {
         if remaining == 0 {
             break;
         }
         let take = remaining.min(entry.amount);
+        if entry.is_active {
+            active_taken += take; // ≤ requested
+        }
         entry.amount -= take;
         remaining -= take;
         if entry.amount == 0 {
@@ -160,6 +164,10 @@ pub fn execute_slash(ctx: Context<ExecuteSlash>) -> Result<()> {
     }
 
     let registrar = &mut ctx.accounts.registrar;
+    registrar.active_locked = registrar
+        .active_locked
+        .checked_sub(active_taken)
+        .ok_or(StakingError::Overflow)?;
     registrar.total_locked = registrar
         .total_locked
         .checked_sub(slashed)

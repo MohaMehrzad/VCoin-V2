@@ -30,6 +30,7 @@ tips, claims, staking, withdrawals or votes.
 
 ## Admin
 
-- `initialize`: upgrade authority only.
-- `set_paused`: new sessions and fees.
+- `initialize`: upgrade authority only; the fee token is pinned to the VCoin mint PDA.
+- `set_paused`: new sessions and fees. `set_guardian`: an emergency key that may pause but
+  never unpause.
 - Two-step authority.

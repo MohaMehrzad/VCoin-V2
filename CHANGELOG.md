@@ -40,6 +40,28 @@ v2 entries below claimed audit completion and production readiness; those claims
 - vilink-protocol: tip/vouch/follow only, per-executor receipts, fee fixed at creation.
 - gasless-protocol: scoped session keys (≤ 24h) and user-capped VCoin fees; relayer off-chain (Kora).
 
+### Re-review fixes (second internal pass over the v3 code)
+- All programs with a pause: optional **guardian** key that may pause (never unpause);
+  `set_guardian`. In sscre the guardian may also `veto_root`, since a DAO vote is slower than
+  the dispute delay.
+- sscre-protocol and five-a-protocol: a root or a score needs the configured quorum **and** a
+  strict majority of the active oracles.
+- sscre-protocol: proposals are void after any oracle-set or quorum change; epochs snapshot their
+  windows; part-funded epochs are authority-only; claim fees go to a program-owned fee vault
+  (`withdraw_fees`); `claim` no longer takes a fee account.
+- staking-protocol: `active_locked` and `deactivate_expired`, so expired deposits stop inflating
+  the max voter weight.
+- private-poll: reveal deadlines are extended by paused time; no expiry while paused.
+- zk-voting-sdk: DKG dealings carry a proof of knowledge (rogue-key defence); `Dealer::new`,
+  `aggregate_dealings` and `finish` take a session id; `check_revealed_share`.
+- identity-protocol: revocation always reaches the identity; only the issuer refreshes a link;
+  upgrades never drop prepaid time.
+- content-registry: the staking account is required (tier refreshed on post, edit and refund);
+  rent returns to its payer on delete.
+- five-a-protocol: sliding submission window; `decline_vouch`.
+- gasless-protocol: fee mint pinned to the VCoin mint. vevcoin-token: `initialize` survives a
+  pre-funded mint address.
+
 ### Tooling
 - LiteSVM integration tests for every program (Realms against the mainnet binary); ZK SDK
   round-trip tests; SDK end-to-end tests on the binaries; CI runs fmt, clippy -D warnings, SBF stack

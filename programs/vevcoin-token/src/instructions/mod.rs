@@ -1,7 +1,9 @@
 //! veVCoin handlers.
 
 use anchor_lang::prelude::*;
-use anchor_lang::system_program::{create_account, CreateAccount};
+use anchor_lang::system_program::{
+    allocate, assign, create_account, transfer, Allocate, Assign, CreateAccount, Transfer,
+};
 use anchor_spl::token_2022::spl_token_2022::{extension::ExtensionType, state::Mint as MintState};
 use anchor_spl::token_interface::{
     burn, initialize_mint2, mint_to, non_transferable_mint_initialize,
@@ -29,19 +31,60 @@ pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
     ])?;
     let mint_bump = [ctx.bumps.mint];
     let mint_seeds: &[&[u8]] = &[VEVCOIN_MINT_SEED, &mint_bump];
-    create_account(
-        CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(),
-            CreateAccount {
-                from: ctx.accounts.authority.to_account_info(),
-                to: mint_info.clone(),
-            },
-            &[mint_seeds],
-        ),
-        Rent::get()?.minimum_balance(space),
-        space as u64,
-        token_program.key,
-    )?;
+    let rent = Rent::get()?.minimum_balance(space);
+    let system_program = ctx.accounts.system_program.to_account_info();
+    if mint_info.lamports() == 0 {
+        create_account(
+            CpiContext::new_with_signer(
+                system_program,
+                CreateAccount {
+                    from: ctx.accounts.authority.to_account_info(),
+                    to: mint_info.clone(),
+                },
+                &[mint_seeds],
+            ),
+            rent,
+            space as u64,
+            token_program.key,
+        )?;
+    } else {
+        // The PDA already holds lamports (anyone can send some to a known address), and
+        // `create_account` refuses such accounts. Top up, allocate and assign instead, as
+        // Anchor's `init` does, so a donation cannot block initialization.
+        let top_up = rent.saturating_sub(mint_info.lamports());
+        if top_up > 0 {
+            transfer(
+                CpiContext::new(
+                    system_program.clone(),
+                    Transfer {
+                        from: ctx.accounts.authority.to_account_info(),
+                        to: mint_info.clone(),
+                    },
+                ),
+                top_up,
+            )?;
+        }
+        allocate(
+            CpiContext::new_with_signer(
+                system_program.clone(),
+                Allocate {
+                    account_to_allocate: mint_info.clone(),
+                },
+                &[mint_seeds],
+            ),
+            space as u64,
+        )?;
+        assign(
+            CpiContext::new_with_signer(
+                system_program,
+                Assign {
+                    account_to_assign: mint_info.clone(),
+                },
+                &[mint_seeds],
+            ),
+            token_program.key,
+        )?;
+    }
 
     // Extensions must be initialized before the base mint.
     non_transferable_mint_initialize(CpiContext::new(

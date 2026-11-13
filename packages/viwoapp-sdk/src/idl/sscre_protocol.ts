@@ -328,7 +328,7 @@ export type SscreProtocol = {
           "writable": true
         },
         {
-          "name": "feeDestination",
+          "name": "feeVault",
           "writable": true,
           "relations": [
             "config"
@@ -635,6 +635,28 @@ export type SscreProtocol = {
           }
         },
         {
+          "name": "feeVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "feeDestination"
         },
         {
@@ -877,6 +899,58 @@ export type SscreProtocol = {
       "args": [
         {
           "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "setGuardian",
+      "docs": [
+        "Sets or clears the emergency guardian (may pause, never unpause)."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
           "type": "pubkey"
         }
       ]
@@ -1347,6 +1421,72 @@ export type SscreProtocol = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "withdrawFees",
+      "docs": [
+        "Sweeps collected claim fees to the configured fee account (permissionless)."
+      ],
+      "discriminator": [
+        198,
+        212,
+        171,
+        109,
+        144,
+        215,
+        174,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "feeVault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "feeDestination",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "vcoinMint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -1493,6 +1633,32 @@ export type SscreProtocol = {
         215,
         223,
         243
+      ]
+    },
+    {
+      "name": "feesWithdrawn",
+      "discriminator": [
+        234,
+        15,
+        0,
+        119,
+        148,
+        241,
+        40,
+        21
+      ]
+    },
+    {
+      "name": "guardianSet",
+      "discriminator": [
+        159,
+        49,
+        155,
+        156,
+        176,
+        88,
+        29,
+        190
       ]
     },
     {
@@ -1810,6 +1976,21 @@ export type SscreProtocol = {
     },
     {
       "code": 6031,
+      "name": "reserveBelowBudget",
+      "msg": "Reserve holds less than the scheduled budget; only the authority may start a smaller epoch"
+    },
+    {
+      "code": 6032,
+      "name": "notEnoughOracles",
+      "msg": "Fewer oracles are registered than the root quorum"
+    },
+    {
+      "code": 6033,
+      "name": "nothingToWithdraw",
+      "msg": "No fees to withdraw"
+    },
+    {
+      "code": 6034,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     }
@@ -1818,10 +1999,17 @@ export type SscreProtocol = {
     {
       "name": "adminState",
       "docs": [
-        "Authority with a two-step, time-locked transfer.",
+        "Authority with a two-step, time-locked transfer, plus an optional emergency guardian.",
         "",
         "`propose` (current authority) → wait [`AUTHORITY_TRANSFER_DELAY`] → `accept`",
-        "(new authority). The current authority can `cancel` at any time before acceptance."
+        "(new authority). The current authority can `cancel` at any time before acceptance.",
+        "",
+        "After launch the authority is a Realms governance PDA, which needs a vote and a hold-up",
+        "(days) to act. The `guardian` (e.g. a council multisig or a zero-hold-up council",
+        "governance) exists so an emergency stop is possible within minutes: it may **pause**",
+        "(never unpause) and use program-specific stop actions such as vetoing a rewards root.",
+        "It cannot move funds, change parameters or keep the protocol paused against the",
+        "authority, which can unpause and replace it."
       ],
       "type": {
         "kind": "struct",
@@ -1843,6 +2031,13 @@ export type SscreProtocol = {
               "Unix time the pending transfer was proposed (0 when none)."
             ],
             "type": "i64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Emergency guardian (`Pubkey::default()` = none)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -1965,6 +2160,18 @@ export type SscreProtocol = {
             "type": "i64"
           },
           {
+            "name": "claimWindow",
+            "docs": [
+              "`PoolParams` snapshot at start, so later parameter changes never move this epoch's",
+              "deadlines."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "disputeDelay",
+            "type": "i64"
+          },
+          {
             "name": "votes",
             "type": {
               "array": [
@@ -1996,6 +2203,13 @@ export type SscreProtocol = {
           {
             "name": "proposedAt",
             "type": "i64"
+          },
+          {
+            "name": "proposedVersion",
+            "docs": [
+              "`PoolConfig::oracle_set_version` when the candidate was proposed."
+            ],
+            "type": "u64"
           },
           {
             "name": "root",
@@ -2172,6 +2386,37 @@ export type SscreProtocol = {
       }
     },
     {
+      "name": "feesWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "guardianSet",
+      "docs": [
+        "The emergency guardian may pause (never unpause); `Pubkey::default()` = none."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "nextEpochBudgetSet",
       "type": {
         "kind": "struct",
@@ -2257,6 +2502,10 @@ export type SscreProtocol = {
           {
             "name": "maxTotalClaim",
             "type": "u64"
+          },
+          {
+            "name": "votedAt",
+            "type": "i64"
           }
         ]
       }
@@ -2324,6 +2573,14 @@ export type SscreProtocol = {
             "type": "u16"
           },
           {
+            "name": "feeVault",
+            "docs": [
+              "PDA `[\"fee-vault\"]`: claim fees collect here, so a claim never depends on an",
+              "outside account. Anyone may sweep it to `fee_destination`."
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "feeDestination",
             "type": "pubkey"
           },
@@ -2387,6 +2644,14 @@ export type SscreProtocol = {
             "type": "u8"
           },
           {
+            "name": "oracleSetVersion",
+            "docs": [
+              "Bumped whenever the oracle set or the quorum changes; a proposed root is only valid",
+              "under the version that produced it."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "paused",
             "type": "bool"
           },
@@ -2408,6 +2673,10 @@ export type SscreProtocol = {
           {
             "name": "reserveBump",
             "type": "u8"
+          },
+          {
+            "name": "feeVaultBump",
+            "type": "u8"
           }
         ]
       }
@@ -2423,6 +2692,10 @@ export type SscreProtocol = {
           },
           {
             "name": "reserveVault",
+            "type": "pubkey"
+          },
+          {
+            "name": "feeVault",
             "type": "pubkey"
           },
           {
@@ -2637,6 +2910,11 @@ export type SscreProtocol = {
       "name": "epochVaultSeed",
       "type": "bytes",
       "value": "[101, 112, 111, 99, 104, 45, 118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "feeVaultSeed",
+      "type": "bytes",
+      "value": "[102, 101, 101, 45, 118, 97, 117, 108, 116]"
     },
     {
       "name": "poolConfigSeed",

@@ -58,6 +58,11 @@ pub mod staking_protocol {
         instructions::stake::withdraw(ctx, index, amount)
     }
 
+    /// Marks an expired deposit inactive so it stops counting toward the max voter weight.
+    pub fn deactivate_expired(ctx: Context<DeactivateExpired>, index: u8) -> Result<()> {
+        instructions::stake::deactivate_expired(ctx, index)
+    }
+
     /// Closes an empty voter account and refunds its rent.
     pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
         instructions::stake::close_voter(ctx)
@@ -131,6 +136,11 @@ pub mod staking_protocol {
 
     pub fn set_paused(ctx: Context<UpdateRegistrar>, paused: bool) -> Result<()> {
         instructions::admin::set_paused(ctx, paused)
+    }
+
+    /// Sets or clears the emergency guardian (may pause, never unpause).
+    pub fn set_guardian(ctx: Context<UpdateRegistrar>, guardian: Pubkey) -> Result<()> {
+        instructions::admin::set_guardian(ctx, guardian)
     }
 
     pub fn set_weight_params(ctx: Context<UpdateRegistrar>, params: WeightParams) -> Result<()> {

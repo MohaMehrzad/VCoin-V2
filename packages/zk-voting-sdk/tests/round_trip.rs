@@ -9,6 +9,7 @@ const PROGRAM: [u8; 32] = [1; 32];
 const POLL: [u8; 32] = [2; 32];
 const THRESHOLD: u8 = 3;
 const SIZE: u8 = 5;
+const G: RistrettoPoint = curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 
 fn decompress(b: &[u8; 32]) -> RistrettoPoint {
     curve25519_dalek::ristretto::CompressedRistretto(*b)
@@ -16,17 +17,20 @@ fn decompress(b: &[u8; 32]) -> RistrettoPoint {
         .unwrap()
 }
 
+/// Identifies the DKG run in these tests.
+const SESSION: [u8; 32] = [9u8; 32];
+
 /// Full Pedersen DKG among `SIZE` members.
 fn committee() -> Vec<KeyShare> {
     let dealers: Vec<Dealer> = (1..=SIZE)
-        .map(|i| Dealer::new(i, THRESHOLD, SIZE, &mut OsRng).unwrap())
+        .map(|i| Dealer::new(i, THRESHOLD, SIZE, &SESSION, &mut OsRng).unwrap())
         .collect();
     let dealings: Vec<PublicDealing> = dealers.iter().map(Dealer::public_dealing).collect();
     (1..=SIZE)
         .map(|i| {
             let shares: Vec<ShareMessage> =
                 dealers.iter().map(|d| d.share_for(i).unwrap()).collect();
-            finish(i, THRESHOLD, &dealings, &shares).unwrap()
+            finish(i, THRESHOLD, &SESSION, &dealings, &shares).unwrap()
         })
         .collect()
 }
@@ -320,30 +324,30 @@ fn committee_registration_checks() {
         "t < 3"
     );
 
-    assert!(Dealer::new(1, 6, 5, &mut OsRng).is_err());
-    assert!(Dealer::new(6, 3, 5, &mut OsRng).is_err());
+    assert!(Dealer::new(1, 6, 5, &SESSION, &mut OsRng).is_err());
+    assert!(Dealer::new(6, 3, 5, &SESSION, &mut OsRng).is_err());
 }
 
 #[test]
 fn a_bad_dealer_is_named() {
     let dealers: Vec<Dealer> = (1..=3)
-        .map(|i| Dealer::new(i, 3, 3, &mut OsRng).unwrap())
+        .map(|i| Dealer::new(i, 3, 3, &SESSION, &mut OsRng).unwrap())
         .collect();
     let dealings: Vec<PublicDealing> = dealers.iter().map(Dealer::public_dealing).collect();
     let mut shares: Vec<ShareMessage> = dealers.iter().map(|d| d.share_for(1).unwrap()).collect();
     let bogus = Scalar::random(&mut OsRng).to_bytes();
     shares[1] = ShareMessage::from_bytes(2, 1, &bogus).unwrap();
     assert_eq!(
-        finish(1, 3, &dealings, &shares).unwrap_err(),
+        finish(1, 3, &SESSION, &dealings, &shares).unwrap_err(),
         SdkError::BadDealing { dealer: 2 }
     );
 
     // Missing or duplicated shares.
-    assert!(finish(1, 3, &dealings, &shares[..2]).is_err());
+    assert!(finish(1, 3, &SESSION, &dealings, &shares[..2]).is_err());
     let mut dup = dealings.clone();
     dup[2].dealer = 1;
     assert_eq!(
-        aggregate_dealings(3, &dup).unwrap_err(),
+        aggregate_dealings(3, &SESSION, &dup).unwrap_err(),
         SdkError::DuplicateIndex(1)
     );
 }
@@ -396,7 +400,7 @@ fn combine_rejects_duplicates_too_few_shares_and_small_bounds() {
 
 #[test]
 fn secrets_never_appear_in_debug_output() {
-    let dealer = Dealer::new(1, 3, 3, &mut OsRng).unwrap();
+    let dealer = Dealer::new(1, 3, 3, &SESSION, &mut OsRng).unwrap();
     let share = dealer.share_for(2).unwrap();
     let secret_hex: String = share
         .to_bytes()
@@ -418,4 +422,118 @@ fn secrets_never_appear_in_debug_output() {
 fn poll_weight_counts_whole_vcoin() {
     assert_eq!(poll_weight(2_999_999_999), 2);
     assert_eq!(poll_weight(WEIGHT_UNIT - 1), 0);
+}
+
+/// Re-review C1 (High): the rogue-key attack. Member 3 publishes last and sets its constant
+/// term to `x·G − A_1 − A_2`, so the election key becomes `x·G` for an `x` it knows. It can
+/// make its dealing pass every honest member's Feldman check, but it cannot prove knowledge
+/// of that constant term, so the dealing is rejected.
+#[test]
+fn a_rogue_key_dealing_is_rejected() {
+    let honest: Vec<Dealer> = (1..=2)
+        .map(|i| Dealer::new(i, 3, 3, &SESSION, &mut OsRng).unwrap())
+        .collect();
+    let mut dealings: Vec<PublicDealing> = honest.iter().map(Dealer::public_dealing).collect();
+
+    let x = Scalar::random(&mut OsRng);
+    let others: RistrettoPoint = dealings.iter().map(|d| decompress(&d.commitments[0])).sum();
+    let a0 = x * G - others;
+    // Shares the attacker hands to members 1 and 2, and commitments that fit them:
+    // A_0 + i·A_1 + i²·A_2 = s_i·G for i = 1, 2.
+    let (s1, s2) = (Scalar::random(&mut OsRng), Scalar::random(&mut OsRng));
+    let (p1, p2) = (s1 * G - a0, s2 * G - a0);
+    let two = Scalar::from(2u64);
+    let a2 = (p2 - two * p1) * two.invert();
+    let a1 = p1 - a2;
+    let commitments = vec![
+        a0.compress().to_bytes(),
+        a1.compress().to_bytes(),
+        a2.compress().to_bytes(),
+    ];
+    // The attack is real: both honest Feldman checks pass and the key would be x·G.
+    for (i, s) in [(1u8, s1), (2u8, s2)] {
+        verify_feldman(&commitments, i, &(s * G).compress().to_bytes()).unwrap();
+    }
+    assert_eq!(others + a0, x * G);
+
+    // It has no valid proof for a0. Replaying an honest dealer's proof, or its own proof
+    // for a term it does know, does not help.
+    let own = Dealer::new(3, 3, 3, &SESSION, &mut OsRng)
+        .unwrap()
+        .public_dealing();
+    for proof in [dealings[0].proof, own.proof, [0u8; DKG_POK_LEN]] {
+        let mut all = dealings.clone();
+        all.push(PublicDealing {
+            dealer: 3,
+            commitments: commitments.clone(),
+            proof,
+        });
+        assert_eq!(
+            aggregate_dealings(3, &SESSION, &all).unwrap_err(),
+            SdkError::BadDealing { dealer: 3 }
+        );
+        let shares: Vec<ShareMessage> = honest
+            .iter()
+            .map(|d| d.share_for(1).unwrap())
+            .chain([ShareMessage::from_bytes(3, 1, &s1.to_bytes()).unwrap()])
+            .collect();
+        assert_eq!(
+            finish(1, 3, &SESSION, &all, &shares).unwrap_err(),
+            SdkError::BadDealing { dealer: 3 }
+        );
+    }
+
+    // An honest third dealing is accepted, but only in its own session and under its index.
+    dealings.push(own.clone());
+    aggregate_dealings(3, &SESSION, &dealings).unwrap();
+    assert_eq!(
+        aggregate_dealings(3, &[1u8; 32], &dealings).unwrap_err(),
+        SdkError::BadDealing { dealer: 1 }
+    );
+    assert!(own.verify_proof(&SESSION, 3, 3).is_ok());
+    assert!(
+        own.verify_proof(&SESSION, 3, 4).is_err(),
+        "bound to the size"
+    );
+    let mut renumbered = own;
+    renumbered.dealer = 2;
+    assert!(renumbered.verify_proof(&SESSION, 3, 3).is_err());
+}
+
+/// A complaint is settled in public: the revealed share either fits the dealer's
+/// commitments (the complaint was false) or it does not (the dealer cheated).
+#[test]
+fn a_revealed_share_settles_a_complaint() {
+    let dealer = Dealer::new(2, 3, 3, &SESSION, &mut OsRng).unwrap();
+    let dealing = dealer.public_dealing();
+    let sent = dealer.share_for(1).unwrap();
+    check_revealed_share(&dealing, &sent).expect("honest dealer is cleared");
+
+    let bogus = ShareMessage::from_bytes(2, 1, &Scalar::random(&mut OsRng).to_bytes()).unwrap();
+    assert_eq!(
+        check_revealed_share(&dealing, &bogus).unwrap_err(),
+        SdkError::BadDealing { dealer: 2 }
+    );
+    // A share addressed to someone else does not answer the complaint.
+    let other = dealer.share_for(3).unwrap();
+    let relabelled = ShareMessage::from_bytes(2, 1, &other.to_bytes()).unwrap();
+    assert!(check_revealed_share(&dealing, &relabelled).is_err());
+}
+
+/// Re-review C9/C10: malformed public input returns an error instead of panicking.
+#[test]
+fn malformed_group_keys_and_commitment_lists_are_errors_not_panics() {
+    let empty = GroupKey {
+        threshold: 3,
+        commitments: vec![],
+        member_pks: vec![],
+    };
+    assert_eq!(empty.election_pk(), [0u8; 32]);
+    assert_eq!(empty.verify(), Err(SdkError::Zk(ZkError::InvalidCommittee)));
+
+    let g = G.compress().to_bytes();
+    assert_eq!(
+        verify_feldman(&vec![g; 64], 5, &g),
+        Err(ZkError::InvalidCommittee)
+    );
 }

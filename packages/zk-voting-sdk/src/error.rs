@@ -8,7 +8,7 @@ pub enum SdkError {
     InvalidPoint,
     #[error("committee index {0} is outside 1..=size")]
     InvalidIndex(u8),
-    #[error("dealer {dealer} sent an invalid share or commitments; exclude it and rerun the DKG")]
+    #[error("dealer {dealer} sent an invalid share, commitments or proof of knowledge; exclude it and rerun the DKG")]
     BadDealing { dealer: u8 },
     #[error("expected exactly one dealing and one share from each of the {expected} members")]
     IncompleteDealings { expected: u8 },

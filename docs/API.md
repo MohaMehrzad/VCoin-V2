@@ -63,6 +63,15 @@ Starts a 24h two-step authority transfer.
 | `config` | writable, PDA |  |
 | `authority` | signer |  |
 
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
 #### `set_paused(paused: bool)`
 
 Pauses or resumes `mint_tokens`.
@@ -90,7 +99,7 @@ Updates a token-metadata field (name, symbol or URI).
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `MetadataUpdated`, `PauseChanged`, `TokensMinted`, `VCoinInitialized`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `GuardianSet`, `MetadataUpdated`, `PauseChanged`, `TokensMinted`, `VCoinInitialized`
 
 ### Errors
 
@@ -278,6 +287,15 @@ Creates the caller's voter account.
 | `payer` | signer, writable |  |
 | `system_program` | = `11111111111111111111111111111111` |  |
 
+#### `deactivate_expired(index: u8)`
+
+Marks an expired deposit inactive so it stops counting toward the max voter weight.
+
+| Account | Flags | Notes |
+|---|---|---|
+| `registrar` | writable, PDA |  |
+| `voter` | writable, PDA |  |
+
 #### `deposit(index: u8, amount: u64, lock_secs: i64)`
 
 Locks VCoin into deposit slot `index` for at least `lock_secs` seconds.
@@ -329,7 +347,7 @@ Moves a deposit's lock end to `now + lock_secs` (must be later than today's end)
 
 | Account | Flags | Notes |
 |---|---|---|
-| `registrar` | PDA |  |
+| `registrar` | writable, PDA |  |
 | `voter` | writable, PDA |  |
 | `owner` | signer |  |
 
@@ -354,6 +372,15 @@ Opens a slash of `amount` against a voter (authority = the DAO). Freezes the vot
 | `system_program` | = `11111111111111111111111111111111` |  |
 
 #### `set_gate_params(min_vote_score: u16, min_propose_score: u16)`
+
+| Account | Flags | Notes |
+|---|---|---|
+| `registrar` | writable, PDA |  |
+| `authority` | signer |  |
+
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
 
 | Account | Flags | Notes |
 |---|---|---|
@@ -427,7 +454,7 @@ Withdraws unlocked VCoin from deposit slot `index`.
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `Deposited`, `GateParamsUpdated`, `GovernanceConfigured`, `LockExtended`, `PauseChanged`, `RegistrarCreated`, `SlashCancelled`, `SlashDestinationChanged`, `SlashExecuted`, `SlashExpired`, `SlashProposed`, `VoterCreated`, `WeightParamsUpdated`, `Withdrawn`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `DepositDeactivated`, `Deposited`, `GateParamsUpdated`, `GovernanceConfigured`, `GuardianSet`, `LockExtended`, `PauseChanged`, `RegistrarCreated`, `SlashCancelled`, `SlashDestinationChanged`, `SlashExecuted`, `SlashExpired`, `SlashProposed`, `VoterCreated`, `WeightParamsUpdated`, `Withdrawn`
 
 ### Errors
 
@@ -460,7 +487,8 @@ Withdraws unlocked VCoin from deposit slot `index`.
 | 6024 | `SlashNotReady` | Slash request is still inside its appeal window |
 | 6025 | `SlashWindowClosed` | Slash request has expired |
 | 6026 | `SlashNotExpired` | Slash request has not expired yet |
-| 6027 | `Overflow` | Arithmetic overflow |
+| 6027 | `AlreadyDeactivated` | Deposit is already inactive |
+| 6028 | `Overflow` | Arithmetic overflow |
 
 ## private-poll
 
@@ -580,6 +608,15 @@ Registers the decryption committee (authority = the DAO). Feldman-verified.
 | `config` | writable, PDA |  |
 | `authority` | signer |  |
 
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
 #### `set_paused(paused: bool)`
 
 | Account | Flags | Notes |
@@ -610,7 +647,7 @@ Committee member `member_index` (1-based) posts its partial decryption.
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `BallotCast`, `CommitteeSet`, `ConfigInitialized`, `PauseChanged`, `PollConsumed`, `PollCreated`, `PollFinalized`, `PollParamsUpdated`, `ShareSubmitted`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `BallotCast`, `CommitteeSet`, `ConfigInitialized`, `GuardianSet`, `PauseChanged`, `PollConsumed`, `PollCreated`, `PollFinalized`, `PollParamsUpdated`, `ShareSubmitted`
 
 ### Errors
 
@@ -699,7 +736,7 @@ Program id: `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ`
 | `vcoin_mint` |  |  |
 | `claimant` | signer |  |
 | `claimant_token` | writable |  |
-| `fee_destination` | writable |  |
+| `fee_vault` | writable |  |
 | `claim_status` | writable, PDA |  |
 | `payer` | signer, writable |  |
 | `token_program` | = `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` |  |
@@ -735,6 +772,7 @@ Creates the pool and reserve vault. Upgrade authority only; VCoin mint pinned.
 | `config` | writable, PDA |  |
 | `vcoin_mint` |  |  |
 | `reserve_vault` | writable, PDA |  |
+| `fee_vault` | writable, PDA |  |
 | `fee_destination` |  |  |
 | `program` | = `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ` |  |
 | `program_data` |  |  |
@@ -766,6 +804,15 @@ Creates the pool and reserve vault. Upgrade authority only; VCoin mint pinned.
 | `authority` | signer |  |
 
 #### `remove_oracle(oracle: Pubkey)`
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
 
 | Account | Flags | Notes |
 |---|---|---|
@@ -831,13 +878,25 @@ Funds the next epoch from the reserve (permissionless, rate-limited).
 | `epoch` | writable, PDA |  |
 | `oracle` | signer |  |
 
+#### `withdraw_fees()`
+
+Sweeps collected claim fees to the configured fee account (permissionless).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | PDA |  |
+| `fee_vault` | writable |  |
+| `fee_destination` | writable |  |
+| `vcoin_mint` |  |  |
+| `token_program` | = `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` |  |
+
 ### Accounts
 
 `ClaimStatus`, `Epoch`, `PoolConfig`
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `EpochClawedBack`, `EpochStarted`, `FeeChangeApplied`, `FeeChangeCancelled`, `FeeChangeProposed`, `NextEpochBudgetSet`, `OracleRegistered`, `OracleRemoved`, `ParamsUpdated`, `PauseChanged`, `PoolInitialized`, `RewardClaimed`, `RootActivated`, `RootProposed`, `RootQuorumSet`, `RootVetoed`, `RootVoted`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `EpochClawedBack`, `EpochStarted`, `FeeChangeApplied`, `FeeChangeCancelled`, `FeeChangeProposed`, `FeesWithdrawn`, `GuardianSet`, `NextEpochBudgetSet`, `OracleRegistered`, `OracleRemoved`, `ParamsUpdated`, `PauseChanged`, `PoolInitialized`, `RewardClaimed`, `RootActivated`, `RootProposed`, `RootQuorumSet`, `RootVetoed`, `RootVoted`
 
 ### Errors
 
@@ -874,7 +933,10 @@ Funds the next epoch from the reserve (permissionless, rate-limited).
 | 6028 | `EpochNotClosed` | Epoch not closed yet |
 | 6029 | `NoPendingFee` | No fee change pending |
 | 6030 | `FeeTimelockActive` | Fee change timelock still active |
-| 6031 | `Overflow` | Arithmetic overflow |
+| 6031 | `ReserveBelowBudget` | Reserve holds less than the scheduled budget; only the authority may start a smaller epoch |
+| 6032 | `NotEnoughOracles` | Fewer oracles are registered than the root quorum |
+| 6033 | `NothingToWithdraw` | No fees to withdraw |
+| 6034 | `Overflow` | Arithmetic overflow |
 
 ## gasless-protocol
 
@@ -978,6 +1040,15 @@ Upgrade authority only.
 | `config` | writable, PDA |  |
 | `authority` | signer |  |
 
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
 #### `set_paused(paused: bool)`
 
 | Account | Flags | Notes |
@@ -1001,7 +1072,7 @@ Upgrade authority only.
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `FeeChangeScheduled`, `FeeChanged`, `FeePaid`, `FeesWithdrawn`, `GaslessInitialized`, `PauseChanged`, `SessionCreated`, `SessionRevoked`, `TreasuryChangeScheduled`, `TreasuryChanged`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `FeeChangeScheduled`, `FeeChanged`, `FeePaid`, `FeesWithdrawn`, `GaslessInitialized`, `GuardianSet`, `PauseChanged`, `SessionCreated`, `SessionRevoked`, `TreasuryChangeScheduled`, `TreasuryChanged`
 
 ### Errors
 
@@ -1021,6 +1092,7 @@ Upgrade authority only.
 | 6011 | `InvalidProgramData` | Program data account does not belong to this program |
 | 6012 | `ZeroAmount` | Amount must be greater than zero |
 | 6013 | `Overflow` | Arithmetic overflow |
+| 6014 | `InvalidVCoinMint` | VCoin mint must be the vcoin-token program's mint PDA |
 
 ## five-a-protocol
 
@@ -1049,6 +1121,19 @@ Program id: `783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8`
 | `pending` | writable, PDA |  |
 | `rent_payer` | writable |  |
 
+#### `decline_vouch()`
+
+The vouchee declines a vouch made for them.
+
+| Account | Flags | Notes |
+|---|---|---|
+| `close.config` | PDA |  |
+| `close.vouch_record` | writable, PDA |  |
+| `close.voucher` | writable |  |
+| `close.voucher_stats` | writable, PDA |  |
+| `close.vouchee_status` | writable, PDA |  |
+| `vouchee` | signer |  |
+
 #### `evaluate_vouch()`
 
 | Account | Flags | Notes |
@@ -1057,6 +1142,7 @@ Program id: `783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8`
 | `close.vouch_record` | writable, PDA |  |
 | `close.voucher` | writable |  |
 | `close.voucher_stats` | writable, PDA |  |
+| `close.vouchee_status` | writable, PDA |  |
 | `oracle` | signer |  |
 | `vouchee_score` |  |  |
 
@@ -1068,6 +1154,7 @@ Program id: `783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8`
 | `vouch_record` | writable, PDA |  |
 | `voucher` | writable |  |
 | `voucher_stats` | writable, PDA |  |
+| `vouchee_status` | writable, PDA |  |
 
 #### `initialize()`
 
@@ -1096,6 +1183,15 @@ Upgrade authority only.
 | `authority` | signer |  |
 
 #### `remove_oracle(oracle: Pubkey)`
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
 
 | Account | Flags | Notes |
 |---|---|---|
@@ -1151,7 +1247,7 @@ An active oracle submits (or changes) its values for `user`.
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `ConsensusSet`, `FiveAInitialized`, `OracleRegistered`, `OracleRemoved`, `PauseChanged`, `ScoreApplied`, `ScoreRoundExpired`, `ScoreSubmitted`, `VouchClosed`, `VouchCreated`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `ConsensusSet`, `FiveAInitialized`, `GuardianSet`, `OracleRegistered`, `OracleRemoved`, `PauseChanged`, `ScoreApplied`, `ScoreRoundExpired`, `ScoreSubmitted`, `VouchClosed`, `VouchCreated`
 
 ### Errors
 
@@ -1179,7 +1275,8 @@ An active oracle submits (or changes) its values for `user`.
 | 6019 | `EvaluationTooEarly` | The evaluation period has not passed |
 | 6020 | `VouchExpired` | The vouch expired; use expire_vouch |
 | 6021 | `VouchNotExpired` | The vouch has not expired |
-| 6022 | `Overflow` | Arithmetic overflow |
+| 6022 | `NotVouchee` | Signer is not the vouchee of this vouch |
+| 6023 | `Overflow` | Arithmetic overflow |
 
 ## identity-protocol
 
@@ -1301,9 +1398,18 @@ Upgrade authority only; USDC mint (6 decimals) and treasury token account fixed 
 |---|---|---|
 | `config` | PDA |  |
 | `attestation_link` | writable, PDA |  |
-| `identity` | writable, optional, PDA | The owner's identity, if it still exists. |
+| `identity` | writable, PDA | link. The handler deserializes it if it still exists. |
 | `rent_payer` | writable |  |
 | `revoker` | signer |  |
+
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
 
 #### `set_paused(paused: bool)`
 
@@ -1339,7 +1445,7 @@ Upgrade authority only; USDC mint (6 decimals) and treasury token account fixed 
 
 ### Events
 
-`AttestationLinked`, `AttestationRevoked`, `AttesterAdded`, `AttesterRemoved`, `AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `DidHashUpdated`, `IdentityClosed`, `IdentityCreated`, `IdentityInitialized`, `LevelLowered`, `PauseChanged`, `PaymentChangeApplied`, `PaymentChangeCancelled`, `PaymentChangeProposed`, `Subscribed`
+`AttestationLinked`, `AttestationRevoked`, `AttesterAdded`, `AttesterRemoved`, `AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `DidHashUpdated`, `GuardianSet`, `IdentityClosed`, `IdentityCreated`, `IdentityInitialized`, `LevelLowered`, `PauseChanged`, `PaymentChangeApplied`, `PaymentChangeCancelled`, `PaymentChangeProposed`, `Subscribed`
 
 ### Errors
 
@@ -1365,7 +1471,8 @@ Upgrade authority only; USDC mint (6 decimals) and treasury token account fixed 
 | 6017 | `PriceAboveMax` | Price exceeds the maximum you signed |
 | 6018 | `NoPendingChange` | No payment change pending |
 | 6019 | `TimelockActive` | Payment change timelock still active |
-| 6020 | `Overflow` | Arithmetic overflow |
+| 6020 | `AttesterMismatch` | Only the attester that issued this attestation may refresh it |
+| 6021 | `Overflow` | Arithmetic overflow |
 
 ## content-registry
 
@@ -1407,6 +1514,7 @@ Program id: `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV`
 | `config` | PDA |  |
 | `author` | signer |  |
 | `user_energy` | writable, PDA |  |
+| `stake` | PDA | the tier can be neither understated by a third party nor left stale by the author; a wallet that never staked simply has no account there (tier 0). |
 | `content` | writable, PDA |  |
 
 #### `create_content(tracking_id: [u8; 32], content_hash: [u8; 32], uri: string, content_type: u8)`
@@ -1418,7 +1526,7 @@ Program id: `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV`
 | `signer` | signer |  |
 | `session` | optional, PDA |  |
 | `user_energy` | writable, PDA |  |
-| `stake` | optional, PDA | The author's staking deposits; refreshes the tier on every post. Omitted = tier 0. |
+| `stake` | PDA | the tier can be neither understated by a third party nor left stale by the author; a wallet that never staked simply has no account there (tier 0). |
 | `content` | writable, PDA |  |
 | `payer` | signer, writable |  |
 | `system_program` | = `11111111111111111111111111111111` |  |
@@ -1428,7 +1536,8 @@ Program id: `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV`
 | Account | Flags | Notes |
 |---|---|---|
 | `content` | writable, PDA |  |
-| `author` | signer, writable |  |
+| `author` | signer |  |
+| `rent_payer` | writable |  |
 
 #### `edit_content(content_hash: [u8; 32], uri: string)`
 
@@ -1439,6 +1548,7 @@ Program id: `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV`
 | `signer` | signer |  |
 | `session` | optional, PDA |  |
 | `user_energy` | writable, PDA |  |
+| `stake` | PDA | the tier can be neither understated by a third party nor left stale by the author; a wallet that never staked simply has no account there (tier 0). |
 | `content` | writable, PDA |  |
 
 #### `init_user_energy()`
@@ -1448,7 +1558,7 @@ Program id: `MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV`
 | `config` | PDA |  |
 | `user` |  |  |
 | `user_energy` | writable, PDA |  |
-| `stake` | optional, PDA | The user's staking deposits; omitted = tier 0. |
+| `stake` | PDA | the tier can be neither understated by a third party nor left stale by the user; a wallet that never staked simply has no account there (tier 0). |
 | `payer` | signer, writable |  |
 | `system_program` | = `11111111111111111111111111111111` |  |
 
@@ -1478,6 +1588,15 @@ Upgrade authority only.
 | `config` | writable, PDA |  |
 | `authority` | signer |  |
 
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
 #### `set_paused(paused: bool)`
 
 | Account | Flags | Notes |
@@ -1495,11 +1614,11 @@ Upgrade authority only.
 
 ### Accounts
 
-`ContentRecord`, `RegistryConfig`, `SessionToken`, `UserEnergy`, `Voter`
+`ContentRecord`, `RegistryConfig`, `SessionToken`, `UserEnergy`
 
 ### Events
 
-`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `ContentCreated`, `ContentDeleted`, `ContentEdited`, `EnergyInitialized`, `EnergySpent`, `EngagementUpdated`, `OracleChangeCancelled`, `OracleChangeProposed`, `OracleChanged`, `PauseChanged`, `RefundClaimed`, `RegistryInitialized`, `TierChanged`
+`AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `ContentCreated`, `ContentDeleted`, `ContentEdited`, `EnergyInitialized`, `EnergySpent`, `EngagementUpdated`, `GuardianSet`, `OracleChangeCancelled`, `OracleChangeProposed`, `OracleChanged`, `PauseChanged`, `RefundClaimed`, `RegistryInitialized`, `TierChanged`
 
 ### Errors
 
@@ -1667,6 +1786,15 @@ Upgrade authority only; VCoin mint pinned.
 | `config` | writable, PDA |  |
 | `authority` | signer |  |
 
+#### `set_guardian(guardian: Pubkey)`
+
+Sets or clears the emergency guardian (may pause, never unpause).
+
+| Account | Flags | Notes |
+|---|---|---|
+| `config` | writable, PDA |  |
+| `authority` | signer |  |
+
 #### `set_paused(paused: bool)`
 
 | Account | Flags | Notes |
@@ -1680,7 +1808,7 @@ Upgrade authority only; VCoin mint pinned.
 
 ### Events
 
-`ActionClosed`, `ActionCreated`, `ActionExecuted`, `AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `ConfigChangeApplied`, `ConfigChangeCancelled`, `ConfigChangeProposed`, `EnabledActionsSet`, `PauseChanged`, `ViLinkInitialized`
+`ActionClosed`, `ActionCreated`, `ActionExecuted`, `AuthorityProposed`, `AuthorityTransferCancelled`, `AuthorityTransferred`, `ConfigChangeApplied`, `ConfigChangeCancelled`, `ConfigChangeProposed`, `EnabledActionsSet`, `GuardianSet`, `PauseChanged`, `ViLinkInitialized`
 
 ### Errors
 

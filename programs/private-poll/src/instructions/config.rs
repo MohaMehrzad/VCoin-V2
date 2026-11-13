@@ -21,6 +21,8 @@ pub fn initialize_config(ctx: Context<InitializeConfig>, params: PollParams) -> 
     config.params = params;
     config.poll_count = 0;
     config.paused = false;
+    config.paused_since = 0;
+    config.pause_accum = 0;
     config.bump = ctx.bumps.config;
     emit!(ConfigInitialized {
         authority,
@@ -97,11 +99,22 @@ pub fn set_poll_params(ctx: Context<UpdateConfig>, params: PollParams) -> Result
     Ok(())
 }
 
+/// Pausing stops creating polls, voting, revealing and settling. Reveal deadlines are
+/// extended by the time spent paused and polls cannot expire while paused.
 pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config
         .admin
-        .require_authority(&ctx.accounts.authority.key())?;
+        .require_pause_rights(&ctx.accounts.authority.key(), paused)?;
+    let now = Clock::get()?.unix_timestamp;
+    if paused && !config.paused {
+        config.paused_since = now;
+    } else if !paused && config.paused {
+        config.pause_accum = config
+            .pause_accum
+            .checked_add(now.saturating_sub(config.paused_since))
+            .ok_or(PollError::Overflow)?;
+    }
     config.paused = paused;
     emit!(PauseChanged { paused });
     Ok(())
@@ -136,5 +149,13 @@ pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         previous,
         new_authority: admin.authority
     });
+    Ok(())
+}
+
+/// Sets or clears the emergency guardian, which may pause but never unpause.
+pub fn set_guardian(ctx: Context<UpdateConfig>, guardian: Pubkey) -> Result<()> {
+    let admin = &mut ctx.accounts.config.admin;
+    admin.set_guardian(&ctx.accounts.authority.key(), guardian)?;
+    emit!(GuardianSet { guardian });
     Ok(())
 }

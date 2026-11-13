@@ -6,6 +6,7 @@ use crate::state::PoolParams;
 pub struct PoolInitialized {
     pub authority: Pubkey,
     pub reserve_vault: Pubkey,
+    pub fee_vault: Pubkey,
     pub first_epoch_budget: u64,
     pub fee_bps: u16,
 }
@@ -129,4 +130,16 @@ pub struct AuthorityTransferCancelled {
 pub struct AuthorityTransferred {
     pub previous: Pubkey,
     pub new_authority: Pubkey,
+}
+
+/// The emergency guardian may pause (never unpause); `Pubkey::default()` = none.
+#[event]
+pub struct GuardianSet {
+    pub guardian: Pubkey,
+}
+
+#[event]
+pub struct FeesWithdrawn {
+    pub amount: u64,
+    pub destination: Pubkey,
 }

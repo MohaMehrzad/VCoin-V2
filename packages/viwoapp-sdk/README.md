@@ -92,15 +92,21 @@ import { MerkleTree, claimIx } from "@viwoapp/sdk";
 const tree = new MerkleTree(epochIndex, claims, maxTotalClaim);
 // Users: claim with the published proof; a relayer may pay the rent.
 const { amount, proof } = tree.proofFor(user);
-const ix = await claimIx(programs, { epochIndex, claimant: user, claimantToken, amount, proof, feeDestination, payer: relayer });
+const ix = await claimIx(programs, { epochIndex, claimant: user, claimantToken, amount, proof, payer: relayer });
 ```
+
+Claim fees collect in the program's fee vault; anyone can sweep them to the pool's fee account
+with `withdrawFeesIx`. `deactivateExpiredIx` (staking) is a permissionless crank that stops an
+expired deposit from counting toward the max voter weight.
 
 ## Session keys, content, ViLink, identity, 5A
 
 - `createSessionIx` opens a ≤ 24h session key, scoped to one program and to content, vouch
   or follow actions.
 - `createContentIx` / `editContentIx` accept an optional session `signer`. The energy tier
-  comes from your staked VCoin.
+  comes from your staked VCoin; the builders always pass the staking account for you.
+- `deleteContentIx(programs, author, trackingId, rentPayer)` returns the record's rent to
+  whoever paid it (pass the relayer if it sponsored the post).
 - `createActionIx`, `executeTipIx` (wallet only) and `executeSocialIx` (wallet or session) cover
   ViLink.
 - `createIdentityIx`, `linkAttestationIx` (co-signed by a trusted attester) and `subscribeIx`

@@ -23,13 +23,16 @@ gate only**.
 - **`submit_score(values)`.**
   - Each active oracle has one changeable submission in the user's round
     `["pending-score", user]`.
-  - Values are applied when `required_consensus` (default 2, settable 2..=min(registered, 5))
-    active oracles submit identical values.
+  - Values are applied when identical values have live submissions from `required_consensus`
+    oracles (default 2, settable 2..=min(registered, 5)) **and** from a strict majority of
+    the active oracles, whichever is larger.
   - Competing value sets are tallied separately, so a dishonest first submission cannot block
     honest ones (audit 5A-01/04).
-  - Applied rounds close and refund their opener. Rounds expire after 1h and reset.
+  - A submission stays live for 1h on its own clock (a sliding window), so no oracle's
+    timing decides which other submissions still count.
+  - Applied rounds close and refund their opener.
   - Applied updates are at least 1h apart.
-- **`close_expired_round`.** Permissionless.
+- **`close_expired_round`.** Permissionless, once the newest submission has lapsed.
 
 ## Vouching
 
@@ -40,18 +43,21 @@ Vouching is reputation-only: no stake and no reward.
   - The vouchee must be below 50% or unscored.
   - No direct mutual vouching.
   - Slots depend on the voucher's score: 3 / 5 / 8 / 10.
-  - A vouchee receives at most 3 vouches.
+  - A vouchee holds at most 3 live vouches.
 - **`evaluate_vouch`.** Oracle only, between day 90 and day 365. It succeeds if the vouchee
   reached 50%; a missing score counts as failed.
 - **`expire_vouch`.** Anyone, after a year.
+- **`decline_vouch`.** The vouchee, at any time (also while paused). Nobody is vouched for
+  against their will.
 
-Every outcome closes the record and frees the slot (5A-06).
+Every outcome closes the record and frees the voucher's slot and the vouchee's (5A-06).
 
 ## Admin
 
 - `initialize`: upgrade authority only.
 - Oracles: `register_oracle` / `remove_oracle`; `set_required_consensus`.
-- `set_paused`: scoring and vouching.
+- `set_paused`: scoring and vouching. `set_guardian`: an emergency key that may pause but
+  never unpause.
 - Two-step authority.
 
 Removed: private mode, `get_score`, unread snapshots, and stake/reward numbers that moved no

@@ -137,6 +137,16 @@ pub struct CloseVouch<'info> {
     pub voucher: UncheckedAccount<'info>,
     #[account(mut, seeds = [VOUCHER_STATS_SEED, vouch_record.voucher.as_ref()], bump = voucher_stats.bump)]
     pub voucher_stats: Box<Account<'info, VoucherStats>>,
+    #[account(mut, seeds = [VOUCH_STATUS_SEED, vouch_record.vouchee.as_ref()], bump = vouchee_status.bump)]
+    pub vouchee_status: Box<Account<'info, UserVouchStatus>>,
+}
+
+/// The vouchee declines a vouch made for them.
+#[derive(Accounts)]
+pub struct DeclineVouch<'info> {
+    pub close: CloseVouch<'info>,
+    #[account(address = close.vouch_record.vouchee @ FiveAError::NotVouchee)]
+    pub vouchee: Signer<'info>,
 }
 
 /// Oracle-only evaluation at or after the 90-day point (audit 5A-05).

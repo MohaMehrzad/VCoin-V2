@@ -125,6 +125,18 @@ export function extendLockIx(p: Programs, owner: PublicKey, index: number, lockS
 }
 
 /**
+ * Permissionless crank: marks `owner`'s deposit `index`, whose lock has ended, as inactive so
+ * it stops counting toward the max voter weight (it already has no voting weight). Relocking
+ * reactivates it. Run it for abandoned deposits to keep governance thresholds reachable.
+ */
+export function deactivateExpiredIx(p: Programs, owner: PublicKey, index: number): Promise<TransactionInstruction> {
+  return p.staking.methods
+    .deactivateExpired(index)
+    .accountsStrict({ registrar: pda.registrar(), voter: pda.voter(owner) })
+    .instruction();
+}
+
+/**
  * Withdraws unlocked VCoin. Pass the owner's Realms TokenOwnerRecord (see `governance.ts`);
  * the program refuses while it has unrelinquished votes, so relinquish first.
  */
