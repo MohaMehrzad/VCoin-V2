@@ -1755,6 +1755,7 @@ dependencies = [
  "litesvm",
  "private-poll",
  "rand 0.8.5",
+ "sha3",
  "solana-loader-v3-interface 5.0.0",
  "solana-sdk",
  "solana-sdk-ids",
