@@ -1,20 +1,16 @@
+//! Content registry: proof-of-existence records rate-limited by stake-tiered energy.
+//!
+//! * A post's record lives at `["content-record", author, tracking_id]` (no squatting) and
+//!   costs energy by type; edits cost energy too and every version's hash is evented.
+//! * Energy tiers come from VCoin locked in staking-protocol, refreshed on every post (users
+//!   cannot pick their tier, audit CR-01); regeneration keeps partial progress (CR-03).
+//! * A separate engagement oracle reports engagement; refunds of up to 100% open after 24h,
+//!   close after 7 days and never consume a non-qualifying claim (CR-06/07).
+//! * Posts and edits may be signed by a gasless-protocol session key (scope CONTENT); deletes
+//!   and refund claims need the author's wallet.
+//! * No global counters (CR-05); deleting closes the record (CR-11).
+
 use anchor_lang::prelude::*;
-
-declare_id!("MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV");
-
-// Content Registry Protocol
-//
-// On-chain tracking hash with state management.
-// Each piece of content gets a unique tracking hash stored on-chain.
-//
-// Content Types:
-// - Post (text/image)
-// - Article (long-form)
-// - Media (video/audio)
-// - NFT (tokenized content)
-// - Thread (multi-post)
-//
-// State Flow: Active → Edited → Deleted (soft) → Archived
 
 pub mod constants;
 pub mod contexts;
@@ -22,104 +18,82 @@ pub mod errors;
 pub mod events;
 pub mod instructions;
 pub mod state;
-pub mod utils;
 
 #[cfg(test)]
 mod tests;
 
 use contexts::*;
-use instructions::*;
+
+declare_id!("MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV");
 
 #[program]
 pub mod content_registry {
     use super::*;
 
-    /// Initialize the content registry
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        identity_program: Pubkey,
-        staking_program: Pubkey,
-    ) -> Result<()> {
-        admin::initialize::handler(ctx, identity_program, staking_program)
+    /// Upgrade authority only.
+    pub fn initialize(ctx: Context<Initialize>, engagement_oracle: Pubkey) -> Result<()> {
+        instructions::admin::initialize(ctx, engagement_oracle)
     }
 
-    /// Initialize energy system config
-    pub fn initialize_energy(ctx: Context<InitializeEnergy>) -> Result<()> {
-        admin::initialize_energy::handler(ctx)
+    pub fn propose_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()> {
+        instructions::admin::propose_oracle(ctx, oracle)
     }
 
-    /// Create content record
+    pub fn apply_oracle(ctx: Context<ApplyOracle>) -> Result<()> {
+        instructions::admin::apply_oracle(ctx)
+    }
+
+    pub fn cancel_oracle(ctx: Context<UpdateConfig>) -> Result<()> {
+        instructions::admin::cancel_oracle(ctx)
+    }
+
+    pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
+        instructions::admin::set_paused(ctx, paused)
+    }
+
+    pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
+        instructions::admin::propose_authority(ctx, new_authority)
+    }
+
+    pub fn cancel_authority_transfer(ctx: Context<UpdateConfig>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer(ctx)
+    }
+
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::accept_authority(ctx)
+    }
+
+    pub fn init_user_energy(ctx: Context<InitUserEnergy>) -> Result<()> {
+        instructions::content::init_user_energy(ctx)
+    }
+
     pub fn create_content(
         ctx: Context<CreateContent>,
         tracking_id: [u8; 32],
         content_hash: [u8; 32],
-        content_uri: String,
+        uri: String,
         content_type: u8,
     ) -> Result<()> {
-        content::create::handler(ctx, tracking_id, content_hash, content_uri, content_type)
+        instructions::content::create_content(ctx, tracking_id, content_hash, uri, content_type)
     }
 
-    /// Edit content (update hash and URI)
     pub fn edit_content(
         ctx: Context<EditContent>,
-        new_content_hash: [u8; 32],
-        new_content_uri: String,
+        content_hash: [u8; 32],
+        uri: String,
     ) -> Result<()> {
-        content::edit::handler(ctx, new_content_hash, new_content_uri)
+        instructions::content::edit_content(ctx, content_hash, uri)
     }
 
-    /// Soft delete content
     pub fn delete_content(ctx: Context<DeleteContent>) -> Result<()> {
-        content::delete::handler(ctx)
+        instructions::content::delete_content(ctx)
     }
 
-    /// Update engagement count (oracle/backend call)
     pub fn update_engagement(ctx: Context<UpdateEngagement>, engagement_count: u32) -> Result<()> {
-        content::update_engagement::handler(ctx, engagement_count)
+        instructions::content::update_engagement(ctx, engagement_count)
     }
 
-    /// Claim energy refund based on engagement
-    pub fn claim_energy_refund(ctx: Context<ClaimRefund>) -> Result<()> {
-        energy::claim_refund::handler(ctx)
-    }
-
-    /// Initialize user energy account
-    pub fn initialize_user_energy(ctx: Context<InitializeUserEnergy>, tier: u8) -> Result<()> {
-        energy::initialize_user::handler(ctx, tier)
-    }
-
-    /// Update user tier (from staking program)
-    pub fn update_user_tier(ctx: Context<UpdateUserTier>, new_tier: u8) -> Result<()> {
-        energy::update_tier::handler(ctx, new_tier)
-    }
-
-    /// Pause/unpause registry
-    pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
-        admin::set_paused::handler(ctx, paused)
-    }
-
-    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
-    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
-        admin::update_authority::handler(ctx, new_authority)
-    }
-
-    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
-    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
-        admin::accept_authority::handler(ctx)
-    }
-
-    /// Cancel a pending authority transfer (H-02 security fix)
-    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
-        admin::cancel_authority_transfer::handler(ctx)
-    }
-
-    /// Get content info
-    pub fn get_content(ctx: Context<GetContent>) -> Result<()> {
-        query::get_content::handler(ctx)
-    }
-
-    /// Get user energy stats
-    pub fn get_energy(ctx: Context<GetEnergy>) -> Result<()> {
-        query::get_energy::handler(ctx)
+    pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
+        instructions::content::claim_refund(ctx)
     }
 }

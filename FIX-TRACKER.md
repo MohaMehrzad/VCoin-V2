@@ -58,19 +58,19 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | SSC-11 | Low | Oracle and fee-recipient management is missing | 04-sscre-protocol.md | C12 | fixed (C12: register (24h activation) / remove oracle, quorum bounds, zero key rejected, timelocked fee + fee account change, all evented) |
 | SSC-12 | Low | Out-of-range leaves are silently unclaimable | 04-sscre-protocol.md | C12 | fixed (C12: no per-leaf min/max; the reference builder rejects zero, duplicate and over-budget leaves) |
 | SSC-13 | Low | Misleading error, and inconsistent accounting units | 04-sscre-protocol.md | C12 | fixed (C12: gross accounting everywhere; specific errors (Paused, ClaimWindowClosed, ExceedsMaxTotalClaim…); circuit breaker removed) |
-| CR-01 | Medium | Users choose their own tier, which bypasses the anti-spam model | 05-content-registry.md | C15 | open |
-| CR-02 | Low | Content records can be squatted by front-running a predictable `tracking_id` (denial of one ID; the victim can retry with a random ID) | 05-content-registry.md | C15 | open |
-| CR-03 | Low | Energy regeneration throws away partial progress (less than 1 energy lost per successful action) | 05-content-registry.md | C15 | open |
-| CR-04 | Medium | Both config initializers are front-runnable | 05-content-registry.md | C15 | open |
-| CR-05 | Low | Every post write-locks one global account, which caps throughput | 05-content-registry.md | C15 | open |
-| CR-06 | Low | An early refund claim burns the refund forever; deleted content still earns refunds (impact limited to rate-limit energy) | 05-content-registry.md | C15 | open |
-| CR-07 | Medium | The engagement "oracle" is the admin key, with no timelock on authority transfer | 05-content-registry.md | C15 | open |
-| CR-08 | Low | Pause covers only `create_content` | 05-content-registry.md | C15 | open |
-| CR-09 | Low | A tier change applies the new regeneration rate retroactively | 05-content-registry.md | C15 | open |
-| CR-10 | Low | The edit rules aren't enforced | 05-content-registry.md | C15 | open |
-| CR-11 | Low | Rent is locked forever | 05-content-registry.md | C15 | open |
-| CR-12 | Low | Test helpers use the wrong account order and count | 05-content-registry.md | C15 | open |
-| CR-13 | Low | The docs describe a different program | 05-content-registry.md | C15 | open |
+| CR-01 | Medium | Users choose their own tier, which bypasses the anti-spam model | 05-content-registry.md | C15 | fixed (C15: tier derived from VCoin locked in staking (Voter, seeds::program), refreshed on every post, tier 0 possible; integration-tests/tests/content.rs: tiers_come_from_locked_stake…) |
+| CR-02 | Low | Content records can be squatted by front-running a predictable `tracking_id` (denial of one ID; the victim can retry with a random ID) | 05-content-registry.md | C15 | fixed (C15: record PDA [content-record, author, tracking_id]; test ids_are_per_author…) |
+| CR-03 | Low | Energy regeneration throws away partial progress (less than 1 energy lost per successful action) | 05-content-registry.md | C15 | fixed (C15: regeneration advances last_regen_time only by the time the whole units cost; unit test regeneration_keeps_partial_progress) |
+| CR-04 | Medium | Both config initializers are front-runnable | 05-content-registry.md | C15 | fixed (C15: single config, initialize upgrade-authority gated; EnergyConfig removed) |
+| CR-05 | Low | Every post write-locks one global account, which caps throughput | 05-content-registry.md | C15 | fixed (C15: no global counters; config read-only on every user path; rate limit merged into UserEnergy) |
+| CR-06 | Low | An early refund claim burns the refund forever; deleted content still earns refunds (impact limited to rate-limit energy) | 05-content-registry.md | C15 | fixed (C15: 0% claims return RefundNotReady without consuming; window 24h..7d; refunds ≤ 100%; deleted content is closed; daily refund cap; regeneration settled first) |
+| CR-07 | Medium | The engagement "oracle" is the admin key, with no timelock on authority transfer | 05-content-registry.md | C15 | fixed (C15: separate engagement_oracle key with 24h timelocked change; AdminState 24h authority transfer) |
+| CR-08 | Low | Pause covers only `create_content` | 05-content-registry.md | C15 | fixed (C15: pause checked in init_user_energy, create, edit, update_engagement, claim_refund) |
+| CR-09 | Low | A tier change applies the new regeneration rate retroactively | 05-content-registry.md | C15 | fixed (C15: set_tier settles regeneration at the old rate first; unit test a_tier_change_settles…) |
+| CR-10 | Low | The edit rules aren't enforced | 05-content-registry.md | C15 | fixed (C15: every edit costs energy, bumps version and emits ContentEdited with previous and new hash) |
+| CR-11 | Low | Rent is locked forever | 05-content-registry.md | C15 | fixed (C15: delete closes the record and refunds rent; UserEnergy persists by design (closing it would allow refilling energy)) |
+| CR-12 | Low | Test helpers use the wrong account order and count | 05-content-registry.md | C15 | fixed (C15: old helpers deleted; integration-tests/tests/content.rs covers tiers, ids, costs, edits, deletes, sessions, refunds, oracle timelock, init gate, pause) |
+| CR-13 | Low | The docs describe a different program | 05-content-registry.md | C15 | partial (C15: dead state removed, session-key support added; docs rewritten in C18) |
 | 5A-01 | High | "3-of-N consensus" is actually 1-of-N, and oracles can't be removed | 06-five-a-protocol.md | C13 | fixed (C13: consensus default 2, settable 2..=min(registered,5); removable oracles with 24h activation; integration-tests/tests/five_a.rs: a_score_applies_only_when_two_oracles_agree…, removed_or_pending_oracles_do_not_count) |
 | 5A-02 | Medium | Front-runnable `initialize`; unvalidated, immutable config addresses | 06-five-a-protocol.md | C13 | fixed (C13: initialize upgrade-authority gated; unused identity/mint/vault config fields removed) |
 | 5A-03 | Medium | No 24h timelock on authority transfer | 06-five-a-protocol.md | C13 | fixed (C13: vcoin-common AdminState 24h two-step authority transfer) |

@@ -2,51 +2,38 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ContentError {
-    #[msg("Unauthorized: Only the authority can perform this action")]
-    Unauthorized,
     #[msg("Content registry is paused")]
-    RegistryPaused,
-    #[msg("Content not found")]
-    ContentNotFound,
-    #[msg("Content already deleted")]
-    ContentAlreadyDeleted,
-    #[msg("Cannot edit deleted content")]
-    CannotEditDeleted,
-    #[msg("Insufficient energy for this action")]
-    InsufficientEnergy,
-    #[msg("Daily post cap exceeded")]
-    DailyCapExceeded,
-    #[msg("Cooldown period not elapsed")]
-    CooldownNotElapsed,
-    #[msg("Invalid content type")]
+    Paused,
+    #[msg("Program data account does not belong to this program")]
+    InvalidProgramData,
+    #[msg("Invalid key")]
+    InvalidKey,
+    #[msg("Signer is neither the author nor a valid content session for the author")]
+    Unauthorized,
+    #[msg("URI longer than 128 bytes")]
+    UriTooLong,
+    #[msg("Unknown content type")]
     InvalidContentType,
-    #[msg("Content URI too long (max 128 chars)")]
-    ContentURITooLong,
-    #[msg("Energy refund already claimed")]
-    RefundAlreadyClaimed,
-    #[msg("Engagement check period not elapsed")]
+    #[msg("Not enough energy")]
+    InsufficientEnergy,
+    #[msg("Daily post cap reached")]
+    DailyCapExceeded,
+    #[msg("Signer is not the engagement oracle")]
+    NotEngagementOracle,
+    #[msg("Refunds open 24h after posting")]
+    RefundTooEarly,
+    #[msg("The 7-day refund window has closed")]
+    RefundWindowClosed,
+    #[msg("Engagement does not qualify for a refund yet")]
     RefundNotReady,
+    #[msg("Refund already claimed")]
+    RefundAlreadyClaimed,
+    #[msg("Daily refund cap reached")]
+    DailyRefundCapExceeded,
+    #[msg("No oracle change pending")]
+    NoPendingChange,
+    #[msg("Oracle change timelock still active")]
+    TimelockActive,
     #[msg("Arithmetic overflow")]
     Overflow,
-
-    // H-02: Two-step authority transfer errors
-    #[msg("Not the pending authority")]
-    NotPendingAuthority,
-
-    #[msg("No pending authority transfer")]
-    NoPendingTransfer,
-
-    #[msg("Cannot propose self as new authority")]
-    CannotProposeSelf,
-
-    #[msg("Invalid authority address (zero)")]
-    InvalidAuthority,
-
-    // C-AUDIT-10: Engagement count must be monotonically increasing
-    #[msg("Engagement count cannot decrease")]
-    EngagementCannotDecrease,
-
-    // C-AUDIT-11: Tier must be within valid range (1-4)
-    #[msg("Invalid tier: must be between 1 and 4")]
-    InvalidTier,
 }

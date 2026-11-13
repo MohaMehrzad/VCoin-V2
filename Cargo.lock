@@ -887,7 +887,9 @@ name = "content-registry"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
- "anchor-spl",
+ "gasless-protocol",
+ "staking-protocol",
+ "vcoin-common",
 ]
 
 [[package]]
@@ -1746,6 +1748,7 @@ dependencies = [
  "anchor-spl",
  "bincode",
  "borsh 1.6.0",
+ "content-registry",
  "five-a-protocol",
  "gasless-protocol",
  "identity-protocol",

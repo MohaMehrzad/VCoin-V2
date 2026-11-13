@@ -17,6 +17,7 @@ five-a-protocol = { path = "../programs/five-a-protocol", features = ["no-entryp
 private-poll = { path = "../programs/private-poll", features = ["no-entrypoint"] }
 sscre-protocol = { path = "../programs/sscre-protocol", features = ["no-entrypoint"] }
 identity-protocol = { path = "../programs/identity-protocol", features = ["no-entrypoint"] }
+content-registry = { path = "../programs/content-registry", features = ["no-entrypoint"] }
 litesvm = { workspace = true }
 solana-sdk = { workspace = true }
 bincode = "1.3"

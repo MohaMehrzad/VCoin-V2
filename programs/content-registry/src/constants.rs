@@ -1,48 +1,39 @@
-/// Seeds
+use anchor_lang::prelude::*;
+
+#[constant]
 pub const REGISTRY_CONFIG_SEED: &[u8] = b"registry-config";
+#[constant]
 pub const CONTENT_RECORD_SEED: &[u8] = b"content-record";
+#[constant]
 pub const USER_ENERGY_SEED: &[u8] = b"user-energy";
-pub const RATE_LIMIT_SEED: &[u8] = b"rate-limit";
-pub const ENERGY_CONFIG_SEED: &[u8] = b"energy-config";
 
-/// Energy costs by action
-pub const ENERGY_COST_TEXT_POST: u16 = 10;
-pub const ENERGY_COST_IMAGE_POST: u16 = 20;
-pub const ENERGY_COST_VIDEO_POST: u16 = 50;
-pub const ENERGY_COST_THREAD: u16 = 40;
-pub const ENERGY_COST_REPLY: u16 = 5;
-pub const ENERGY_COST_REPOST: u16 = 8;
-pub const ENERGY_COST_EDIT_AFTER_1H: u16 = 5;
+pub const HOUR: i64 = 60 * 60;
+pub const DAY: i64 = 24 * HOUR;
+pub const VCOIN: u64 = 1_000_000_000;
 
-/// Energy regen rate per hour by tier
-pub const REGEN_RATE_NONE: u16 = 20;
-pub const REGEN_RATE_BRONZE: u16 = 50;
-pub const REGEN_RATE_SILVER: u16 = 80;
-pub const REGEN_RATE_GOLD: u16 = 120;
-pub const REGEN_RATE_PLATINUM: u16 = 200;
+pub const MAX_URI_LEN: usize = 128;
 
-/// Max energy by tier
-pub const MAX_ENERGY_NONE: u16 = 200;
-pub const MAX_ENERGY_BRONZE: u16 = 500;
-pub const MAX_ENERGY_SILVER: u16 = 800;
-pub const MAX_ENERGY_GOLD: u16 = 1200;
-pub const MAX_ENERGY_PLATINUM: u16 = 2000;
+/// Energy tiers from VCoin locked in staking-protocol (audit CR-01: not user-chosen).
+pub const TIER_THRESHOLDS: [u64; 4] = [
+    1_000 * VCOIN,
+    5_000 * VCOIN,
+    20_000 * VCOIN,
+    100_000 * VCOIN,
+];
+pub const MAX_ENERGY: [u16; 5] = [200, 500, 800, 1_200, 2_000];
+/// Energy regenerated per hour.
+pub const REGEN_PER_HOUR: [u16; 5] = [20, 50, 80, 120, 200];
+pub const DAILY_POST_CAP: [u16; 5] = [50, 100, 200, 400, 1_000];
 
-/// Engagement thresholds for refunds
-///
-/// M-AUDIT-23: These thresholds are compile-time constants. Changing them requires
-/// a program upgrade and redeployment. They are intentionally hardcoded rather than
-/// stored in on-chain state to avoid governance overhead for values that are part of
-/// the core economic model. If dynamic tuning is needed in the future, consider
-/// migrating them to a governance-controlled on-chain config account.
-pub const REFUND_THRESHOLD_10: u32 = 10; // 25% refund
-pub const REFUND_THRESHOLD_50: u32 = 50; // 50% refund
-pub const REFUND_THRESHOLD_100: u32 = 100; // 100% refund
-pub const REFUND_THRESHOLD_1000: u32 = 1000; // 150% refund (viral)
+/// Energy per content type: post, article, media, NFT, thread.
+pub const CONTENT_COSTS: [u16; 5] = [10, 20, 50, 20, 40];
+pub const EDIT_COST: u16 = 5;
 
-/// Timing
-///
-/// M-AUDIT-23: These timing constants are also compile-time values requiring a
-/// program upgrade to change.
-pub const ENGAGEMENT_CHECK_DELAY: i64 = 24 * 60 * 60; // 24 hours
-pub const FREE_EDIT_WINDOW: i64 = 60 * 60; // 1 hour
+/// Refunds: 24h after posting, claimable until day 7, at most 100% of the energy spent.
+pub const REFUND_DELAY: i64 = DAY;
+pub const REFUND_DEADLINE: i64 = 7 * DAY;
+/// (engagements, refund %) from highest to lowest.
+pub const REFUND_TIERS: [(u32, u16); 3] = [(100, 100), (50, 50), (10, 25)];
+
+/// Engagement-oracle key changes take effect after this delay.
+pub const ORACLE_CHANGE_DELAY: i64 = DAY;
