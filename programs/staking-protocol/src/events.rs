@@ -71,3 +71,16 @@ pub struct AuthorityTransferred {
     pub previous: Pubkey,
     pub new_authority: Pubkey,
 }
+
+#[event]
+pub struct GovernanceConfigured {
+    pub realm: Pubkey,
+    pub governance_program_id: Pubkey,
+    pub slash_destination: Pubkey,
+}
+
+#[event]
+pub struct GateParamsUpdated {
+    pub min_vote_score: u16,
+    pub min_propose_score: u16,
+}

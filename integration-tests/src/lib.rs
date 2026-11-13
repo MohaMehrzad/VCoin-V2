@@ -480,15 +480,30 @@ pub mod stack {
         )
     }
 
+    /// Withdraw with no governance wired (the token owner record is not consulted).
     pub fn withdraw_ix(
         s: &Stack,
         st: &Staker,
         index: u8,
         amount: u64,
     ) -> solana_sdk::instruction::Instruction {
+        withdraw_ix_with_record(s, st, index, amount, Pubkey::new_unique())
+    }
+
+    /// Withdraw passing the owner's Realms TokenOwnerRecord.
+    pub fn withdraw_ix_with_record(
+        s: &Stack,
+        st: &Staker,
+        index: u8,
+        amount: u64,
+        token_owner_record: Pubkey,
+    ) -> solana_sdk::instruction::Instruction {
         ix(
             staking_protocol::ID,
-            move_stake_accounts(s, st),
+            staking_protocol::accounts::Withdraw {
+                stake: move_stake_accounts(s, st),
+                token_owner_record,
+            },
             staking_protocol::instruction::Withdraw { index, amount },
         )
     }

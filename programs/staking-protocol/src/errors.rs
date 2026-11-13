@@ -32,6 +32,24 @@ pub enum StakingError {
     NothingReceived,
     #[msg("Weight parameters out of bounds")]
     InvalidWeightParams,
+    #[msg(
+        "Realm must be a RealmV2 of the configured governance program with VCoin as community mint"
+    )]
+    InvalidRealm,
+    #[msg("Governance is already configured")]
+    GovernanceAlreadyConfigured,
+    #[msg("Governance is not configured yet")]
+    GovernanceNotConfigured,
+    #[msg("Token owner record does not match this realm, mint and owner")]
+    InvalidTokenOwnerRecord,
+    #[msg("Relinquish all votes and finish open proposals before withdrawing")]
+    VotesNotRelinquished,
+    #[msg("5A reputation score is below the required gate")]
+    ScoreBelowGate,
+    #[msg("5A score account is not the owner's UserScore PDA")]
+    InvalidScoreAccount,
+    #[msg("Gate scores must be at most 10000")]
+    InvalidGateParams,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

@@ -16,6 +16,7 @@ pub mod constants;
 pub mod contexts;
 pub mod errors;
 pub mod events;
+pub mod governance;
 pub mod instructions;
 pub mod state;
 pub mod weight;
@@ -24,7 +25,7 @@ pub mod weight;
 mod tests;
 
 use contexts::*;
-use state::WeightParams;
+use state::{VoterWeightAction, WeightParams};
 
 declare_id!("6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu");
 
@@ -53,13 +54,53 @@ pub mod staking_protocol {
     }
 
     /// Withdraws unlocked VCoin from deposit slot `index`.
-    pub fn withdraw(ctx: Context<MoveStake>, index: u8, amount: u64) -> Result<()> {
+    pub fn withdraw(ctx: Context<Withdraw>, index: u8, amount: u64) -> Result<()> {
         instructions::stake::withdraw(ctx, index, amount)
     }
 
     /// Closes an empty voter account and refunds its rent.
     pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
         instructions::stake::close_voter(ctx)
+    }
+
+    /// Wires the registrar to its Realms realm as voter-weight plugin (one-shot).
+    pub fn configure_governance(
+        ctx: Context<ConfigureGovernance>,
+        governance_program_id: Pubkey,
+        min_vote_score: u16,
+        min_propose_score: u16,
+    ) -> Result<()> {
+        instructions::realms::configure_governance(
+            ctx,
+            governance_program_id,
+            min_vote_score,
+            min_propose_score,
+        )
+    }
+
+    pub fn create_voter_weight_record(ctx: Context<CreateVoterWeightRecord>) -> Result<()> {
+        instructions::realms::create_voter_weight_record(ctx)
+    }
+
+    /// Writes the voter's weight for one Realms action (valid for the current slot).
+    pub fn update_voter_weight_record(
+        ctx: Context<UpdateVoterWeightRecord>,
+        action: VoterWeightAction,
+        target: Option<Pubkey>,
+    ) -> Result<()> {
+        instructions::realms::update_voter_weight_record(ctx, action, target)
+    }
+
+    pub fn update_max_voter_weight_record(ctx: Context<UpdateMaxVoterWeightRecord>) -> Result<()> {
+        instructions::realms::update_max_voter_weight_record(ctx)
+    }
+
+    pub fn set_gate_params(
+        ctx: Context<UpdateRegistrar>,
+        min_vote_score: u16,
+        min_propose_score: u16,
+    ) -> Result<()> {
+        instructions::realms::set_gate_params(ctx, min_vote_score, min_propose_score)
     }
 
     pub fn set_paused(ctx: Context<UpdateRegistrar>, paused: bool) -> Result<()> {

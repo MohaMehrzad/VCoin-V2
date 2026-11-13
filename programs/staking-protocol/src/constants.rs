@@ -38,3 +38,18 @@ pub const DEFAULT_MIN_LOCK_REMAINING_TO_VOTE: u64 = 4 * 24 * 60 * 60;
 pub const MAX_BASELINE_FACTOR: u64 = FACTOR_SCALE;
 pub const MAX_EXTRA_FACTOR_CAP: u64 = 3 * FACTOR_SCALE;
 pub const MIN_SATURATION_SECS: u64 = MIN_LOCK_SECS as u64;
+
+/// Realms voter-weight records written by this plugin.
+#[constant]
+pub const VOTER_WEIGHT_RECORD_SEED: &[u8] = b"voter-weight-record";
+#[constant]
+pub const MAX_VOTER_WEIGHT_RECORD_SEED: &[u8] = b"max-voter-weight-record";
+
+/// spl-governance `GovernanceAccountType` tags (verified against the deployed program).
+pub const REALM_V2_ACCOUNT_TYPE: u8 = 16;
+pub const TOKEN_OWNER_RECORD_V2_ACCOUNT_TYPE: u8 = 17;
+/// spl-governance PDA prefix for realms, holdings and token owner records.
+pub const GOVERNANCE_SEED: &[u8] = b"governance";
+
+/// 5A composite score upper bound (scores are 0..=10000).
+pub const MAX_FIVE_A_SCORE: u16 = 10_000;

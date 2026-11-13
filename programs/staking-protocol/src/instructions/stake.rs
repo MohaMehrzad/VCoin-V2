@@ -7,6 +7,7 @@ use crate::constants::*;
 use crate::contexts::*;
 use crate::errors::StakingError;
 use crate::events::*;
+use crate::governance::assert_can_withdraw;
 use crate::state::DepositEntry;
 
 pub fn create_voter(ctx: Context<CreateVoter>) -> Result<()> {
@@ -38,7 +39,8 @@ fn check_lock_secs(lock_secs: i64) -> Result<()> {
 /// a 1:1 non-transferable veVCoin receipt. Adding to an existing (unexpired) slot keeps
 /// the later of the two lock ends.
 pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) -> Result<()> {
-    require!(!ctx.accounts.registrar.paused, StakingError::Paused);
+    let accs = ctx.accounts;
+    require!(!accs.registrar.paused, StakingError::Paused);
     require!(amount > 0, StakingError::ZeroAmount);
     let i = check_index(index)?;
     check_lock_secs(lock_secs)?;
@@ -46,30 +48,29 @@ pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) 
     let requested_end = now.checked_add(lock_secs).ok_or(StakingError::Overflow)?;
 
     // Credit exactly what the vault receives.
-    let before = ctx.accounts.vault.amount;
+    let before = accs.vault.amount;
     transfer_checked(
         CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
+            accs.token_program.to_account_info(),
             TransferChecked {
-                from: ctx.accounts.owner_vcoin.to_account_info(),
-                mint: ctx.accounts.vcoin_mint.to_account_info(),
-                to: ctx.accounts.vault.to_account_info(),
-                authority: ctx.accounts.owner.to_account_info(),
+                from: accs.owner_vcoin.to_account_info(),
+                mint: accs.vcoin_mint.to_account_info(),
+                to: accs.vault.to_account_info(),
+                authority: accs.owner.to_account_info(),
             },
         ),
         amount,
-        ctx.accounts.vcoin_mint.decimals,
+        accs.vcoin_mint.decimals,
     )?;
-    ctx.accounts.vault.reload()?;
-    let credited = ctx
-        .accounts
+    accs.vault.reload()?;
+    let credited = accs
         .vault
         .amount
         .checked_sub(before)
         .ok_or(StakingError::Overflow)?;
     require!(credited > 0, StakingError::NothingReceived);
 
-    let entry = &mut ctx.accounts.voter.deposits[i];
+    let entry = &mut accs.voter.deposits[i];
     if entry.is_used {
         require!(entry.lock_end > now, StakingError::DepositExpired);
         entry.amount = entry
@@ -86,21 +87,20 @@ pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) 
         };
     }
     let lock_end = entry.lock_end;
-
-    let registrar = &mut ctx.accounts.registrar;
-    registrar.total_locked = registrar
+    accs.registrar.total_locked = accs
+        .registrar
         .total_locked
         .checked_add(credited)
         .ok_or(StakingError::Overflow)?;
 
-    mint_receipt(&ctx, credited)?;
+    mint_receipt(accs, credited)?;
 
     emit!(Deposited {
-        owner: ctx.accounts.owner.key(),
+        owner: accs.owner.key(),
         index,
         amount: credited,
         lock_end,
-        total_locked: ctx.accounts.registrar.total_locked,
+        total_locked: accs.registrar.total_locked,
     });
     Ok(())
 }
@@ -126,54 +126,61 @@ pub fn extend_lock(ctx: Context<ExtendLock>, index: u8, lock_secs: i64) -> Resul
     Ok(())
 }
 
-/// Returns unlocked VCoin and burns the matching receipt. Never paused: users can always
-/// exit once their lock ends (pausing must not trap funds).
-pub fn withdraw(ctx: Context<MoveStake>, index: u8, amount: u64) -> Result<()> {
+/// Returns unlocked VCoin and burns the matching receipt. Never paused (pausing must not
+/// trap funds); blocked while the owner has unrelinquished Realms votes or open proposals
+/// or a pending slash.
+pub fn withdraw(ctx: Context<Withdraw>, index: u8, amount: u64) -> Result<()> {
+    let accs = &mut ctx.accounts.stake;
     require!(amount > 0, StakingError::ZeroAmount);
     let i = check_index(index)?;
     let now = Clock::get()?.unix_timestamp;
     {
-        let entry = &ctx.accounts.voter.deposits[i];
+        let entry = &accs.voter.deposits[i];
         require!(entry.is_used, StakingError::DepositNotUsed);
         require!(now >= entry.lock_end, StakingError::StillLocked);
         require!(amount <= entry.amount, StakingError::InsufficientDeposit);
     }
+    assert_can_withdraw(
+        &accs.registrar,
+        &accs.owner.key(),
+        &ctx.accounts.token_owner_record.to_account_info(),
+    )?;
 
-    let bump = [ctx.accounts.registrar.bump];
+    let bump = [accs.registrar.bump];
     let seeds: &[&[u8]] = &[REGISTRAR_SEED, &bump];
     transfer_checked(
         CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
+            accs.token_program.to_account_info(),
             TransferChecked {
-                from: ctx.accounts.vault.to_account_info(),
-                mint: ctx.accounts.vcoin_mint.to_account_info(),
-                to: ctx.accounts.owner_vcoin.to_account_info(),
-                authority: ctx.accounts.registrar.to_account_info(),
+                from: accs.vault.to_account_info(),
+                mint: accs.vcoin_mint.to_account_info(),
+                to: accs.owner_vcoin.to_account_info(),
+                authority: accs.registrar.to_account_info(),
             },
             &[seeds],
         ),
         amount,
-        ctx.accounts.vcoin_mint.decimals,
+        accs.vcoin_mint.decimals,
     )?;
 
-    burn_receipt(&ctx, amount)?;
+    burn_receipt(accs, amount)?;
 
-    let entry = &mut ctx.accounts.voter.deposits[i];
+    let entry = &mut accs.voter.deposits[i];
     entry.amount -= amount; // amount <= entry.amount checked above
     if entry.amount == 0 {
         *entry = DepositEntry::default();
     }
-    let registrar = &mut ctx.accounts.registrar;
-    registrar.total_locked = registrar
+    accs.registrar.total_locked = accs
+        .registrar
         .total_locked
         .checked_sub(amount)
         .ok_or(StakingError::Overflow)?;
 
     emit!(Withdrawn {
-        owner: ctx.accounts.owner.key(),
+        owner: accs.owner.key(),
         index,
         amount,
-        total_locked: ctx.accounts.registrar.total_locked,
+        total_locked: accs.registrar.total_locked
     });
     Ok(())
 }
@@ -187,43 +194,41 @@ pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
     Ok(())
 }
 
-fn registrar_signer_seeds(bump: &[u8; 1]) -> [&[u8]; 2] {
-    [REGISTRAR_SEED, bump]
-}
-
-fn mint_receipt(ctx: &Context<MoveStake>, amount: u64) -> Result<()> {
-    let bump = [ctx.accounts.registrar.bump];
-    let seeds = registrar_signer_seeds(&bump);
+fn mint_receipt(accs: &MoveStake, amount: u64) -> Result<()> {
+    let bump = [accs.registrar.bump];
+    let seeds: &[&[u8]] = &[REGISTRAR_SEED, &bump];
     vevcoin_token::cpi::mint_vevcoin(
         CpiContext::new_with_signer(
-            ctx.accounts.vevcoin_program.to_account_info(),
+            accs.vevcoin_program.to_account_info(),
             vevcoin_token::cpi::accounts::MintVeVCoin {
-                config: ctx.accounts.vevcoin_config.to_account_info(),
-                mint: ctx.accounts.vevcoin_mint.to_account_info(),
-                destination: ctx.accounts.owner_vevcoin.to_account_info(),
-                staking_authority: ctx.accounts.registrar.to_account_info(),
-                token_program: ctx.accounts.token_program.to_account_info(),
+                config: accs.vevcoin_config.to_account_info(),
+                mint: accs.vevcoin_mint.to_account_info(),
+                destination: accs.owner_vevcoin.to_account_info(),
+                staking_authority: accs.registrar.to_account_info(),
+                token_program: accs.token_program.to_account_info(),
             },
-            &[&seeds],
+            &[seeds],
         ),
         amount,
     )
 }
 
-fn burn_receipt(ctx: &Context<MoveStake>, amount: u64) -> Result<()> {
-    let bump = [ctx.accounts.registrar.bump];
-    let seeds = registrar_signer_seeds(&bump);
+/// Burns `min(amount, balance)` receipts (the veVCoin program clamps), so a holder who
+/// already burned their own receipt can always withdraw.
+pub(crate) fn burn_receipt(accs: &MoveStake, amount: u64) -> Result<()> {
+    let bump = [accs.registrar.bump];
+    let seeds: &[&[u8]] = &[REGISTRAR_SEED, &bump];
     vevcoin_token::cpi::burn_vevcoin(
         CpiContext::new_with_signer(
-            ctx.accounts.vevcoin_program.to_account_info(),
+            accs.vevcoin_program.to_account_info(),
             vevcoin_token::cpi::accounts::BurnVeVCoin {
-                config: ctx.accounts.vevcoin_config.to_account_info(),
-                mint: ctx.accounts.vevcoin_mint.to_account_info(),
-                source: ctx.accounts.owner_vevcoin.to_account_info(),
-                staking_authority: ctx.accounts.registrar.to_account_info(),
-                token_program: ctx.accounts.token_program.to_account_info(),
+                config: accs.vevcoin_config.to_account_info(),
+                mint: accs.vevcoin_mint.to_account_info(),
+                source: accs.owner_vevcoin.to_account_info(),
+                staking_authority: accs.registrar.to_account_info(),
+                token_program: accs.token_program.to_account_info(),
             },
-            &[&seeds],
+            &[seeds],
         ),
         amount,
     )

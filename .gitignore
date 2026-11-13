@@ -55,3 +55,6 @@ Thumbs.db
 # Build artifacts
 *.so
 *.wasm
+
+# Test fixture: deployed SPL Governance binary (see integration-tests/fixtures/README.md)
+!integration-tests/fixtures/*.so

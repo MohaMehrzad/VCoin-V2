@@ -38,21 +38,19 @@ impl WeightParams {
 #[account]
 #[derive(Default, InitSpace)]
 pub struct Registrar {
-    /// Bootstrap authority (pause, governance wiring). Handed to the DAO after launch.
+    /// Authority for pause, parameters and slashing. Bootstrapped by the deployer and handed
+    /// (24h two-step) to the Realms governance PDA after launch, so every change is a DAO vote.
     pub admin: AdminState,
     /// Realms (SPL Governance) program and realm this registrar serves as voter-weight plugin.
     pub governance_program_id: Pubkey,
     pub realm: Pubkey,
     /// The realm's community governing-token mint (the mint Realms votes are cast for).
     pub realm_governing_token_mint: Pubkey,
-    /// Realms governance PDA: the only signer for weight/gate params and slashing.
-    pub dao_authority: Pubkey,
     pub vcoin_mint: Pubkey,
     pub vault: Pubkey,
     pub vevcoin_mint: Pubkey,
     /// Where slashed VCoin goes (DAO treasury token account).
     pub slash_destination: Pubkey,
-    pub five_a_program: Pubkey,
     pub weight: WeightParams,
     /// 5A composite score (0..=10000) required to vote / to create proposals.
     pub min_vote_score: u16,

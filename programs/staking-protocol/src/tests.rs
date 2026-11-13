@@ -45,3 +45,21 @@ fn locked_amount_counts_only_unexpired_deposits() {
     assert_eq!(v.locked_amount(100), 0);
     assert!(!v.is_empty());
 }
+
+#[test]
+fn realms_addin_records_match_the_deployed_governance_layout() {
+    // Discriminators and maximal sizes observed against the deployed spl-governance
+    // program (mainnet + devnet builds) in LiteSVM.
+    use crate::state::{MaxVoterWeightRecord, VoterWeightRecord};
+    use anchor_lang::Discriminator;
+    assert_eq!(
+        VoterWeightRecord::DISCRIMINATOR,
+        [0x2e, 0xf9, 0x9b, 0x4b, 0x99, 0xf8, 0x74, 0x09]
+    );
+    assert_eq!(
+        MaxVoterWeightRecord::DISCRIMINATOR,
+        [0x9d, 0x5f, 0xf2, 0x97, 0x10, 0x62, 0x1a, 0x76]
+    );
+    assert_eq!(VoterWeightRecord::LEN, 164);
+    assert_eq!(MaxVoterWeightRecord::LEN, 97);
+}

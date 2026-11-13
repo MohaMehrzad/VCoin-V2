@@ -13,12 +13,17 @@ vcoin-token = { path = "../programs/vcoin-token", features = ["no-entrypoint"] }
 vevcoin-token = { path = "../programs/vevcoin-token", features = ["no-entrypoint"] }
 staking-protocol = { path = "../programs/staking-protocol", features = ["no-entrypoint"] }
 gasless-protocol = { path = "../programs/gasless-protocol", features = ["no-entrypoint"] }
+five-a-protocol = { path = "../programs/five-a-protocol", features = ["no-entrypoint"] }
 litesvm = { workspace = true }
 solana-sdk = { workspace = true }
 bincode = "1.3"
 solana-loader-v3-interface = { version = "5.0", features = ["serde"] }
 solana-sdk-ids = "2.2"
 solana-system-interface = { version = "1.0", features = ["bincode"] }
+
+[dev-dependencies]
+spl-governance-mythic = { version = "3.1.2", features = ["no-entrypoint"] }
+borsh = "1"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
