@@ -1,4 +1,4 @@
-# cargo-audit configuration (read by `cargo audit` and rustsec/audit-check in CI).
+# cargo-audit configuration (read by `cargo audit` locally and in CI).
 #
 # Each ignore below is reachable ONLY through test tooling (litesvm / solana-sdk keypair
 # helpers used by `integration-tests`). None of the on-chain program crates depend on

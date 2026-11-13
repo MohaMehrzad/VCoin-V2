@@ -104,8 +104,17 @@ jobs:
   audit:
     name: RustSec advisories
     runs-on: ubuntu-latest
+    # Plain `cargo audit` (same command as the local gate). The previous third-party action
+    # needed `checks: write` to post a check run and failed with the read-only token.
+    # Vulnerabilities fail the job; informational warnings (unmaintained/unsound, all in
+    # Solana/Anchor host tooling) are printed but do not. Ignores live in .cargo/audit.toml.
+    permissions:
+      contents: read
+    env:
+      CARGO_AUDIT_VERSION: "0.23.0"
     steps:
       - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked --version "$CARGO_AUDIT_VERSION"
+      - name: cargo audit
+        run: cargo audit
