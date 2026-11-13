@@ -14,29 +14,26 @@ pub fn handler(ctx: Context<MintTokens>, amount: u64) -> Result<()> {
     let paused = ctx.accounts.config.paused;
     let total_minted = ctx.accounts.config.total_minted;
     let bump = ctx.accounts.config.bump;
-    
+
     // Check authorization
     require!(
         ctx.accounts.authority.key() == authority,
         VCoinError::Unauthorized
     );
-    
+
     // Check not paused
     require!(!paused, VCoinError::TokenPaused);
-    
+
     // Check supply limit
     require!(
         total_minted.checked_add(amount).unwrap() <= TOTAL_SUPPLY,
         VCoinError::ExceedsMaxSupply
     );
-    
+
     // Mint tokens using Token-2022
-    let seeds = &[
-        VCOIN_CONFIG_SEED,
-        &[bump],
-    ];
+    let seeds = &[VCOIN_CONFIG_SEED, &[bump]];
     let signer_seeds = &[&seeds[..]];
-    
+
     token_2022::mint_to(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -49,12 +46,12 @@ pub fn handler(ctx: Context<MintTokens>, amount: u64) -> Result<()> {
         ),
         amount,
     )?;
-    
+
     // Update total minted
     ctx.accounts.config.total_minted = total_minted.checked_add(amount).unwrap();
-    
+
     let clock = Clock::get()?;
-    
+
     // L-01: Emit tokens minted event
     emit!(TokensMinted {
         recipient: ctx.accounts.destination.key(),
@@ -62,10 +59,9 @@ pub fn handler(ctx: Context<MintTokens>, amount: u64) -> Result<()> {
         total_minted: ctx.accounts.config.total_minted,
         timestamp: clock.unix_timestamp,
     });
-    
+
     msg!("Minted {} VCoin tokens", amount);
     msg!("Total minted: {}", ctx.accounts.config.total_minted);
-    
+
     Ok(())
 }
-

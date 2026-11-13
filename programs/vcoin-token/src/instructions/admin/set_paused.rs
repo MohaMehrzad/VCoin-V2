@@ -8,16 +8,16 @@ use crate::events::{ProtocolPaused, ProtocolUnpaused};
 /// Only authority can pause
 pub fn handler(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     let config = &mut ctx.accounts.config;
-    
+
     require!(
         ctx.accounts.authority.key() == config.authority,
         VCoinError::Unauthorized
     );
-    
+
     config.paused = paused;
-    
+
     let clock = Clock::get()?;
-    
+
     // L-01: Emit pause/unpause event
     if paused {
         emit!(ProtocolPaused {
@@ -30,9 +30,8 @@ pub fn handler(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
             timestamp: clock.unix_timestamp,
         });
     }
-    
+
     msg!("Token paused status: {}", paused);
-    
+
     Ok(())
 }
-

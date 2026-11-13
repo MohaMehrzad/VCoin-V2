@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{Proposal, PrivateVotingConfig, VoteRecord, GovernanceConfig};
+use crate::state::{GovernanceConfig, PrivateVotingConfig, Proposal, VoteRecord};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct CastPrivateVote<'info> {

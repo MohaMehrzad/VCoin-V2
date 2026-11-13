@@ -1,4 +1,4 @@
-/// 5A Protocol Constants
+// 5A Protocol Constants
 // ============================================================================
 // L-02: Hardcoded Constants - Governance Path for Future Updates
 // ============================================================================
@@ -30,15 +30,15 @@ pub const PENDING_SCORE_SEED: &[u8] = b"pending-score"; // H-05
 
 /// Score weights (out of 10000)
 /// L-02: Configurable via program upgrade - critical for fair scoring
-pub const AUTHENTICITY_WEIGHT: u16 = 2500;  // 25%
-pub const ACCURACY_WEIGHT: u16 = 2000;      // 20%
-pub const AGILITY_WEIGHT: u16 = 1500;       // 15%
-pub const ACTIVITY_WEIGHT: u16 = 2500;      // 25%
-pub const APPROVED_WEIGHT: u16 = 1500;      // 15%
+pub const AUTHENTICITY_WEIGHT: u16 = 2500; // 25%
+pub const ACCURACY_WEIGHT: u16 = 2000; // 20%
+pub const AGILITY_WEIGHT: u16 = 1500; // 15%
+pub const ACTIVITY_WEIGHT: u16 = 2500; // 25%
+pub const APPROVED_WEIGHT: u16 = 1500; // 15%
 
 /// Vouch system
 /// L-02: Configurable via program upgrade - affects vouching economics
-pub const MIN_VOUCHER_SCORE: u16 = 6000;    // 60% 5A score to vouch
+pub const MIN_VOUCHER_SCORE: u16 = 6000; // 60% 5A score to vouch
 pub const VOUCH_STAKE_AMOUNT: u64 = 5_000_000_000; // 5 VCoin
 pub const VOUCHES_REQUIRED: u8 = 3;
 pub const VOUCH_EVALUATION_PERIOD: i64 = 90 * 24 * 60 * 60; // 90 days
@@ -58,4 +58,3 @@ pub const MIN_SCORE_UPDATE_INTERVAL: i64 = 60 * 60; // 1 hour minimum between up
 
 /// M-18: Maximum vouch age before it expires (1 year)
 pub const MAX_VOUCH_AGE: i64 = 365 * 24 * 60 * 60;
-

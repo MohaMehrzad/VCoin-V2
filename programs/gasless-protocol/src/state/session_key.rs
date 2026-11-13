@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use super::FeeMethod;
+use anchor_lang::prelude::*;
 
 /// Session key for temporary signing
 #[account]
@@ -47,18 +47,17 @@ impl SessionKey {
         1 +  // is_revoked
         8 +  // last_action_at
         1 +  // fee_method
-        1;   // bump
-    
+        1; // bump
+
     /// Check if action is in scope
     pub fn is_action_in_scope(&self, action_type: u16) -> bool {
         (self.scope & action_type) != 0
     }
-    
+
     /// Check if session is valid
     pub fn is_valid(&self, current_timestamp: i64) -> bool {
-        !self.is_revoked && 
-        current_timestamp <= self.expires_at &&
-        self.actions_used < self.max_actions
+        !self.is_revoked
+            && current_timestamp <= self.expires_at
+            && self.actions_used < self.max_actions
     }
 }
-

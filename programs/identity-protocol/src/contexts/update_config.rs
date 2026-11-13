@@ -13,7 +13,6 @@ pub struct UpdateConfig<'info> {
         has_one = authority @ IdentityError::Unauthorized
     )]
     pub identity_config: Account<'info, IdentityConfig>,
-    
+
     pub authority: Signer<'info>,
 }
-

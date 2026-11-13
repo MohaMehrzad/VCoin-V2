@@ -7,11 +7,10 @@ use crate::state::UserStake;
 pub struct GetStakeInfo<'info> {
     /// CHECK: Just for PDA derivation
     pub user: UncheckedAccount<'info>,
-    
+
     #[account(
         seeds = [USER_STAKE_SEED, user.key().as_ref()],
         bump
     )]
     pub user_stake: Account<'info, UserStake>,
 }
-

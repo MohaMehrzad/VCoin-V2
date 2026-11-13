@@ -13,7 +13,6 @@ pub struct UpdateAuthority<'info> {
         has_one = authority @ TransferHookError::Unauthorized
     )]
     pub hook_config: Account<'info, HookConfig>,
-    
+
     pub authority: Signer<'info>,
 }
-

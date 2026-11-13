@@ -46,6 +46,5 @@ impl GovernanceConfig {
         8 +  // treasury_balance
         8 +  // pending_authority_activated_at (H-02)
         1 +  // paused
-        1;   // bump
+        1; // bump
 }
-

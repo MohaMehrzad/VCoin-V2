@@ -19,4 +19,3 @@ impl VoteChoice {
         }
     }
 }
-

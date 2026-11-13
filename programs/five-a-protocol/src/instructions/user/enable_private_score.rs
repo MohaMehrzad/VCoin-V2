@@ -8,4 +8,3 @@ pub fn handler(ctx: Context<UpdateUserScore>) -> Result<()> {
     msg!("Private score mode enabled");
     Ok(())
 }
-

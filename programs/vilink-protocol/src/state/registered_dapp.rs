@@ -37,6 +37,5 @@ impl RegisteredDApp {
         8 +  // action_count
         1 +  // allowed_actions
         2 +  // fee_share_bps
-        1;   // bump
+        1; // bump
 }
-

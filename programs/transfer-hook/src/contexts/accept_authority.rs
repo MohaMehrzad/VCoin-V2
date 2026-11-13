@@ -15,8 +15,7 @@ pub struct AcceptAuthority<'info> {
         constraint = hook_config.pending_authority != Pubkey::default() @ TransferHookError::NoPendingTransfer
     )]
     pub hook_config: Account<'info, HookConfig>,
-    
+
     /// The new authority accepting the transfer - must sign
     pub new_authority: Signer<'info>,
 }
-

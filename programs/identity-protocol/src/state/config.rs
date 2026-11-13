@@ -40,6 +40,5 @@ impl IdentityConfig {
         8 +  // total_identities
         8 +  // verified_identities
         1 +  // paused
-        1;   // bump
+        1; // bump
 }
-

@@ -1,0 +1,17 @@
+[package]
+name = "integration-tests"
+version = "0.1.0"
+description = "LiteSVM integration tests that load the built programs from target/deploy"
+edition = "2021"
+publish = false
+
+[dependencies]
+anchor-lang = { workspace = true }
+litesvm = { workspace = true }
+solana-sdk = { workspace = true }
+bincode = "1.3"
+solana-loader-v3-interface = { version = "5.0", features = ["serde"] }
+solana-sdk-ids = "2.2"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

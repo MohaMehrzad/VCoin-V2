@@ -64,16 +64,15 @@ impl GaslessConfig {
         4 +  // current_day
         8 +  // day_spent
         2 +  // max_slippage_bps (L-03)
-        1;   // bump
-    
+        1; // bump
+
     /// Get current day number
     pub fn get_day_number(timestamp: i64) -> u32 {
         (timestamp / 86400) as u32
     }
-    
+
     /// Check if daily budget reset needed
     pub fn should_reset_daily_budget(&self, current_timestamp: i64) -> bool {
         Self::get_day_number(current_timestamp) > self.current_day
     }
 }
-

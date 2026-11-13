@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{SLASH_STATUS_PENDING, SLASH_STATUS_APPROVED, SLASH_STATUS_EXECUTED};
+use crate::constants::{SLASH_STATUS_APPROVED, SLASH_STATUS_EXECUTED, SLASH_STATUS_PENDING};
 
 /// Slash request requiring governance approval (H-01 Security Fix)
-/// 
+///
 /// Slashing flow:
 /// 1. Permanent delegate proposes slash -> creates SlashRequest (Pending)
 /// 2. Governance votes and approves -> status becomes Approved, timelock starts
@@ -45,26 +45,25 @@ impl SlashRequest {
         8 +  // created_at
         8 +  // timelock_end
         8 +  // executed_at
-        1;   // bump
-    
+        1; // bump
+
     /// Check if the slash request is pending
     pub fn is_pending(&self) -> bool {
         self.status == SLASH_STATUS_PENDING
     }
-    
+
     /// Check if the slash request is approved and ready for execution
     pub fn is_approved(&self) -> bool {
         self.status == SLASH_STATUS_APPROVED
     }
-    
+
     /// Check if the slash request has been executed
     pub fn is_executed(&self) -> bool {
         self.status == SLASH_STATUS_EXECUTED
     }
-    
+
     /// Check if timelock has expired (can execute)
     pub fn is_timelock_expired(&self, current_timestamp: i64) -> bool {
         self.is_approved() && current_timestamp >= self.timelock_end
     }
 }
-

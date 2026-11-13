@@ -1,11 +1,16 @@
 //! Unit tests for Identity Protocol
 //!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
     use crate::constants::*;
-    use crate::state::{IdentityConfig, Identity, VerificationLevel, SubscriptionTier};
+    use crate::state::{Identity, IdentityConfig, SubscriptionTier, VerificationLevel};
     use anchor_lang::prelude::Pubkey;
 
     // ========================================================================
@@ -39,8 +44,14 @@ mod tests {
 
     #[test]
     fn test_identity_config_size() {
-        let expected = 8 + 32 + 32 + 32 + 32 + (32 * 10) + 1 + 8 + 8 + 1 + 1;
-        assert_eq!(IdentityConfig::LEN, expected, "Config size mismatch");
+        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
+        let mut buf = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(&IdentityConfig::default(), &mut buf).unwrap();
+        assert_eq!(
+            IdentityConfig::LEN,
+            8 + buf.len(),
+            "IdentityConfig::LEN out of sync with struct"
+        );
     }
 
     #[test]
@@ -56,10 +67,16 @@ mod tests {
     #[test]
     fn test_verification_level_from_u8() {
         assert_eq!(VerificationLevel::from_u8(0), Some(VerificationLevel::None));
-        assert_eq!(VerificationLevel::from_u8(1), Some(VerificationLevel::Basic));
+        assert_eq!(
+            VerificationLevel::from_u8(1),
+            Some(VerificationLevel::Basic)
+        );
         assert_eq!(VerificationLevel::from_u8(2), Some(VerificationLevel::KYC));
         assert_eq!(VerificationLevel::from_u8(3), Some(VerificationLevel::Full));
-        assert_eq!(VerificationLevel::from_u8(4), Some(VerificationLevel::Enhanced));
+        assert_eq!(
+            VerificationLevel::from_u8(4),
+            Some(VerificationLevel::Enhanced)
+        );
         assert_eq!(VerificationLevel::from_u8(5), None);
     }
 
@@ -79,7 +96,7 @@ mod tests {
             VerificationLevel::Full,
             VerificationLevel::Enhanced,
         ];
-        
+
         for i in 0..levels.len() {
             assert_eq!(VerificationLevel::from_u8(i as u8), Some(levels[i]));
         }
@@ -92,9 +109,18 @@ mod tests {
     #[test]
     fn test_subscription_tier_from_u8() {
         assert_eq!(SubscriptionTier::from_u8(0), Some(SubscriptionTier::Free));
-        assert_eq!(SubscriptionTier::from_u8(1), Some(SubscriptionTier::Verified));
-        assert_eq!(SubscriptionTier::from_u8(2), Some(SubscriptionTier::Premium));
-        assert_eq!(SubscriptionTier::from_u8(3), Some(SubscriptionTier::Enterprise));
+        assert_eq!(
+            SubscriptionTier::from_u8(1),
+            Some(SubscriptionTier::Verified)
+        );
+        assert_eq!(
+            SubscriptionTier::from_u8(2),
+            Some(SubscriptionTier::Premium)
+        );
+        assert_eq!(
+            SubscriptionTier::from_u8(3),
+            Some(SubscriptionTier::Enterprise)
+        );
         assert_eq!(SubscriptionTier::from_u8(4), None);
     }
 
@@ -103,7 +129,10 @@ mod tests {
         assert_eq!(SubscriptionTier::Free.price(), SUBSCRIPTION_FREE);
         assert_eq!(SubscriptionTier::Verified.price(), SUBSCRIPTION_VERIFIED);
         assert_eq!(SubscriptionTier::Premium.price(), SUBSCRIPTION_PREMIUM);
-        assert_eq!(SubscriptionTier::Enterprise.price(), SUBSCRIPTION_ENTERPRISE);
+        assert_eq!(
+            SubscriptionTier::Enterprise.price(),
+            SUBSCRIPTION_ENTERPRISE
+        );
     }
 
     #[test]
@@ -119,7 +148,7 @@ mod tests {
     #[test]
     fn test_identity_default() {
         let identity = Identity::default();
-        
+
         assert_eq!(identity.verification_level, 0);
         assert!(!identity.is_active);
         assert_eq!(identity.created_at, 0);
@@ -129,7 +158,7 @@ mod tests {
     #[test]
     fn test_identity_username_capacity() {
         let identity = Identity::default();
-        
+
         // Username is stored as [u8; 32]
         assert_eq!(identity.username.len(), 32);
     }
@@ -141,7 +170,7 @@ mod tests {
     #[test]
     fn test_config_default() {
         let config = IdentityConfig::default();
-        
+
         assert_eq!(config.attester_count, 0);
         assert_eq!(config.total_identities, 0);
         assert_eq!(config.verified_identities, 0);
@@ -151,7 +180,7 @@ mod tests {
     #[test]
     fn test_trusted_attester_capacity() {
         let config = IdentityConfig::default();
-        
+
         // Max 10 trusted attesters
         assert_eq!(config.trusted_attesters.len(), 10);
     }
@@ -165,30 +194,23 @@ mod tests {
         let program_id = Pubkey::new_unique();
         let user1 = Pubkey::new_unique();
         let user2 = Pubkey::new_unique();
-        
-        let (pda1, _) = Pubkey::find_program_address(
-            &[IDENTITY_SEED, user1.as_ref()],
-            &program_id
+
+        let (pda1, _) = Pubkey::find_program_address(&[IDENTITY_SEED, user1.as_ref()], &program_id);
+
+        let (pda2, _) = Pubkey::find_program_address(&[IDENTITY_SEED, user2.as_ref()], &program_id);
+
+        assert_ne!(
+            pda1, pda2,
+            "Different users should have different identity PDAs"
         );
-        
-        let (pda2, _) = Pubkey::find_program_address(
-            &[IDENTITY_SEED, user2.as_ref()],
-            &program_id
-        );
-        
-        assert_ne!(pda1, pda2, "Different users should have different identity PDAs");
     }
 
     #[test]
     fn test_config_pda() {
         let program_id = Pubkey::new_unique();
-        
-        let (pda, bump) = Pubkey::find_program_address(
-            &[IDENTITY_CONFIG_SEED],
-            &program_id
-        );
-        
-        assert!(bump <= 255);
+
+        let (pda, _bump) = Pubkey::find_program_address(&[IDENTITY_CONFIG_SEED], &program_id);
+
         assert_ne!(pda, Pubkey::default());
     }
 
@@ -200,7 +222,7 @@ mod tests {
     fn test_subscription_expiry_calculation() {
         let start_time = 1000i64;
         let expires_at = start_time + SUBSCRIPTION_DURATION;
-        
+
         assert_eq!(expires_at, start_time + 30 * 24 * 60 * 60);
     }
 
@@ -208,7 +230,7 @@ mod tests {
     fn test_subscription_active() {
         let expires_at = 2_000_000i64;
         let current_time = 1_000_000i64;
-        
+
         assert!(current_time < expires_at, "Subscription should be active");
     }
 
@@ -216,7 +238,7 @@ mod tests {
     fn test_subscription_expired() {
         let expires_at = 1_000_000i64;
         let current_time = 2_000_000i64;
-        
+
         assert!(current_time >= expires_at, "Subscription should be expired");
     }
 
@@ -231,7 +253,7 @@ mod tests {
             verified_identities: 50,
             ..Default::default()
         };
-        
+
         assert!(config.verified_identities <= config.total_identities);
     }
 
@@ -241,8 +263,7 @@ mod tests {
             attester_count: 10,
             ..Default::default()
         };
-        
+
         assert!(config.attester_count as usize <= config.trusted_attesters.len());
     }
 }
-

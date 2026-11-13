@@ -45,18 +45,17 @@ impl UserScore {
         8 +  // last_snapshot_epoch
         4 +  // update_count
         1 +  // is_private
-        1;   // bump
-    
+        1; // bump
+
     /// Calculate weighted composite score
     pub fn calculate_composite(&self) -> u16 {
-        let weighted = 
-            (self.authenticity as u32 * AUTHENTICITY_WEIGHT as u32 +
-             self.accuracy as u32 * ACCURACY_WEIGHT as u32 +
-             self.agility as u32 * AGILITY_WEIGHT as u32 +
-             self.activity as u32 * ACTIVITY_WEIGHT as u32 +
-             self.approved as u32 * APPROVED_WEIGHT as u32) / 10000;
-        
+        let weighted = (self.authenticity as u32 * AUTHENTICITY_WEIGHT as u32
+            + self.accuracy as u32 * ACCURACY_WEIGHT as u32
+            + self.agility as u32 * AGILITY_WEIGHT as u32
+            + self.activity as u32 * ACTIVITY_WEIGHT as u32
+            + self.approved as u32 * APPROVED_WEIGHT as u32)
+            / 10000;
+
         weighted as u16
     }
 }
-

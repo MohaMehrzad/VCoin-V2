@@ -29,4 +29,3 @@ pub const PLATFORM_FEE_BPS: u16 = 250; // 2.5%
 pub const MAX_PLATFORM_FEE_BPS: u16 = 1000;
 /// Minimum platform fee (0.1%)
 pub const MIN_PLATFORM_FEE_BPS: u16 = 10;
-

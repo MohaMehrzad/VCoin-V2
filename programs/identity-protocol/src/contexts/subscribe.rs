@@ -49,4 +49,3 @@ pub struct Subscribe<'info> {
 
     pub system_program: Program<'info, System>,
 }
-

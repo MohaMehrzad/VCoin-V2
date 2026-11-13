@@ -9,4 +9,3 @@ pub enum VouchStatus {
     Slashed = 2,
     Rewarded = 3,
 }
-

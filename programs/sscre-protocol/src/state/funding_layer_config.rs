@@ -40,6 +40,5 @@ impl FundingLayerConfig {
         8 +  // total_recycled
         8 +  // last_layer_switch
         2 +  // months_remaining_estimate
-        1;   // bump
+        1; // bump
 }
-

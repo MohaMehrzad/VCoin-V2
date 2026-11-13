@@ -72,6 +72,6 @@ impl PrivateVotingConfig {
         32 + // accumulated_ct_abstain_r
         32 + // accumulated_ct_abstain_c
         4 +  // total_private_votes
-        1;   // bump
-    // Total: 680 bytes
+        1; // bump
+           // Total: 680 bytes
 }

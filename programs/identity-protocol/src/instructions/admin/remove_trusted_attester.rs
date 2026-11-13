@@ -6,7 +6,7 @@ use crate::errors::IdentityError;
 /// Remove trusted attester (admin only)
 pub fn handler(ctx: Context<UpdateConfig>, attester: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.identity_config;
-    
+
     // Find and remove the attester
     let mut found = false;
     let count = config.attester_count as usize;
@@ -23,10 +23,9 @@ pub fn handler(ctx: Context<UpdateConfig>, attester: Pubkey) -> Result<()> {
             break;
         }
     }
-    
+
     require!(found, IdentityError::UntrustedAttester);
-    
+
     msg!("Trusted attester removed: {}", attester);
     Ok(())
 }
-

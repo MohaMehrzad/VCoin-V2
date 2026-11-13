@@ -52,6 +52,5 @@ impl RewardsPoolConfig {
         1 +  // circuit_breaker_active
         32 + // fee_recipient
         1 +  // bump
-        1;   // vault_bump
+        1; // vault_bump
 }
-

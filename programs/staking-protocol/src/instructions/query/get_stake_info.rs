@@ -18,7 +18,7 @@ pub struct UserStakeInfo {
 pub fn handler(ctx: Context<GetStakeInfo>) -> Result<UserStakeInfo> {
     let user_stake = &ctx.accounts.user_stake;
     let clock = Clock::get()?;
-    
+
     Ok(UserStakeInfo {
         staked_amount: user_stake.staked_amount,
         lock_end: user_stake.lock_end,
@@ -28,4 +28,3 @@ pub fn handler(ctx: Context<GetStakeInfo>) -> Result<UserStakeInfo> {
         fee_discount_bps: StakingTier::from_amount(user_stake.staked_amount).fee_discount_bps(),
     })
 }
-

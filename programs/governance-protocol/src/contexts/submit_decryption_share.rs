@@ -1,6 +1,6 @@
+use crate::constants::{DECRYPTION_SHARE_SEED, PRIVATE_VOTING_SEED};
+use crate::state::{DecryptionShare, PrivateVotingConfig};
 use anchor_lang::prelude::*;
-use crate::constants::{PRIVATE_VOTING_SEED, DECRYPTION_SHARE_SEED};
-use crate::state::{PrivateVotingConfig, DecryptionShare};
 
 #[derive(Accounts)]
 #[instruction(committee_index: u8)]

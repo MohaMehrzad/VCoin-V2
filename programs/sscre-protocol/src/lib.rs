@@ -4,19 +4,19 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 declare_id!("6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ");
 
-/// SSCRE Protocol - Self-Sustaining Circular Reward Economy
-/// 
-/// Merkle-based gasless reward claims with 6-layer funding hierarchy.
-/// 
-/// Key Features:
-/// - 350M VCoin primary rewards pool
-/// - Monthly epoch-based distribution
-/// - Merkle tree claims for gas efficiency
-/// - 5A score-weighted rewards
-/// - 6-layer sustainable funding (post Year 5)
-/// 
-/// Reward Distribution Formula:
-/// user_reward = base_allocation × five_a_multiplier × streak_bonus × vouch_multiplier
+// SSCRE Protocol - Self-Sustaining Circular Reward Economy
+//
+// Merkle-based gasless reward claims with 6-layer funding hierarchy.
+//
+// Key Features:
+// - 350M VCoin primary rewards pool
+// - Monthly epoch-based distribution
+// - Merkle tree claims for gas efficiency
+// - 5A score-weighted rewards
+// - 6-layer sustainable funding (post Year 5)
+//
+// Reward Distribution Formula:
+// user_reward = base_allocation × five_a_multiplier × streak_bonus × vouch_multiplier
 
 pub mod constants;
 pub mod errors;
@@ -28,22 +28,22 @@ mod tests;
 
 use constants::*;
 use errors::*;
-use state::*;
 use events::*;
+use state::*;
 
 #[program]
 pub mod sscre_protocol {
     use super::*;
 
     /// Initialize the SSCRE rewards pool
-    pub fn initialize_pool(
-        ctx: Context<InitializePool>,
-        fee_recipient: Pubkey,
-    ) -> Result<()> {
+    pub fn initialize_pool(ctx: Context<InitializePool>, fee_recipient: Pubkey) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
-        
+
         // L-03: Validate fee_recipient is not zero address
-        require!(fee_recipient != Pubkey::default(), SSCREError::InvalidAddress);
+        require!(
+            fee_recipient != Pubkey::default(),
+            SSCREError::InvalidAddress
+        );
 
         config.authority = ctx.accounts.authority.key();
         config.vcoin_mint = ctx.accounts.vcoin_mint.key();
@@ -59,21 +59,24 @@ pub mod sscre_protocol {
         config.fee_recipient = fee_recipient;
         config.bump = ctx.bumps.pool_config;
         config.vault_bump = ctx.bumps.pool_vault;
-        
+
         emit!(PoolInitialized {
             authority: config.authority,
             vcoin_mint: config.vcoin_mint,
             initial_reserves: PRIMARY_RESERVES,
         });
-        
-        msg!("SSCRE Pool initialized with {} VCoin reserves", PRIMARY_RESERVES);
+
+        msg!(
+            "SSCRE Pool initialized with {} VCoin reserves",
+            PRIMARY_RESERVES
+        );
         Ok(())
     }
-    
+
     /// Initialize the 6-layer funding configuration
     pub fn initialize_funding_layers(ctx: Context<InitializeFundingLayers>) -> Result<()> {
         let funding = &mut ctx.accounts.funding_config;
-        
+
         funding.authority = ctx.accounts.authority.key();
         funding.l1_primary_remaining = PRIMARY_RESERVES;
         funding.l2_secondary_remaining = SECONDARY_RESERVES;
@@ -85,15 +88,15 @@ pub mod sscre_protocol {
         funding.last_layer_switch = 0;
         funding.months_remaining_estimate = 60;
         funding.bump = ctx.bumps.funding_config;
-        
+
         msg!("Funding layers initialized");
         Ok(())
     }
-    
+
     /// Initialize circuit breaker
     pub fn initialize_circuit_breaker(ctx: Context<InitializeCircuitBreaker>) -> Result<()> {
         let cb = &mut ctx.accounts.circuit_breaker;
-        
+
         cb.authority = ctx.accounts.authority.key();
         cb.is_active = false;
         cb.max_epoch_emission = MAX_EPOCH_EMISSION;
@@ -104,50 +107,59 @@ pub mod sscre_protocol {
         cb.last_trigger_at = 0;
         cb.last_trigger_reason = 0;
         cb.bump = ctx.bumps.circuit_breaker;
-        
+
         msg!("Circuit breaker initialized");
         Ok(())
     }
-    
+
     /// Register an oracle for merkle root submission
     pub fn register_oracle(ctx: Context<RegisterOracle>, oracle: Pubkey) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
-        
+
         require!(config.oracle_count < 5, SSCREError::Overflow);
 
         // C-12: Check for duplicate oracle registration
         for i in 0..config.oracle_count as usize {
-            require!(config.oracles[i] != oracle, SSCREError::OracleAlreadyRegistered);
+            require!(
+                config.oracles[i] != oracle,
+                SSCREError::OracleAlreadyRegistered
+            );
         }
 
         let idx = config.oracle_count as usize;
         config.oracles[idx] = oracle;
         config.oracle_count += 1;
-        
+
         msg!("Oracle registered: {}", oracle);
         Ok(())
     }
-    
+
     /// Start a new epoch
     pub fn start_epoch(ctx: Context<StartEpoch>, total_allocation: u64) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
         let epoch_dist = &mut ctx.accounts.epoch_distribution;
         let cb = &mut ctx.accounts.circuit_breaker;
-        
+
         require!(!config.paused, SSCREError::ProtocolPaused);
         require!(!cb.is_active, SSCREError::CircuitBreakerEpochMax);
         // M-09: Prevent zero-allocation epochs
         require!(total_allocation > 0, SSCREError::ZeroAllocation);
-        require!(total_allocation <= MAX_EPOCH_EMISSION, SSCREError::CircuitBreakerEpochMax);
-        require!(total_allocation <= config.remaining_reserves, SSCREError::InsufficientPoolBalance);
-        
+        require!(
+            total_allocation <= MAX_EPOCH_EMISSION,
+            SSCREError::CircuitBreakerEpochMax
+        );
+        require!(
+            total_allocation <= config.remaining_reserves,
+            SSCREError::InsufficientPoolBalance
+        );
+
         let clock = Clock::get()?;
-        
+
         config.current_epoch = config.current_epoch.saturating_add(1);
-        
+
         cb.current_epoch_emission = 0;
         cb.largest_claim_this_epoch = 0;
-        
+
         epoch_dist.epoch = config.current_epoch;
         epoch_dist.merkle_root = [0u8; 32];
         epoch_dist.total_allocation = total_allocation;
@@ -161,17 +173,21 @@ pub mod sscre_protocol {
         epoch_dist.avg_five_a_score = 0;
         epoch_dist.eligible_users = 0;
         epoch_dist.bump = ctx.bumps.epoch_distribution;
-        
+
         emit!(EpochStarted {
             epoch: epoch_dist.epoch,
             start_time: epoch_dist.start_time,
             end_time: epoch_dist.end_time,
         });
-        
-        msg!("Epoch {} started with {} VCoin allocation", epoch_dist.epoch, total_allocation);
+
+        msg!(
+            "Epoch {} started with {} VCoin allocation",
+            epoch_dist.epoch,
+            total_allocation
+        );
         Ok(())
     }
-    
+
     /// Update merkle root (finalize epoch distribution)
     pub fn update_merkle_root(
         ctx: Context<UpdateMerkleRoot>,
@@ -181,7 +197,7 @@ pub mod sscre_protocol {
     ) -> Result<()> {
         let config = &ctx.accounts.pool_config;
         let epoch_dist = &mut ctx.accounts.epoch_distribution;
-        
+
         require!(!config.paused, SSCREError::ProtocolPaused);
         require!(!epoch_dist.is_finalized, SSCREError::EpochAlreadyExists);
 
@@ -191,24 +207,24 @@ pub mod sscre_protocol {
         let oracle_key = ctx.accounts.oracle.key();
         let is_oracle = config.oracles[..config.oracle_count as usize].contains(&oracle_key);
         require!(is_oracle, SSCREError::OracleNotRegistered);
-        
+
         epoch_dist.merkle_root = merkle_root;
         epoch_dist.is_finalized = true;
         epoch_dist.submitter = oracle_key;
         epoch_dist.eligible_users = eligible_users;
         epoch_dist.avg_five_a_score = avg_five_a_score;
-        
+
         emit!(EpochFinalized {
             epoch: epoch_dist.epoch,
             merkle_root,
             total_allocation: epoch_dist.total_allocation,
             eligible_users,
         });
-        
+
         msg!("Epoch {} finalized with merkle root", epoch_dist.epoch);
         Ok(())
     }
-    
+
     /// Claim rewards with merkle proof
     pub fn claim_rewards(
         ctx: Context<ClaimRewards>,
@@ -219,37 +235,50 @@ pub mod sscre_protocol {
         let epoch_dist = &mut ctx.accounts.epoch_distribution;
         let user_claim = &mut ctx.accounts.user_claim;
         let cb = &mut ctx.accounts.circuit_breaker;
-        
+
         require!(!config.paused, SSCREError::ProtocolPaused);
         require!(!cb.is_active, SSCREError::CircuitBreakerEpochMax);
         require!(epoch_dist.is_finalized, SSCREError::EpochNotFinalized);
         require!(amount >= MIN_CLAIM_AMOUNT, SSCREError::ClaimBelowMinimum);
-        require!(amount <= MAX_SINGLE_CLAIM, SSCREError::CircuitBreakerClaimMax);
-        
+        require!(
+            amount <= MAX_SINGLE_CLAIM,
+            SSCREError::CircuitBreakerClaimMax
+        );
+
         // H-NEW-02: Limit merkle proof size to prevent DoS attacks
         // 32 levels supports 2^32 = 4+ billion users, which is more than enough
         require!(merkle_proof.len() <= 32, SSCREError::MerkleProofTooLarge);
-        
+
         let clock = Clock::get()?;
-        
-        require!(clock.unix_timestamp <= epoch_dist.claim_expiry, SSCREError::ClaimWindowExpired);
-        require!(!user_claim.is_epoch_claimed(epoch_dist.epoch), SSCREError::AlreadyClaimed);
-        
+
+        require!(
+            clock.unix_timestamp <= epoch_dist.claim_expiry,
+            SSCREError::ClaimWindowExpired
+        );
+        require!(
+            !user_claim.is_epoch_claimed(epoch_dist.epoch),
+            SSCREError::AlreadyClaimed
+        );
+
         let user_key = ctx.accounts.user.key();
         let leaf = compute_leaf(&user_key, amount, epoch_dist.epoch);
-        require!(verify_merkle_proof(&merkle_proof, &epoch_dist.merkle_root, &leaf), SSCREError::InvalidMerkleProof);
-        
+        require!(
+            verify_merkle_proof(&merkle_proof, &epoch_dist.merkle_root, &leaf),
+            SSCREError::InvalidMerkleProof
+        );
+
         // C-05: Use ceiling division to prevent fee rounding to zero on small amounts
-        let fee = ((amount as u128 * GASLESS_FEE_BPS as u128 + 9999) / 10000) as u64;
+        let fee = (amount as u128 * GASLESS_FEE_BPS as u128).div_ceil(10000) as u64;
         let fee = fee.min(amount);
         let net_amount = amount.saturating_sub(fee);
-        
+
         let pool_bump = config.bump;
         let seeds = &[POOL_CONFIG_SEED, &[pool_bump]];
         let signer_seeds = &[&seeds[..]];
-        
+
         token_2022::transfer_checked(
-            CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(),
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
                 token_2022::TransferChecked {
                     from: ctx.accounts.pool_vault.to_account_info(),
                     to: ctx.accounts.user_token_account.to_account_info(),
@@ -261,10 +290,11 @@ pub mod sscre_protocol {
             net_amount,
             ctx.accounts.vcoin_mint.decimals,
         )?;
-        
+
         if fee > 0 {
             token_2022::transfer_checked(
-                CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(),
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info(),
                     token_2022::TransferChecked {
                         from: ctx.accounts.pool_vault.to_account_info(),
                         to: ctx.accounts.fee_account.to_account_info(),
@@ -277,29 +307,29 @@ pub mod sscre_protocol {
                 ctx.accounts.vcoin_mint.decimals,
             )?;
         }
-        
+
         user_claim.user = user_key;
         user_claim.mark_epoch_claimed(epoch_dist.epoch)?;
         user_claim.total_claimed = user_claim.total_claimed.saturating_add(net_amount);
         user_claim.claims_count = user_claim.claims_count.saturating_add(1);
-        
+
         if user_claim.first_claim_at == 0 {
             user_claim.first_claim_at = clock.unix_timestamp;
         }
         user_claim.last_claim_at = clock.unix_timestamp;
         user_claim.bump = ctx.bumps.user_claim;
-        
+
         epoch_dist.total_claimed = epoch_dist.total_claimed.saturating_add(amount);
         epoch_dist.claims_count = epoch_dist.claims_count.saturating_add(1);
-        
+
         config.total_distributed = config.total_distributed.saturating_add(amount);
         config.remaining_reserves = config.remaining_reserves.saturating_sub(amount);
-        
+
         cb.current_epoch_emission = cb.current_epoch_emission.saturating_add(amount);
         if amount > cb.largest_claim_this_epoch {
             cb.largest_claim_this_epoch = amount;
         }
-        
+
         emit!(RewardsClaimed {
             user: user_key,
             epoch: epoch_dist.epoch,
@@ -307,78 +337,85 @@ pub mod sscre_protocol {
             fee_deducted: fee,
             net_amount,
         });
-        
-        msg!("Claimed {} VCoin (net: {} after {} fee)", amount, net_amount, fee);
+
+        msg!(
+            "Claimed {} VCoin (net: {} after {} fee)",
+            amount,
+            net_amount,
+            fee
+        );
         Ok(())
     }
-    
+
     /// Trigger circuit breaker (emergency)
     pub fn trigger_circuit_breaker(ctx: Context<TriggerCircuitBreaker>, reason: u8) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
         let cb = &mut ctx.accounts.circuit_breaker;
-        
+
         let clock = Clock::get()?;
-        
+
         cb.is_active = true;
         cb.trigger_count = cb.trigger_count.saturating_add(1);
         cb.last_trigger_at = clock.unix_timestamp;
         cb.last_trigger_reason = reason;
-        
+
         config.circuit_breaker_active = true;
-        
+
         emit!(CircuitBreakerTriggered {
             reason,
             value: 0,
             threshold: 0,
             timestamp: clock.unix_timestamp,
         });
-        
+
         msg!("Circuit breaker triggered: reason {}", reason);
         Ok(())
     }
-    
+
     /// Reset circuit breaker (after investigation)
     /// M-05 Security Fix: Requires cooldown period before reset
     pub fn reset_circuit_breaker(ctx: Context<ResetCircuitBreaker>) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
         let cb = &mut ctx.accounts.circuit_breaker;
-        
+
         // M-05: Enforce 6-hour cooldown period after trigger
         let clock = Clock::get()?;
         require!(
             clock.unix_timestamp >= cb.last_trigger_at + CIRCUIT_BREAKER_COOLDOWN,
             SSCREError::CircuitBreakerCooldown
         );
-        
+
         cb.is_active = false;
         config.circuit_breaker_active = false;
-        
-        msg!("Circuit breaker reset after {} hours cooldown", 
-            (clock.unix_timestamp - cb.last_trigger_at) / 3600);
+
+        msg!(
+            "Circuit breaker reset after {} hours cooldown",
+            (clock.unix_timestamp - cb.last_trigger_at) / 3600
+        );
         Ok(())
     }
-    
+
     /// Pause/unpause protocol
     pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
         ctx.accounts.pool_config.paused = paused;
         msg!("SSCRE Protocol paused: {}", paused);
         Ok(())
     }
-    
+
     /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
     pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
-        
+
         require!(
             new_authority != config.authority,
             SSCREError::CannotProposeSelf
         );
-        
+
         require!(
             new_authority != Pubkey::default(),
             SSCREError::InvalidAuthority
         );
-        
+
         config.pending_authority = new_authority;
 
         // L-01: Emit authority transfer proposed event
@@ -390,14 +427,14 @@ pub mod sscre_protocol {
         msg!("Authority transfer proposed to: {}", new_authority);
         Ok(())
     }
-    
+
     /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
     pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
-        
+
         let old_authority = config.authority;
         let new_authority = ctx.accounts.new_authority.key();
-        
+
         config.authority = new_authority;
         config.pending_authority = Pubkey::default();
 
@@ -407,19 +444,23 @@ pub mod sscre_protocol {
             new_authority,
         });
 
-        msg!("Authority transferred from {} to {}", old_authority, new_authority);
+        msg!(
+            "Authority transferred from {} to {}",
+            old_authority,
+            new_authority
+        );
         Ok(())
     }
-    
+
     /// Cancel a pending authority transfer (H-02 security fix)
     pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
         let config = &mut ctx.accounts.pool_config;
-        
+
         require!(
             config.pending_authority != Pubkey::default(),
             SSCREError::NoPendingTransfer
         );
-        
+
         let cancelled = config.pending_authority;
         config.pending_authority = Pubkey::default();
 
@@ -432,14 +473,14 @@ pub mod sscre_protocol {
         msg!("Authority transfer to {} cancelled", cancelled);
         Ok(())
     }
-    
+
     /// Update 5A program reference
     pub fn set_five_a_program(ctx: Context<UpdateConfig>, five_a_program: Pubkey) -> Result<()> {
         ctx.accounts.pool_config.five_a_program = five_a_program;
         msg!("5A Program set to: {}", five_a_program);
         Ok(())
     }
-    
+
     /// Get pool stats
     pub fn get_pool_stats(ctx: Context<GetPoolStats>) -> Result<()> {
         let config = &ctx.accounts.pool_config;
@@ -449,7 +490,7 @@ pub mod sscre_protocol {
         msg!("Paused: {}", config.paused);
         Ok(())
     }
-    
+
     /// Get user claim stats
     pub fn get_user_stats(ctx: Context<GetUserStats>) -> Result<()> {
         let claim = &ctx.accounts.user_claim;
@@ -530,21 +571,21 @@ pub struct UpdateMerkleRoot<'info> {
 #[derive(Accounts)]
 pub struct ClaimRewards<'info> {
     #[account(mut, seeds = [POOL_CONFIG_SEED], bump = pool_config.bump)]
-    pub pool_config: Account<'info, RewardsPoolConfig>,
+    pub pool_config: Box<Account<'info, RewardsPoolConfig>>,
     #[account(mut, seeds = [EPOCH_SEED, epoch_distribution.epoch.to_le_bytes().as_ref()], bump = epoch_distribution.bump)]
-    pub epoch_distribution: Account<'info, EpochDistribution>,
+    pub epoch_distribution: Box<Account<'info, EpochDistribution>>,
     #[account(init_if_needed, payer = user, space = UserClaim::LEN, seeds = [USER_CLAIM_SEED, user.key().as_ref()], bump)]
-    pub user_claim: Account<'info, UserClaim>,
+    pub user_claim: Box<Account<'info, UserClaim>>,
     #[account(mut, seeds = [CIRCUIT_BREAKER_SEED], bump = circuit_breaker.bump)]
-    pub circuit_breaker: Account<'info, CircuitBreaker>,
+    pub circuit_breaker: Box<Account<'info, CircuitBreaker>>,
     #[account(constraint = vcoin_mint.key() == pool_config.vcoin_mint)]
-    pub vcoin_mint: InterfaceAccount<'info, Mint>,
+    pub vcoin_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(mut, seeds = [b"pool-vault"], bump)]
-    pub pool_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut, constraint = user_token_account.owner == user.key() @ SSCREError::InvalidTokenAccount, constraint = user_token_account.mint == pool_config.vcoin_mint @ SSCREError::InvalidMint)]
-    pub user_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut, constraint = fee_account.owner == pool_config.fee_recipient @ SSCREError::InvalidTokenAccount, constraint = fee_account.mint == pool_config.vcoin_mint @ SSCREError::InvalidMint)]
-    pub fee_account: InterfaceAccount<'info, TokenAccount>,
+    pub fee_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut)]
     pub user: Signer<'info>,
     pub token_program: Program<'info, Token2022>,

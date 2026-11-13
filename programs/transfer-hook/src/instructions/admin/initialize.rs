@@ -9,7 +9,7 @@ pub fn handler(
     min_activity_amount: u64,
 ) -> Result<()> {
     let config = &mut ctx.accounts.hook_config;
-    
+
     config.authority = ctx.accounts.authority.key();
     config.vcoin_mint = ctx.accounts.vcoin_mint.key();
     config.five_a_program = five_a_program;
@@ -19,8 +19,10 @@ pub fn handler(
     config.wash_trading_flags = 0;
     config.paused = false;
     config.bump = ctx.bumps.hook_config;
-    
-    msg!("Transfer hook initialized for VCoin mint: {}", config.vcoin_mint);
+
+    msg!(
+        "Transfer hook initialized for VCoin mint: {}",
+        config.vcoin_mint
+    );
     Ok(())
 }
-

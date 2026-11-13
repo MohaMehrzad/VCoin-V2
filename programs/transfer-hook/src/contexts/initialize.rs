@@ -14,13 +14,12 @@ pub struct Initialize<'info> {
         bump
     )]
     pub hook_config: Account<'info, HookConfig>,
-    
+
     /// VCoin mint (Token-2022)
     pub vcoin_mint: InterfaceAccount<'info, Mint>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

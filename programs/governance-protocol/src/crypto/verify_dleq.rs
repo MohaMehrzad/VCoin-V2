@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
 use solana_curve25519::ristretto::{
-    subtract_ristretto, multiply_ristretto, validate_ristretto,
-    PodRistrettoPoint,
+    multiply_ristretto, subtract_ristretto, validate_ristretto, PodRistrettoPoint,
 };
 use solana_curve25519::scalar::PodScalar;
 use solana_sha256_hasher::hashv;
 
-use crate::crypto::constants::{RISTRETTO_BASEPOINT_COMPRESSED, DOMAIN_DLEQ_PROOF};
+use crate::crypto::constants::{DOMAIN_DLEQ_PROOF, RISTRETTO_BASEPOINT_COMPRESSED};
 use crate::errors::GovernanceError;
 
 /// Verify a batched DLEQ proof for a committee member's decryption shares.
@@ -32,7 +31,10 @@ pub fn verify_batched_dleq(
     let pk = PodRistrettoPoint(*pubkey);
 
     // Validate all points
-    require!(validate_ristretto(&pk), GovernanceError::InvalidRistrettoPoint);
+    require!(
+        validate_ristretto(&pk),
+        GovernanceError::InvalidRistrettoPoint
+    );
     for base in bases.iter() {
         require!(
             validate_ristretto(&PodRistrettoPoint(*base)),
@@ -50,12 +52,9 @@ pub fn verify_batched_dleq(
     let s_scalar = PodScalar(*response);
 
     // Reconstruct commitment for base equation: A0 = s*G - e*pk
-    let s_g = multiply_ristretto(&s_scalar, &g)
-        .ok_or(GovernanceError::InvalidDleqProof)?;
-    let e_pk = multiply_ristretto(&e_scalar, &pk)
-        .ok_or(GovernanceError::InvalidDleqProof)?;
-    let a0 = subtract_ristretto(&s_g, &e_pk)
-        .ok_or(GovernanceError::InvalidDleqProof)?;
+    let s_g = multiply_ristretto(&s_scalar, &g).ok_or(GovernanceError::InvalidDleqProof)?;
+    let e_pk = multiply_ristretto(&e_scalar, &pk).ok_or(GovernanceError::InvalidDleqProof)?;
+    let a0 = subtract_ristretto(&s_g, &e_pk).ok_or(GovernanceError::InvalidDleqProof)?;
 
     // Reconstruct commitments for each category: A_i = s*R_sum_i - e*partial_i
     let mut a_commitments = [[0u8; 32]; 3];
@@ -63,12 +62,12 @@ pub fn verify_batched_dleq(
         let base_point = PodRistrettoPoint(bases[i]);
         let result_point = PodRistrettoPoint(results[i]);
 
-        let s_base = multiply_ristretto(&s_scalar, &base_point)
-            .ok_or(GovernanceError::InvalidDleqProof)?;
+        let s_base =
+            multiply_ristretto(&s_scalar, &base_point).ok_or(GovernanceError::InvalidDleqProof)?;
         let e_result = multiply_ristretto(&e_scalar, &result_point)
             .ok_or(GovernanceError::InvalidDleqProof)?;
-        let a_i = subtract_ristretto(&s_base, &e_result)
-            .ok_or(GovernanceError::InvalidDleqProof)?;
+        let a_i =
+            subtract_ristretto(&s_base, &e_result).ok_or(GovernanceError::InvalidDleqProof)?;
         a_commitments[i] = a_i.0;
     }
 

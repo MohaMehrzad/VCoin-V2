@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::GetSessionInfo;
+use anchor_lang::prelude::*;
 
 pub fn handler(ctx: Context<GetSessionInfo>) -> Result<()> {
     let session = &ctx.accounts.session_key;
@@ -11,4 +11,3 @@ pub fn handler(ctx: Context<GetSessionInfo>) -> Result<()> {
     msg!("Revoked: {}", session.is_revoked);
     Ok(())
 }
-

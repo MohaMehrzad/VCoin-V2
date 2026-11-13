@@ -13,13 +13,12 @@ pub struct Initialize<'info> {
         bump
     )]
     pub identity_config: Account<'info, IdentityConfig>,
-    
+
     /// CHECK: Treasury account for subscription payments
     pub treasury: UncheckedAccount<'info>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

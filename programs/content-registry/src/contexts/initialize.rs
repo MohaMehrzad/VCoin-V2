@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::REGISTRY_CONFIG_SEED;
 use crate::state::RegistryConfig;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -12,10 +12,9 @@ pub struct Initialize<'info> {
         bump
     )]
     pub registry_config: Account<'info, RegistryConfig>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

@@ -1,4 +1,4 @@
-/// veVCoin Token Constants
+// veVCoin Token Constants
 
 /// Token decimals
 pub const VEVCOIN_DECIMALS: u8 = 9;
@@ -17,4 +17,3 @@ pub const FOUR_YEARS_SECONDS: i64 = 4 * 365 * 24 * 60 * 60;
 
 /// C-01: 24-hour timelock for authority transfers (in seconds)
 pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 86400;
-

@@ -31,6 +31,5 @@ impl UserStake {
         8 +  // stake_start
         1 +  // tier
         8 +  // ve_vcoin_amount
-        1;   // bump
+        1; // bump
 }
-

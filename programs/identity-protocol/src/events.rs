@@ -29,4 +29,3 @@ pub struct SubscriptionUpdated {
     pub tier: u8,
     pub expires_at: i64,
 }
-

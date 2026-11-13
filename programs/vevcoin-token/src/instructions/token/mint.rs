@@ -12,31 +12,28 @@ pub fn handler(ctx: Context<MintVeVCoin>, amount: u64) -> Result<()> {
     // Get bump from context
     let config_bump = ctx.bumps.config;
     let user_account_bump = ctx.bumps.user_account;
-    
+
     // Only staking protocol can mint
     require!(
         ctx.accounts.staking_protocol.key() == ctx.accounts.config.staking_protocol,
         VeVCoinError::Unauthorized
     );
-    
+
     require!(amount > 0, VeVCoinError::ZeroAmount);
-    
+
     let clock = Clock::get()?;
     let now = clock.unix_timestamp;
-    
+
     // Check if first time user
     let is_new_user = ctx.accounts.user_account.balance == 0;
     let current_balance = ctx.accounts.user_account.balance;
     let current_total_supply = ctx.accounts.config.total_supply;
     let current_total_holders = ctx.accounts.config.total_holders;
-    
+
     // Mint tokens using Token-2022 first
-    let seeds = &[
-        VEVCOIN_CONFIG_SEED,
-        &[config_bump],
-    ];
+    let seeds = &[VEVCOIN_CONFIG_SEED, &[config_bump]];
     let signer_seeds = &[&seeds[..]];
-    
+
     token_2022::mint_to(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -49,11 +46,11 @@ pub fn handler(ctx: Context<MintVeVCoin>, amount: u64) -> Result<()> {
         ),
         amount,
     )?;
-    
+
     // Now update state
     let user_account = &mut ctx.accounts.user_account;
     let config = &mut ctx.accounts.config;
-    
+
     // Initialize user account if first time
     if is_new_user {
         user_account.owner = ctx.accounts.user.key();
@@ -62,12 +59,12 @@ pub fn handler(ctx: Context<MintVeVCoin>, amount: u64) -> Result<()> {
         // M-20: Use saturating_add to prevent panic on overflow
         config.total_holders = current_total_holders.saturating_add(1);
     }
-    
+
     // Update balances
     user_account.balance = current_balance.checked_add(amount).unwrap();
     user_account.last_update_at = now;
     config.total_supply = current_total_supply.checked_add(amount).unwrap();
-    
+
     // L-01: Emit veVCoin minted event
     emit!(VeVCoinMinted {
         user: ctx.accounts.user.key(),
@@ -75,10 +72,9 @@ pub fn handler(ctx: Context<MintVeVCoin>, amount: u64) -> Result<()> {
         total_supply: config.total_supply,
         timestamp: now,
     });
-    
+
     msg!("Minted {} veVCoin to {}", amount, ctx.accounts.user.key());
     msg!("New balance: {}", user_account.balance);
-    
+
     Ok(())
 }
-

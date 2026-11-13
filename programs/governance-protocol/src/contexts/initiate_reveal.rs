@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{Proposal, PrivateVotingConfig};
+use crate::state::{PrivateVotingConfig, Proposal};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct InitiateReveal<'info> {
@@ -9,14 +9,13 @@ pub struct InitiateReveal<'info> {
         bump = proposal.bump
     )]
     pub proposal: Account<'info, Proposal>,
-    
+
     #[account(
         mut,
         seeds = [PRIVATE_VOTING_SEED, proposal.key().as_ref()],
         bump = private_voting_config.bump
     )]
     pub private_voting_config: Account<'info, PrivateVotingConfig>,
-    
+
     pub initiator: Signer<'info>,
 }
-

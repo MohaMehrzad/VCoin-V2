@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{RegistryConfig, ContentRecord, UserEnergy, UserRateLimit};
+use crate::state::{ContentRecord, RegistryConfig, UserEnergy, UserRateLimit};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 #[instruction(tracking_id: [u8; 32])]
@@ -11,7 +11,7 @@ pub struct CreateContent<'info> {
         bump = registry_config.bump
     )]
     pub registry_config: Account<'info, RegistryConfig>,
-    
+
     #[account(
         init,
         payer = author,
@@ -20,14 +20,14 @@ pub struct CreateContent<'info> {
         bump
     )]
     pub content_record: Account<'info, ContentRecord>,
-    
+
     #[account(
         mut,
         seeds = [USER_ENERGY_SEED, author.key().as_ref()],
         bump = user_energy.bump
     )]
     pub user_energy: Account<'info, UserEnergy>,
-    
+
     #[account(
         init_if_needed,
         payer = author,
@@ -36,10 +36,9 @@ pub struct CreateContent<'info> {
         bump
     )]
     pub rate_limit: Account<'info, UserRateLimit>,
-    
+
     #[account(mut)]
     pub author: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

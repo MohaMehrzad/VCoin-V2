@@ -11,27 +11,26 @@ pub struct SlashTokens<'info> {
     /// The permanent delegate authority
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     #[account(
         seeds = [VCOIN_CONFIG_SEED],
         bump = config.bump
     )]
     pub config: Account<'info, VCoinConfig>,
-    
+
     /// The VCoin mint
     #[account(
         mut,
         constraint = mint.key() == config.mint @ VCoinError::InvalidMint
     )]
     pub mint: InterfaceAccount<'info, Mint>,
-    
+
     /// Target account to slash tokens from - MUST use VCoin mint
     #[account(
         mut,
         constraint = target_account.mint == config.mint @ VCoinError::InvalidMint
     )]
     pub target_account: InterfaceAccount<'info, TokenAccount>,
-    
+
     pub token_program: Program<'info, Token2022>,
 }
-

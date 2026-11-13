@@ -11,4 +11,3 @@ pub struct GetIdentity<'info> {
     )]
     pub identity: Account<'info, Identity>,
 }
-

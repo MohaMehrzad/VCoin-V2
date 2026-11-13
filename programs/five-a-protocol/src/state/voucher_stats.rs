@@ -37,15 +37,20 @@ impl VoucherStats {
         1 +  // max_concurrent_vouches
         8 +  // total_rewards_earned
         8 +  // total_stake_lost
-        1;   // bump
-    
+        1; // bump
+
     /// Calculate max vouches based on 5A score
     pub fn max_vouches_for_score(score: u16) -> u8 {
-        if score >= 9000 { 10 }
-        else if score >= 8000 { 8 }
-        else if score >= 7000 { 5 }
-        else if score >= 6000 { 3 }
-        else { 0 }
+        if score >= 9000 {
+            10
+        } else if score >= 8000 {
+            8
+        } else if score >= 7000 {
+            5
+        } else if score >= 6000 {
+            3
+        } else {
+            0
+        }
     }
 }
-

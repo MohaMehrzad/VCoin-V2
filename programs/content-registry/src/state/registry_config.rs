@@ -31,6 +31,5 @@ impl RegistryConfig {
         8 +  // total_content_count
         8 +  // active_content_count
         1 +  // paused
-        1;   // bump
+        1; // bump
 }
-

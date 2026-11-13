@@ -10,7 +10,7 @@ pub fn handler(
     block_wash_trading: Option<bool>,
 ) -> Result<()> {
     let config = &mut ctx.accounts.hook_config;
-    
+
     if let Some(program) = new_five_a_program {
         config.five_a_program = program;
     }
@@ -20,8 +20,7 @@ pub fn handler(
     if let Some(block) = block_wash_trading {
         config.block_wash_trading = block;
     }
-    
+
     msg!("Hook config updated");
     Ok(())
 }
-

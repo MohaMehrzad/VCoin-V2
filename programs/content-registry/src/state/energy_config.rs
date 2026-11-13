@@ -25,5 +25,5 @@ impl EnergyConfig {
         8 +  // engagement_check_delay
         4 +  // viral_threshold
         1 +  // paused
-        1;   // bump
+        1; // bump
 }

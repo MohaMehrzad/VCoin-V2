@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
+use anchor_lang::prelude::*;
 
 /// Content type enum
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
@@ -23,7 +23,7 @@ impl ContentType {
             _ => None,
         }
     }
-    
+
     pub fn energy_cost(&self) -> u16 {
         match self {
             ContentType::Post => ENERGY_COST_TEXT_POST,

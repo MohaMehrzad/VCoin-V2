@@ -1,11 +1,8 @@
-use anchor_lang::prelude::*;
 use crate::contexts::UpdateEngagement;
 use crate::errors::ContentError;
+use anchor_lang::prelude::*;
 
-pub fn handler(
-    ctx: Context<UpdateEngagement>,
-    engagement_count: u32,
-) -> Result<()> {
+pub fn handler(ctx: Context<UpdateEngagement>, engagement_count: u32) -> Result<()> {
     let content = &mut ctx.accounts.content_record;
 
     // C-AUDIT-10: Enforce monotonic engagement increase — engagement can never decrease
@@ -19,4 +16,3 @@ pub fn handler(
     msg!("Engagement updated: {}", engagement_count);
     Ok(())
 }
-

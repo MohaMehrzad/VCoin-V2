@@ -37,6 +37,5 @@ impl HookConfig {
         8 +  // total_transfers
         8 +  // wash_trading_flags
         1 +  // paused
-        1;   // bump
+        1; // bump
 }
-

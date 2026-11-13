@@ -11,4 +11,3 @@ pub struct GetScore<'info> {
     )]
     pub user_score: Account<'info, UserScore>,
 }
-

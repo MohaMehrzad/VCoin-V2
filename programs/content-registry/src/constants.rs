@@ -35,9 +35,9 @@ pub const MAX_ENERGY_PLATINUM: u16 = 2000;
 /// stored in on-chain state to avoid governance overhead for values that are part of
 /// the core economic model. If dynamic tuning is needed in the future, consider
 /// migrating them to a governance-controlled on-chain config account.
-pub const REFUND_THRESHOLD_10: u32 = 10;    // 25% refund
-pub const REFUND_THRESHOLD_50: u32 = 50;    // 50% refund
-pub const REFUND_THRESHOLD_100: u32 = 100;  // 100% refund
+pub const REFUND_THRESHOLD_10: u32 = 10; // 25% refund
+pub const REFUND_THRESHOLD_50: u32 = 50; // 50% refund
+pub const REFUND_THRESHOLD_100: u32 = 100; // 100% refund
 pub const REFUND_THRESHOLD_1000: u32 = 1000; // 150% refund (viral)
 
 /// Timing

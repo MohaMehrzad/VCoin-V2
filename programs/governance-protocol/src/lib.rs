@@ -2,29 +2,29 @@ use anchor_lang::prelude::*;
 
 declare_id!("3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe");
 
-/// Governance Protocol
-/// 
-/// Full on-chain governance using veVCoin for voting power, boosted by 5A score.
-/// Supports ZK Private Voting where votes are encrypted during voting period.
-/// 
-/// Voting Power Formula:
-/// - Quadratic: base_votes = sqrt(vcoin_tokens)
-/// - 5A Boost: five_a_boost = 1.0 + (five_a_score / 100)  // 1.0x to 2.0x
-/// - Tier Multiplier: Bronze=1.0x, Silver=2.0x, Gold=5.0x, Platinum=10.0x
-/// - effective_votes = base_votes * five_a_boost * tier_multiplier
-/// 
-/// Governance Tiers:
-/// - Community (1+ veVCoin): Can vote
-/// - Delegate (1,000+ veVCoin): Can create proposals
-/// - Council (10,000+ veVCoin): Fast-track proposals
+// Governance Protocol
+//
+// Full on-chain governance using veVCoin for voting power, boosted by 5A score.
+// Supports ZK Private Voting where votes are encrypted during voting period.
+//
+// Voting Power Formula:
+// - Quadratic: base_votes = sqrt(vcoin_tokens)
+// - 5A Boost: five_a_boost = 1.0 + (five_a_score / 100)  // 1.0x to 2.0x
+// - Tier Multiplier: Bronze=1.0x, Silver=2.0x, Gold=5.0x, Platinum=10.0x
+// - effective_votes = base_votes * five_a_boost * tier_multiplier
+//
+// Governance Tiers:
+// - Community (1+ veVCoin): Can vote
+// - Delegate (1,000+ veVCoin): Can create proposals
+// - Council (10,000+ veVCoin): Fast-track proposals
 
 pub mod constants;
+pub mod contexts;
 pub mod crypto;
 pub mod errors;
 pub mod events;
-pub mod state;
-pub mod contexts;
 pub mod instructions;
+pub mod state;
 
 #[cfg(test)]
 mod tests;
@@ -44,7 +44,7 @@ pub mod governance_protocol {
     ) -> Result<()> {
         admin::initialize::handler(ctx, staking_program, five_a_program)
     }
-    
+
     /// Create a new proposal
     pub fn create_proposal(
         ctx: Context<CreateProposal>,
@@ -53,21 +53,24 @@ pub mod governance_protocol {
         proposal_type: u8,
         enable_private_voting: bool,
     ) -> Result<()> {
-        proposal::create::handler(ctx, title_hash, description_uri, proposal_type, enable_private_voting)
+        proposal::create::handler(
+            ctx,
+            title_hash,
+            description_uri,
+            proposal_type,
+            enable_private_voting,
+        )
     }
-    
+
     /// Cast a public vote
-    /// 
+    ///
     /// C-NEW-01 Security Fix: veVCoin balance, 5A score, and tier are now
     /// read directly from on-chain accounts instead of being passed as parameters.
     /// This prevents vote manipulation attacks.
-    pub fn cast_vote(
-        ctx: Context<CastVote>,
-        choice: u8,
-    ) -> Result<()> {
+    pub fn cast_vote(ctx: Context<CastVote>, choice: u8) -> Result<()> {
         vote::cast::handler(ctx, choice)
     }
-    
+
     /// Cast a ZK private vote with cryptographic proof verification
     ///
     /// The voter encrypts their choice using Twisted ElGamal and provides
@@ -93,8 +96,12 @@ pub mod governance_protocol {
         committee_elgamal_pubkeys: [[u8; 32]; 5],
     ) -> Result<()> {
         zk_voting::enable_private_voting::handler(
-            ctx, encryption_pubkey, decryption_committee,
-            committee_size, decryption_threshold, committee_elgamal_pubkeys,
+            ctx,
+            encryption_pubkey,
+            decryption_committee,
+            committee_size,
+            decryption_threshold,
+            committee_elgamal_pubkeys,
         )
     }
 
@@ -114,8 +121,13 @@ pub mod governance_protocol {
         dleq_response: [u8; 32],
     ) -> Result<()> {
         zk_voting::submit_decryption_share::handler(
-            ctx, committee_index, partial_for, partial_against,
-            partial_abstain, dleq_challenge, dleq_response,
+            ctx,
+            committee_index,
+            partial_for,
+            partial_against,
+            partial_abstain,
+            dleq_challenge,
+            dleq_response,
         )
     }
 
@@ -132,20 +144,24 @@ pub mod governance_protocol {
         lagrange_coefficients: Vec<[u8; 32]>,
     ) -> Result<()> {
         zk_voting::aggregate_revealed_votes::handler(
-            ctx, tally_for, tally_against, tally_abstain, lagrange_coefficients,
+            ctx,
+            tally_for,
+            tally_against,
+            tally_abstain,
+            lagrange_coefficients,
         )
     }
-    
+
     /// Finalize proposal (determine pass/fail)
     pub fn finalize_proposal(ctx: Context<FinalizeProposal>) -> Result<()> {
         proposal::finalize::handler(ctx)
     }
-    
+
     /// Execute a passed proposal
     pub fn execute_proposal(ctx: Context<ExecuteProposal>) -> Result<()> {
         proposal::execute::handler(ctx)
     }
-    
+
     /// Delegate voting power
     pub fn delegate_votes(
         ctx: Context<DelegateVotes>,
@@ -155,14 +171,21 @@ pub mod governance_protocol {
         expires_at: i64,
         revocable: bool,
     ) -> Result<()> {
-        delegation::delegate::handler(ctx, delegation_type, categories, vevcoin_amount, expires_at, revocable)
+        delegation::delegate::handler(
+            ctx,
+            delegation_type,
+            categories,
+            vevcoin_amount,
+            expires_at,
+            revocable,
+        )
     }
-    
+
     /// Revoke delegation
     pub fn revoke_delegation(ctx: Context<RevokeDelegation>) -> Result<()> {
         delegation::revoke::handler(ctx)
     }
-    
+
     /// Update governance parameters
     pub fn update_config(
         ctx: Context<UpdateConfig>,
@@ -171,29 +194,35 @@ pub mod governance_protocol {
         voting_period: Option<i64>,
         timelock_delay: Option<i64>,
     ) -> Result<()> {
-        admin::update_config::handler(ctx, proposal_threshold, quorum, voting_period, timelock_delay)
+        admin::update_config::handler(
+            ctx,
+            proposal_threshold,
+            quorum,
+            voting_period,
+            timelock_delay,
+        )
     }
-    
+
     /// Pause/unpause governance
     pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
         admin::set_paused::handler(ctx, paused)
     }
-    
+
     /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
     pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
         admin::update_authority::handler(ctx, new_authority)
     }
-    
+
     /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
     pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         admin::accept_authority::handler(ctx)
     }
-    
+
     /// Cancel a pending authority transfer (H-02 security fix)
     pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
         admin::cancel_authority_transfer::handler(ctx)
     }
-    
+
     /// Get proposal info
     pub fn get_proposal(ctx: Context<GetProposal>) -> Result<()> {
         query::get_proposal::handler(ctx)

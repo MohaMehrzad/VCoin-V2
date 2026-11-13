@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
-use solana_curve25519::ristretto::{
-    subtract_ristretto, multiply_ristretto, PodRistrettoPoint,
-};
+use solana_curve25519::ristretto::{multiply_ristretto, subtract_ristretto, PodRistrettoPoint};
 use solana_curve25519::scalar::PodScalar;
 use solana_sha256_hasher::hashv;
 
@@ -28,8 +26,14 @@ pub fn handler(
     let proposal = &mut ctx.accounts.proposal;
     let private_config = &mut ctx.accounts.private_voting_config;
 
-    require!(private_config.reveal_started, GovernanceError::RevealNotStarted);
-    require!(!private_config.reveal_completed, GovernanceError::RevealAlreadyComplete);
+    require!(
+        private_config.reveal_started,
+        GovernanceError::RevealNotStarted
+    );
+    require!(
+        !private_config.reveal_completed,
+        GovernanceError::RevealAlreadyComplete
+    );
     require!(
         private_config.shares_received >= private_config.decryption_threshold,
         GovernanceError::InsufficientDecryptionShares
@@ -70,7 +74,11 @@ pub fn handler(
 
         // Verify PDA derivation
         let (expected_pda, _bump) = Pubkey::find_program_address(
-            &[DECRYPTION_SHARE_SEED, proposal_key.as_ref(), &[committee_index]],
+            &[
+                DECRYPTION_SHARE_SEED,
+                proposal_key.as_ref(),
+                &[committee_index],
+            ],
             ctx.program_id,
         );
         require!(
@@ -90,7 +98,8 @@ pub fn handler(
         let mut member_bytes = [0u8; 32];
         member_bytes.copy_from_slice(&share_data[40..72]);
         require!(
-            private_config.decryption_committee[committee_index as usize] == Pubkey::from(member_bytes),
+            private_config.decryption_committee[committee_index as usize]
+                == Pubkey::from(member_bytes),
             GovernanceError::InvalidDecryptionShare
         );
 
@@ -190,9 +199,17 @@ pub fn handler(
         shares_verified: verified_shares,
     });
 
-    msg!("ZK reveal complete: For={}, Against={}, Abstain={} (cryptographically verified)",
-        tally_for, tally_against, tally_abstain);
-    msg!("Shares verified: {}/{}", verified_shares, private_config.decryption_threshold);
+    msg!(
+        "ZK reveal complete: For={}, Against={}, Abstain={} (cryptographically verified)",
+        tally_for,
+        tally_against,
+        tally_abstain
+    );
+    msg!(
+        "Shares verified: {}/{}",
+        verified_shares,
+        private_config.decryption_threshold
+    );
     Ok(())
 }
 
@@ -209,8 +226,8 @@ fn combine_partials(
         let scalar = PodScalar(*coeff);
         let point = PodRistrettoPoint(*partial);
 
-        let weighted = multiply_ristretto(&scalar, &point)
-            .ok_or(GovernanceError::InvalidDecryptionShare)?;
+        let weighted =
+            multiply_ristretto(&scalar, &point).ok_or(GovernanceError::InvalidDecryptionShare)?;
 
         combined = add_ristretto_safe(&combined, &weighted)?;
     }
@@ -227,12 +244,11 @@ fn verify_tally(
 ) -> Result<()> {
     // Left side: tally * H
     let tally_scalar = u64_to_scalar(tally);
-    let expected = multiply_ristretto(&tally_scalar, h)
-        .ok_or(GovernanceError::TallyVerificationFailed)?;
+    let expected =
+        multiply_ristretto(&tally_scalar, h).ok_or(GovernanceError::TallyVerificationFailed)?;
 
     // Right side: C_sum - D
-    let actual = subtract_ristretto(c_sum, d)
-        .ok_or(GovernanceError::TallyVerificationFailed)?;
+    let actual = subtract_ristretto(c_sum, d).ok_or(GovernanceError::TallyVerificationFailed)?;
 
     require!(
         expected.0 == actual.0,
@@ -243,10 +259,7 @@ fn verify_tally(
 }
 
 /// Safe point addition that handles identity
-fn add_ristretto_safe(
-    a: &PodRistrettoPoint,
-    b: &PodRistrettoPoint,
-) -> Result<PodRistrettoPoint> {
+fn add_ristretto_safe(a: &PodRistrettoPoint, b: &PodRistrettoPoint) -> Result<PodRistrettoPoint> {
     use solana_curve25519::ristretto::add_ristretto;
 
     // If a is identity (all zeros), return b

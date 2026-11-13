@@ -4,24 +4,24 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 declare_id!("CFGXTS2MueQwTYTMMTBQbRWzJtSTC2p4ZRuKPpLDmrv7");
 
-/// ViLink Protocol - Cross-dApp Action Deep Links
-/// 
-/// One-tap social actions with shareable URLs.
-/// 
-/// Key Features:
-/// - Shareable action links (viwo://action/xxx)
-/// - Cross-dApp integration
-/// - Gasless execution via session keys
-/// - Action types: Tip, Vouch, Follow, Challenge, Stake
-/// 
-/// URI Format:
-/// viwo://action/{action_id}?amount=X&target=Y
-/// 
-/// Flow:
-/// 1. Creator generates action link
-/// 2. User clicks link → app opens
-/// 3. Session key executes action (gasless)
-/// 4. User notified of result
+// ViLink Protocol - Cross-dApp Action Deep Links
+//
+// One-tap social actions with shareable URLs.
+//
+// Key Features:
+// - Shareable action links (viwo://action/xxx)
+// - Cross-dApp integration
+// - Gasless execution via session keys
+// - Action types: Tip, Vouch, Follow, Challenge, Stake
+//
+// URI Format:
+// viwo://action/{action_id}?amount=X&target=Y
+//
+// Flow:
+// 1. Creator generates action link
+// 2. User clicks link → app opens
+// 3. Session key executes action (gasless)
+// 4. User notified of result
 
 pub mod constants;
 pub mod errors;
@@ -33,8 +33,8 @@ mod tests;
 
 use constants::*;
 use errors::*;
-use state::*;
 use events::*;
+use state::*;
 
 #[program]
 pub mod vilink_protocol {
@@ -43,7 +43,7 @@ pub mod vilink_protocol {
     /// Initialize ViLink configuration
     pub fn initialize(ctx: Context<Initialize>, treasury: Pubkey) -> Result<()> {
         let config = &mut ctx.accounts.config;
-        
+
         config.authority = ctx.accounts.authority.key();
         config.vcoin_mint = ctx.accounts.vcoin_mint.key();
         config.treasury = treasury;
@@ -59,19 +59,20 @@ pub mod vilink_protocol {
         config.paused = false;
         config.platform_fee_bps = PLATFORM_FEE_BPS;
         config.bump = ctx.bumps.config;
-        
+
         emit!(ViLinkConfigInitialized {
             authority: config.authority,
             vcoin_mint: config.vcoin_mint,
             enabled_actions: config.enabled_actions,
         });
-        
+
         msg!("ViLink Protocol initialized");
         Ok(())
     }
-    
+
     /// Create a new action link
     /// M-04 Security Fix: Added nonce parameter for deterministic PDA derivation
+    #[allow(clippy::too_many_arguments)]
     pub fn create_action(
         ctx: Context<CreateAction>,
         action_type: u8,
@@ -87,35 +88,35 @@ pub mod vilink_protocol {
         let config = &mut ctx.accounts.config;
         let action = &mut ctx.accounts.action;
         let user_stats = &mut ctx.accounts.user_stats;
-        
+
         require!(!config.paused, ViLinkError::ProtocolPaused);
         require!(action_type < 8, ViLinkError::InvalidActionType);
-        require!(config.is_action_enabled(action_type), ViLinkError::ActionTypeDisabled);
-        
+        require!(
+            config.is_action_enabled(action_type),
+            ViLinkError::ActionTypeDisabled
+        );
+
         // H-07: Sequential creation is enforced by Solana's account locking model.
         // The user_stats account (mutable PDA) serializes concurrent creates for the
         // same user, preventing race conditions on the action_nonce.
         // M-04 Security Fix: Validate nonce matches expected value
         // For new users, action_nonce will be 0 (default)
-        require!(
-            nonce == user_stats.action_nonce,
-            ViLinkError::InvalidNonce
-        );
-        
+        require!(nonce == user_stats.action_nonce, ViLinkError::InvalidNonce);
+
         if action_type == ACTION_TIP {
             require!(amount >= MIN_TIP_AMOUNT, ViLinkError::InvalidAmount);
             require!(amount <= MAX_TIP_AMOUNT, ViLinkError::InvalidAmount);
         }
-        
+
         // L-04: Return error for invalid expiry instead of silent clamping
         require!(
             expiry_seconds > 0 && expiry_seconds <= MAX_ACTION_EXPIRY,
             ViLinkError::InvalidExpiry
         );
         let expiry = expiry_seconds;
-        
+
         let clock = Clock::get()?;
-        
+
         let action_id = generate_action_id(
             &ctx.accounts.creator.key(),
             &target,
@@ -123,7 +124,7 @@ pub mod vilink_protocol {
             amount,
             clock.unix_timestamp,
         );
-        
+
         action.action_id = action_id;
         action.creator = ctx.accounts.creator.key();
         action.target = target;
@@ -140,11 +141,11 @@ pub mod vilink_protocol {
         action.one_time = one_time;
         action.execution_count = 0;
         action.max_executions = max_executions;
-        action.action_nonce = nonce;  // M-04: Store nonce for PDA verification
+        action.action_nonce = nonce; // M-04: Store nonce for PDA verification
         action.bump = ctx.bumps.action;
-        
+
         config.total_actions_created = config.total_actions_created.saturating_add(1);
-        
+
         user_stats.user = ctx.accounts.creator.key();
         user_stats.actions_created = user_stats.actions_created.saturating_add(1);
         if user_stats.first_action_at == 0 {
@@ -154,7 +155,7 @@ pub mod vilink_protocol {
         // M-04 Security Fix: Increment nonce for next action
         user_stats.action_nonce = user_stats.action_nonce.saturating_add(1);
         user_stats.bump = ctx.bumps.user_stats;
-        
+
         emit!(ActionCreated {
             action_id,
             creator: action.creator,
@@ -163,54 +164,93 @@ pub mod vilink_protocol {
             amount,
             expires_at: action.expires_at,
         });
-        
-        msg!("Action created: type={}, target={}, nonce={}", action_type_name(action_type), target, nonce);
+
+        msg!(
+            "Action created: type={}, target={}, nonce={}",
+            action_type_name(action_type),
+            target,
+            nonce
+        );
         Ok(())
     }
-    
+
     /// Execute an action (tip execution with VCoin transfer)
     pub fn execute_tip_action(ctx: Context<ExecuteTipAction>) -> Result<()> {
         let config = &mut ctx.accounts.config;
         let action = &mut ctx.accounts.action;
         let executor_stats = &mut ctx.accounts.executor_stats;
         let target_stats = &mut ctx.accounts.target_stats;
-        
+
         require!(!config.paused, ViLinkError::ProtocolPaused);
-        
-        require!(ctx.accounts.executor_token_account.owner == ctx.accounts.executor.key(), ViLinkError::InvalidTokenAccount);
-        require!(ctx.accounts.executor_token_account.mint == config.vcoin_mint, ViLinkError::InvalidMint);
-        require!(ctx.accounts.target_token_account.owner == action.target, ViLinkError::InvalidTarget);
-        require!(ctx.accounts.target_token_account.mint == config.vcoin_mint, ViLinkError::InvalidMint);
-        require!(ctx.accounts.treasury_token_account.owner == config.treasury, ViLinkError::InvalidTreasury);
-        require!(ctx.accounts.treasury_token_account.mint == config.vcoin_mint, ViLinkError::InvalidMint);
-        
+
+        require!(
+            ctx.accounts.executor_token_account.owner == ctx.accounts.executor.key(),
+            ViLinkError::InvalidTokenAccount
+        );
+        require!(
+            ctx.accounts.executor_token_account.mint == config.vcoin_mint,
+            ViLinkError::InvalidMint
+        );
+        require!(
+            ctx.accounts.target_token_account.owner == action.target,
+            ViLinkError::InvalidTarget
+        );
+        require!(
+            ctx.accounts.target_token_account.mint == config.vcoin_mint,
+            ViLinkError::InvalidMint
+        );
+        require!(
+            ctx.accounts.treasury_token_account.owner == config.treasury,
+            ViLinkError::InvalidTreasury
+        );
+        require!(
+            ctx.accounts.treasury_token_account.mint == config.vcoin_mint,
+            ViLinkError::InvalidMint
+        );
+
         let clock = Clock::get()?;
-        
-        require!(!action.executed || !action.one_time, ViLinkError::ActionAlreadyExecuted);
-        require!(clock.unix_timestamp <= action.expires_at, ViLinkError::ActionExpired);
-        require!(action.action_type == ACTION_TIP, ViLinkError::InvalidActionType);
-        
+
+        require!(
+            !action.executed || !action.one_time,
+            ViLinkError::ActionAlreadyExecuted
+        );
+        require!(
+            clock.unix_timestamp <= action.expires_at,
+            ViLinkError::ActionExpired
+        );
+        require!(
+            action.action_type == ACTION_TIP,
+            ViLinkError::InvalidActionType
+        );
+
         if action.max_executions > 0 {
-            require!(action.execution_count < action.max_executions, ViLinkError::ActionAlreadyExecuted);
+            require!(
+                action.execution_count < action.max_executions,
+                ViLinkError::ActionAlreadyExecuted
+            );
         }
-        
+
         let executor_key = ctx.accounts.executor.key();
-        require!(executor_key != action.creator, ViLinkError::SelfExecutionNotAllowed);
-        
+        require!(
+            executor_key != action.creator,
+            ViLinkError::SelfExecutionNotAllowed
+        );
+
         // H-05: Validate executor token account has no active delegation
         require!(
-            ctx.accounts.executor_token_account.delegate.is_none() ||
-            ctx.accounts.executor_token_account.delegated_amount == 0,
+            ctx.accounts.executor_token_account.delegate.is_none()
+                || ctx.accounts.executor_token_account.delegated_amount == 0,
             ViLinkError::TokenAccountDelegated
         );
 
         // C-06: Use ceiling division to prevent fee rounding to zero on small amounts
-        let fee = ((action.amount as u128 * config.platform_fee_bps as u128 + 9999) / 10000) as u64;
+        let fee = (action.amount as u128 * config.platform_fee_bps as u128).div_ceil(10000) as u64;
         let fee = fee.min(action.amount);
         let net_amount = action.amount.saturating_sub(fee);
-        
+
         token_2022::transfer_checked(
-            CpiContext::new(ctx.accounts.token_program.to_account_info(),
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
                 token_2022::TransferChecked {
                     from: ctx.accounts.executor_token_account.to_account_info(),
                     to: ctx.accounts.target_token_account.to_account_info(),
@@ -221,10 +261,11 @@ pub mod vilink_protocol {
             net_amount,
             ctx.accounts.vcoin_mint.decimals,
         )?;
-        
+
         if fee > 0 {
             token_2022::transfer_checked(
-                CpiContext::new(ctx.accounts.token_program.to_account_info(),
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info(),
                     token_2022::TransferChecked {
                         from: ctx.accounts.executor_token_account.to_account_info(),
                         to: ctx.accounts.treasury_token_account.to_account_info(),
@@ -236,29 +277,29 @@ pub mod vilink_protocol {
                 ctx.accounts.vcoin_mint.decimals,
             )?;
         }
-        
+
         action.execution_count = action.execution_count.saturating_add(1);
         if action.one_time {
             action.executed = true;
         }
         action.executor = executor_key;
         action.executed_at = clock.unix_timestamp;
-        
+
         config.total_actions_executed = config.total_actions_executed.saturating_add(1);
         config.total_tip_volume = config.total_tip_volume.saturating_add(action.amount);
-        
+
         executor_stats.user = executor_key;
         executor_stats.actions_executed = executor_stats.actions_executed.saturating_add(1);
         executor_stats.tips_sent = executor_stats.tips_sent.saturating_add(1);
         executor_stats.vcoin_sent = executor_stats.vcoin_sent.saturating_add(action.amount);
         executor_stats.last_action_at = clock.unix_timestamp;
         executor_stats.bump = ctx.bumps.executor_stats;
-        
+
         target_stats.user = action.target;
         target_stats.tips_received = target_stats.tips_received.saturating_add(1);
         target_stats.vcoin_received = target_stats.vcoin_received.saturating_add(net_amount);
         target_stats.bump = ctx.bumps.target_stats;
-        
+
         emit!(ActionExecuted {
             action_id: action.action_id,
             executor: executor_key,
@@ -267,43 +308,59 @@ pub mod vilink_protocol {
             amount: action.amount,
             fee_paid: fee,
         });
-        
-        msg!("Tip action executed: {} VCoin to {}", action.amount, action.target);
+
+        msg!(
+            "Tip action executed: {} VCoin to {}",
+            action.amount,
+            action.target
+        );
         Ok(())
     }
-    
+
     /// Execute a vouch action
     pub fn execute_vouch_action(ctx: Context<ExecuteGenericAction>) -> Result<()> {
         let config = &mut ctx.accounts.config;
         let action = &mut ctx.accounts.action;
         let executor_stats = &mut ctx.accounts.executor_stats;
-        
+
         require!(!config.paused, ViLinkError::ProtocolPaused);
-        require!(action.action_type == ACTION_VOUCH, ViLinkError::InvalidActionType);
-        
+        require!(
+            action.action_type == ACTION_VOUCH,
+            ViLinkError::InvalidActionType
+        );
+
         let clock = Clock::get()?;
-        
-        require!(!action.executed || !action.one_time, ViLinkError::ActionAlreadyExecuted);
-        require!(clock.unix_timestamp <= action.expires_at, ViLinkError::ActionExpired);
-        
+
+        require!(
+            !action.executed || !action.one_time,
+            ViLinkError::ActionAlreadyExecuted
+        );
+        require!(
+            clock.unix_timestamp <= action.expires_at,
+            ViLinkError::ActionExpired
+        );
+
         let executor_key = ctx.accounts.executor.key();
-        require!(executor_key != action.creator, ViLinkError::SelfExecutionNotAllowed);
-        
+        require!(
+            executor_key != action.creator,
+            ViLinkError::SelfExecutionNotAllowed
+        );
+
         action.execution_count = action.execution_count.saturating_add(1);
         if action.one_time {
             action.executed = true;
         }
         action.executor = executor_key;
         action.executed_at = clock.unix_timestamp;
-        
+
         config.total_actions_executed = config.total_actions_executed.saturating_add(1);
-        
+
         executor_stats.user = executor_key;
         executor_stats.actions_executed = executor_stats.actions_executed.saturating_add(1);
         executor_stats.vouches_given = executor_stats.vouches_given.saturating_add(1);
         executor_stats.last_action_at = clock.unix_timestamp;
         executor_stats.bump = ctx.bumps.executor_stats;
-        
+
         emit!(ActionExecuted {
             action_id: action.action_id,
             executor: executor_key,
@@ -312,43 +369,55 @@ pub mod vilink_protocol {
             amount: 0,
             fee_paid: 0,
         });
-        
+
         msg!("Vouch action executed for {}", action.target);
         Ok(())
     }
-    
+
     /// Execute a follow action
     pub fn execute_follow_action(ctx: Context<ExecuteGenericAction>) -> Result<()> {
         let config = &mut ctx.accounts.config;
         let action = &mut ctx.accounts.action;
         let executor_stats = &mut ctx.accounts.executor_stats;
-        
+
         require!(!config.paused, ViLinkError::ProtocolPaused);
-        require!(action.action_type == ACTION_FOLLOW, ViLinkError::InvalidActionType);
-        
+        require!(
+            action.action_type == ACTION_FOLLOW,
+            ViLinkError::InvalidActionType
+        );
+
         let clock = Clock::get()?;
-        
-        require!(!action.executed || !action.one_time, ViLinkError::ActionAlreadyExecuted);
-        require!(clock.unix_timestamp <= action.expires_at, ViLinkError::ActionExpired);
-        
+
+        require!(
+            !action.executed || !action.one_time,
+            ViLinkError::ActionAlreadyExecuted
+        );
+        require!(
+            clock.unix_timestamp <= action.expires_at,
+            ViLinkError::ActionExpired
+        );
+
         let executor_key = ctx.accounts.executor.key();
-        require!(executor_key != action.creator, ViLinkError::SelfExecutionNotAllowed);
-        
+        require!(
+            executor_key != action.creator,
+            ViLinkError::SelfExecutionNotAllowed
+        );
+
         action.execution_count = action.execution_count.saturating_add(1);
         if action.one_time {
             action.executed = true;
         }
         action.executor = executor_key;
         action.executed_at = clock.unix_timestamp;
-        
+
         config.total_actions_executed = config.total_actions_executed.saturating_add(1);
-        
+
         executor_stats.user = executor_key;
         executor_stats.actions_executed = executor_stats.actions_executed.saturating_add(1);
         executor_stats.follows_given = executor_stats.follows_given.saturating_add(1);
         executor_stats.last_action_at = clock.unix_timestamp;
         executor_stats.bump = ctx.bumps.executor_stats;
-        
+
         emit!(ActionExecuted {
             action_id: action.action_id,
             executor: executor_key,
@@ -357,11 +426,11 @@ pub mod vilink_protocol {
             amount: 0,
             fee_paid: 0,
         });
-        
+
         msg!("Follow action executed for {}", action.target);
         Ok(())
     }
-    
+
     /// Register an external dApp
     pub fn register_dapp(
         ctx: Context<RegisterDApp>,
@@ -372,13 +441,13 @@ pub mod vilink_protocol {
     ) -> Result<()> {
         let config = &ctx.accounts.config;
         let dapp = &mut ctx.accounts.dapp;
-        
+
         require!(!config.paused, ViLinkError::ProtocolPaused);
-        
+
         let clock = Clock::get()?;
-        
+
         let dapp_id = generate_dapp_id(&ctx.accounts.dapp_authority.key());
-        
+
         dapp.dapp_id = dapp_id;
         dapp.name = name;
         dapp.authority = ctx.accounts.dapp_authority.key();
@@ -389,29 +458,32 @@ pub mod vilink_protocol {
         dapp.allowed_actions = allowed_actions;
         dapp.fee_share_bps = fee_share_bps;
         dapp.bump = ctx.bumps.dapp;
-        
+
         emit!(DAppRegistered {
             dapp_id,
             authority: dapp.authority,
             allowed_actions,
         });
-        
+
         msg!("dApp registered: {:?}", name);
         Ok(())
     }
-    
+
     /// Create a batch of actions
     /// Finding #5 Security Fix: Now uses batch_nonce for deterministic PDA derivation
     pub fn create_batch(ctx: Context<CreateBatch>, action_ids: Vec<[u8; 32]>) -> Result<()> {
         let config = &ctx.accounts.config;
         let batch = &mut ctx.accounts.batch;
         let user_stats = &mut ctx.accounts.user_stats;
-        
+
         require!(!config.paused, ViLinkError::ProtocolPaused);
-        require!(action_ids.len() <= MAX_ACTIONS_PER_BATCH, ViLinkError::BatchTooLarge);
-        
+        require!(
+            action_ids.len() <= MAX_ACTIONS_PER_BATCH,
+            ViLinkError::BatchTooLarge
+        );
+
         let clock = Clock::get()?;
-        
+
         // M-07: batch_id is a display identifier generated from creator + timestamp.
         // batch_nonce (from user_stats) is the PDA seed ensuring uniqueness.
         // batch_id may collide if two batches are created in the same second (display only),
@@ -425,20 +497,24 @@ pub mod vilink_protocol {
         batch.total_actions = action_ids.len() as u8;
         batch.executed_count = 0;
         batch.bump = ctx.bumps.batch;
-        
+
         // Finding #5: Increment batch_nonce for next batch PDA derivation
         user_stats.batch_nonce = user_stats.batch_nonce.saturating_add(1);
-        
+
         emit!(BatchCreated {
             batch_id,
             creator: batch.creator,
             action_count: batch.total_actions,
         });
-        
-        msg!("Batch created with {} actions (nonce: {})", action_ids.len(), user_stats.batch_nonce - 1);
+
+        msg!(
+            "Batch created with {} actions (nonce: {})",
+            action_ids.len(),
+            user_stats.batch_nonce - 1
+        );
         Ok(())
     }
-    
+
     /// Update protocol programs
     pub fn update_programs(
         ctx: Context<UpdateConfig>,
@@ -449,88 +525,92 @@ pub mod vilink_protocol {
         gasless_program: Pubkey,
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
-        
+
         config.five_a_program = five_a_program;
         config.staking_program = staking_program;
         config.content_registry = content_registry;
         config.governance_program = governance_program;
         config.gasless_program = gasless_program;
-        
+
         msg!("Protocol programs updated");
         Ok(())
     }
-    
+
     /// Enable/disable action types
     pub fn set_enabled_actions(ctx: Context<UpdateConfig>, enabled_actions: u8) -> Result<()> {
         ctx.accounts.config.enabled_actions = enabled_actions;
         msg!("Enabled actions updated: {:#010b}", enabled_actions);
         Ok(())
     }
-    
+
     /// Update platform fee
     /// M-02 Security Fix: Validates fee is within acceptable bounds (0.1% - 10%)
     pub fn set_platform_fee(ctx: Context<UpdateConfig>, fee_bps: u16) -> Result<()> {
         // M-02: Validate fee bounds to prevent excessive or zero fees
         require!(
-            fee_bps >= MIN_PLATFORM_FEE_BPS && fee_bps <= MAX_PLATFORM_FEE_BPS,
+            (MIN_PLATFORM_FEE_BPS..=MAX_PLATFORM_FEE_BPS).contains(&fee_bps),
             ViLinkError::InvalidFeeRange
         );
-        
+
         ctx.accounts.config.platform_fee_bps = fee_bps;
         msg!("Platform fee updated to {} bps", fee_bps);
         Ok(())
     }
-    
+
     /// Pause/unpause protocol
     pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
         ctx.accounts.config.paused = paused;
         msg!("ViLink Protocol paused: {}", paused);
         Ok(())
     }
-    
+
     /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
     pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
         let config = &mut ctx.accounts.config;
-        
+
         require!(
             new_authority != config.authority,
             ViLinkError::CannotProposeSelf
         );
-        
+
         require!(
             new_authority != Pubkey::default(),
             ViLinkError::InvalidAuthority
         );
-        
+
         config.pending_authority = new_authority;
-        
+
         msg!("Authority transfer proposed to: {}", new_authority);
         Ok(())
     }
-    
+
     /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
     pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
         let config = &mut ctx.accounts.config;
-        
+
         let old_authority = config.authority;
         let new_authority = ctx.accounts.new_authority.key();
-        
+
         config.authority = new_authority;
         config.pending_authority = Pubkey::default();
-        
-        msg!("Authority transferred from {} to {}", old_authority, new_authority);
+
+        msg!(
+            "Authority transferred from {} to {}",
+            old_authority,
+            new_authority
+        );
         Ok(())
     }
-    
+
     /// Cancel a pending authority transfer (H-02 security fix)
     pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
         let config = &mut ctx.accounts.config;
-        
+
         require!(
             config.pending_authority != Pubkey::default(),
             ViLinkError::NoPendingTransfer
         );
-        
+
         let cancelled = config.pending_authority;
         config.pending_authority = Pubkey::default();
 
@@ -543,7 +623,7 @@ pub mod vilink_protocol {
         msg!("Authority transfer to {} cancelled", cancelled);
         Ok(())
     }
-    
+
     /// Get action details
     pub fn get_action(ctx: Context<GetAction>) -> Result<()> {
         let action = &ctx.accounts.action;
@@ -553,18 +633,30 @@ pub mod vilink_protocol {
         msg!("Target: {}", action.target);
         msg!("Amount: {}", action.amount);
         msg!("Executed: {}", action.executed);
-        msg!("Executions: {}/{}", action.execution_count, action.max_executions);
+        msg!(
+            "Executions: {}/{}",
+            action.execution_count,
+            action.max_executions
+        );
         Ok(())
     }
-    
+
     /// Get user stats
     pub fn get_user_stats(ctx: Context<GetUserStats>) -> Result<()> {
         let stats = &ctx.accounts.user_stats;
         msg!("User: {}", stats.user);
         msg!("Actions created: {}", stats.actions_created);
         msg!("Actions executed: {}", stats.actions_executed);
-        msg!("Tips sent: {}, VCoin: {}", stats.tips_sent, stats.vcoin_sent);
-        msg!("Tips received: {}, VCoin: {}", stats.tips_received, stats.vcoin_received);
+        msg!(
+            "Tips sent: {}, VCoin: {}",
+            stats.tips_sent,
+            stats.vcoin_sent
+        );
+        msg!(
+            "Tips received: {}, VCoin: {}",
+            stats.tips_received,
+            stats.vcoin_received
+        );
         Ok(())
     }
 }
@@ -665,10 +757,10 @@ pub struct CreateBatch<'info> {
     pub user_stats: Account<'info, UserActionStats>,
     /// Finding #5: Use batch_nonce instead of timestamp to prevent PDA collisions
     #[account(
-        init, 
-        payer = creator, 
-        space = ActionBatch::LEN, 
-        seeds = [BATCH_SEED, creator.key().as_ref(), &user_stats.batch_nonce.to_le_bytes()], 
+        init,
+        payer = creator,
+        space = ActionBatch::LEN,
+        seeds = [BATCH_SEED, creator.key().as_ref(), &user_stats.batch_nonce.to_le_bytes()],
         bump
     )]
     pub batch: Account<'info, ActionBatch>,

@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
+use anchor_lang::prelude::*;
 
 /// User energy account
 #[account]
@@ -38,8 +38,8 @@ impl UserEnergy {
         4 +  // energy_refunded_today
         8 +  // last_reset
         1 +  // tier
-        1;   // bump
-    
+        1; // bump
+
     pub fn max_energy_for_tier(tier: u8) -> u16 {
         match tier {
             0 => MAX_ENERGY_NONE,
@@ -50,7 +50,7 @@ impl UserEnergy {
             _ => MAX_ENERGY_NONE,
         }
     }
-    
+
     pub fn regen_rate_for_tier(tier: u8) -> u16 {
         match tier {
             0 => REGEN_RATE_NONE,

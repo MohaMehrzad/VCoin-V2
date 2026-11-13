@@ -9,8 +9,8 @@ use crate::state::SubscriptionTier;
 
 /// Subscribe to a tier
 pub fn handler(ctx: Context<Subscribe>, tier: u8) -> Result<()> {
-    let tier_enum = SubscriptionTier::from_u8(tier)
-        .ok_or(IdentityError::InvalidSubscriptionTier)?;
+    let tier_enum =
+        SubscriptionTier::from_u8(tier).ok_or(IdentityError::InvalidSubscriptionTier)?;
 
     let price = tier_enum.price();
 
@@ -22,10 +22,7 @@ pub fn handler(ctx: Context<Subscribe>, tier: u8) -> Result<()> {
             to: ctx.accounts.treasury_token_account.to_account_info(),
             authority: ctx.accounts.user.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            cpi_accounts,
-        );
+        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
         token::transfer_checked(cpi_ctx, price, ctx.accounts.usdc_mint.decimals)?;
     }
 
@@ -49,4 +46,3 @@ pub fn handler(ctx: Context<Subscribe>, tier: u8) -> Result<()> {
     msg!("Subscription activated: tier {}", tier);
     Ok(())
 }
-

@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
 use crate::constants::AUTHORITY_TRANSFER_TIMELOCK;
 use crate::contexts::AcceptAuthority;
 use crate::errors::GovernanceError;
+use anchor_lang::prelude::*;
 
 /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
 pub fn handler(ctx: Context<AcceptAuthority>) -> Result<()> {
@@ -21,8 +21,11 @@ pub fn handler(ctx: Context<AcceptAuthority>) -> Result<()> {
     config.pending_authority = Pubkey::default();
     config.pending_authority_activated_at = 0;
 
-    msg!("Authority transferred from {} to {}", old_authority, new_authority);
+    msg!(
+        "Authority transferred from {} to {}",
+        old_authority,
+        new_authority
+    );
 
     Ok(())
 }
-

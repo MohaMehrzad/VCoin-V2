@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
 use crate::constants::REGISTRY_CONFIG_SEED;
 use crate::errors::ContentError;
 use crate::state::RegistryConfig;
+use anchor_lang::prelude::*;
 
 /// Context for accepting a pending authority transfer (H-02 security fix)
 #[derive(Accounts)]
@@ -14,8 +14,7 @@ pub struct AcceptAuthority<'info> {
         constraint = registry_config.pending_authority != Pubkey::default() @ ContentError::NoPendingTransfer
     )]
     pub registry_config: Account<'info, RegistryConfig>,
-    
+
     /// The new authority accepting the transfer - must sign
     pub new_authority: Signer<'info>,
 }
-

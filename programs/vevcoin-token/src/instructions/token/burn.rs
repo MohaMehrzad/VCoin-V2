@@ -11,29 +11,29 @@ use crate::events::VeVCoinBurned;
 pub fn handler(ctx: Context<BurnVeVCoin>, amount: u64) -> Result<()> {
     // Get bumps from context
     let config_bump = ctx.bumps.config;
-    
+
     // Only staking protocol can burn
     require!(
         ctx.accounts.staking_protocol.key() == ctx.accounts.config.staking_protocol,
         VeVCoinError::Unauthorized
     );
-    
+
     require!(amount > 0, VeVCoinError::ZeroAmount);
-    require!(ctx.accounts.user_account.balance >= amount, VeVCoinError::InsufficientBalance);
-    
+    require!(
+        ctx.accounts.user_account.balance >= amount,
+        VeVCoinError::InsufficientBalance
+    );
+
     let clock = Clock::get()?;
     let current_balance = ctx.accounts.user_account.balance;
     let current_total_supply = ctx.accounts.config.total_supply;
     let current_total_holders = ctx.accounts.config.total_holders;
     let new_balance = current_balance.checked_sub(amount).unwrap();
-    
+
     // Burn tokens using Token-2022 first
-    let seeds = &[
-        VEVCOIN_CONFIG_SEED,
-        &[config_bump],
-    ];
+    let seeds = &[VEVCOIN_CONFIG_SEED, &[config_bump]];
     let signer_seeds = &[&seeds[..]];
-    
+
     token_2022::burn(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -46,21 +46,21 @@ pub fn handler(ctx: Context<BurnVeVCoin>, amount: u64) -> Result<()> {
         ),
         amount,
     )?;
-    
+
     // Now update state
     let user_account = &mut ctx.accounts.user_account;
     let config = &mut ctx.accounts.config;
-    
+
     // Update balances
     user_account.balance = new_balance;
     user_account.last_update_at = clock.unix_timestamp;
     config.total_supply = current_total_supply.checked_sub(amount).unwrap();
-    
+
     // Update holder count if balance is now zero
     if new_balance == 0 {
         config.total_holders = current_total_holders.checked_sub(1).unwrap();
     }
-    
+
     // L-01: Emit veVCoin burned event
     emit!(VeVCoinBurned {
         user: ctx.accounts.user.key(),
@@ -68,10 +68,9 @@ pub fn handler(ctx: Context<BurnVeVCoin>, amount: u64) -> Result<()> {
         remaining_supply: config.total_supply,
         timestamp: clock.unix_timestamp,
     });
-    
+
     msg!("Burned {} veVCoin from {}", amount, ctx.accounts.user.key());
     msg!("New balance: {}", user_account.balance);
-    
+
     Ok(())
 }
-

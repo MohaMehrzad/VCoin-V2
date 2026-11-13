@@ -12,27 +12,32 @@ use crate::state::StakingTier;
 /// M-01 Security Fix: Added reentrancy guard for CPI protection
 pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
     // M-01: Check reentrancy guard before proceeding
-    require!(!ctx.accounts.pool.reentrancy_guard, StakingError::ReentrancyDetected);
-    
+    require!(
+        !ctx.accounts.pool.reentrancy_guard,
+        StakingError::ReentrancyDetected
+    );
+
     // Get values for validation first
     let staked_amount = ctx.accounts.user_stake.staked_amount;
     let lock_end = ctx.accounts.user_stake.lock_end;
     let ve_vcoin_amount = ctx.accounts.user_stake.ve_vcoin_amount;
-    
+
     require!(staked_amount > 0, StakingError::NoActiveStake);
     require!(amount > 0, StakingError::ZeroStakeAmount);
     require!(amount <= staked_amount, StakingError::InsufficientStake);
-    
+
     let clock = Clock::get()?;
     let now = clock.unix_timestamp;
-    
+
     // Check lock has expired
     require!(now >= lock_end, StakingError::TokensStillLocked);
-    
+
     // Calculate new stake and tier
-    let new_staked_amount = staked_amount.checked_sub(amount).ok_or(StakingError::Overflow)?;
+    let new_staked_amount = staked_amount
+        .checked_sub(amount)
+        .ok_or(StakingError::Overflow)?;
     let new_tier = StakingTier::from_amount(new_staked_amount);
-    
+
     // Calculate new veVCoin (0 if fully unstaking)
     // M-NEW-01 Fix: Multiply before divide to minimize precision loss
     // H-04: Integer division truncation means users may lose fractional veVCoin
@@ -46,25 +51,22 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
     } else {
         0
     };
-    let vevcoin_to_burn = ve_vcoin_amount.checked_sub(new_vevcoin).unwrap_or(0);
-    
+    let vevcoin_to_burn = ve_vcoin_amount.saturating_sub(new_vevcoin);
+
     // Get bump from context
     let pool_bump = ctx.bumps.pool;
     let current_total_stakers = ctx.accounts.pool.total_stakers;
     let current_total_staked = ctx.accounts.pool.total_staked;
-    
-    let seeds = &[
-        STAKING_POOL_SEED,
-        &[pool_bump],
-    ];
+
+    let seeds = &[STAKING_POOL_SEED, &[pool_bump]];
     let signer_seeds = &[&seeds[..]];
-    
+
     // M-01: Set reentrancy guard before CPI operations
     {
         let pool_mut = &mut ctx.accounts.pool;
         pool_mut.reentrancy_guard = true;
     }
-    
+
     // === CRITICAL FIX C-04: Burn veVCoin via CPI FIRST ===
     if vevcoin_to_burn > 0 {
         vevcoin_token::cpi::burn_vevcoin(
@@ -85,7 +87,7 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
         )?;
     }
     // === END CRITICAL FIX ===
-    
+
     // Transfer VCoin back to user
     token_2022::transfer_checked(
         CpiContext::new_with_signer(
@@ -101,29 +103,33 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
         amount,
         ctx.accounts.vcoin_mint.decimals,
     )?;
-    
+
     // Update state after CPI
     let user_stake = &mut ctx.accounts.user_stake;
     let pool = &mut ctx.accounts.pool;
-    
+
     // Update user stake
     let is_full_unstake = new_staked_amount == 0;
     user_stake.staked_amount = new_staked_amount;
     user_stake.tier = new_tier.as_u8();
     user_stake.ve_vcoin_amount = new_vevcoin;
-    
+
     if is_full_unstake {
         user_stake.lock_duration = 0;
         user_stake.lock_end = 0;
-        pool.total_stakers = current_total_stakers.checked_sub(1).ok_or(StakingError::Overflow)?;
+        pool.total_stakers = current_total_stakers
+            .checked_sub(1)
+            .ok_or(StakingError::Overflow)?;
     }
-    
+
     // Update pool
-    pool.total_staked = current_total_staked.checked_sub(amount).ok_or(StakingError::Overflow)?;
-    
+    pool.total_staked = current_total_staked
+        .checked_sub(amount)
+        .ok_or(StakingError::Overflow)?;
+
     // M-01: Clear reentrancy guard after CPI operations complete
     pool.reentrancy_guard = false;
-    
+
     // L-01: Emit unstaking event
     emit!(Unstaked {
         user: ctx.accounts.user.key(),
@@ -132,11 +138,10 @@ pub fn handler(ctx: Context<Unstake>, amount: u64) -> Result<()> {
         remaining_stake: new_staked_amount,
         timestamp: now,
     });
-    
+
     msg!("Unstaked {} VCoin", amount);
     msg!("veVCoin burned: {}", vevcoin_to_burn);
     msg!("Remaining stake: {}", new_staked_amount);
-    
+
     Ok(())
 }
-

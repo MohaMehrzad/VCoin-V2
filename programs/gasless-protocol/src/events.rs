@@ -46,4 +46,3 @@ pub struct FeeCollected {
     pub amount: u64,
     pub is_vcoin: bool,
 }
-

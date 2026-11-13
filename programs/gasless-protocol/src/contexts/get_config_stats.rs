@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::GASLESS_CONFIG_SEED;
 use crate::state::GaslessConfig;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct GetConfigStats<'info> {
@@ -10,4 +10,3 @@ pub struct GetConfigStats<'info> {
     )]
     pub config: Account<'info, GaslessConfig>,
 }
-

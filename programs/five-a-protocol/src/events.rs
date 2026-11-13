@@ -35,4 +35,3 @@ pub struct VouchEvaluated {
     pub success: bool,
     pub reward_or_slash: u64,
 }
-

@@ -47,6 +47,5 @@ impl StakingPool {
         1 +  // paused
         1 +  // bump
         1 +  // vault_bump
-        1;   // reentrancy_guard (M-01)
+        1; // reentrancy_guard (M-01)
 }
-

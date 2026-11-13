@@ -28,6 +28,5 @@ impl ActionBatch {
         8 +  // created_at
         1 +  // total_actions
         1 +  // executed_count
-        1;   // bump
+        1; // bump
 }
-

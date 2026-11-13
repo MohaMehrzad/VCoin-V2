@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{VOUCH_RECORD_SEED, USER_SCORE_SEED, VOUCHER_STATS_SEED};
-use crate::state::{VouchRecord, UserScore, VoucherStats};
+use crate::constants::{USER_SCORE_SEED, VOUCHER_STATS_SEED, VOUCH_RECORD_SEED};
+use crate::state::{UserScore, VouchRecord, VoucherStats};
 
 #[derive(Accounts)]
 pub struct EvaluateVouch<'info> {
@@ -11,7 +11,7 @@ pub struct EvaluateVouch<'info> {
         bump = vouch_record.bump
     )]
     pub vouch_record: Account<'info, VouchRecord>,
-    
+
     /// H-17: vouchee_score PDA is derived from vouch_record.vouchee, ensuring
     /// the score account always corresponds to the correct vouchee user.
     #[account(
@@ -19,14 +19,13 @@ pub struct EvaluateVouch<'info> {
         bump = vouchee_score.bump
     )]
     pub vouchee_score: Account<'info, UserScore>,
-    
+
     #[account(
         mut,
         seeds = [VOUCHER_STATS_SEED, vouch_record.voucher.as_ref()],
         bump = voucher_stats.bump
     )]
     pub voucher_stats: Account<'info, VoucherStats>,
-    
+
     pub evaluator: Signer<'info>,
 }
-

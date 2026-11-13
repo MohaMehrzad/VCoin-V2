@@ -15,8 +15,7 @@ pub struct AcceptAuthority<'info> {
         constraint = config.pending_authority != Pubkey::default() @ VCoinError::NoPendingTransfer
     )]
     pub config: Account<'info, VCoinConfig>,
-    
+
     /// The new authority accepting the transfer - must sign
     pub new_authority: Signer<'info>,
 }
-

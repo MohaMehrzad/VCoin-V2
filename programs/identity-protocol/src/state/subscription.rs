@@ -28,6 +28,5 @@ impl Subscription {
         8 +  // expires_at
         1 +  // auto_renew
         8 +  // total_paid
-        1;   // bump
+        1; // bump
 }
-

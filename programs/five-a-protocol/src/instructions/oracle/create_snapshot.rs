@@ -13,13 +13,12 @@ pub fn handler(
 ) -> Result<()> {
     let config = &mut ctx.accounts.five_a_config;
     require!(!config.paused, FiveAError::ProtocolPaused);
-    
+
     // Verify oracle
     let oracle_key = ctx.accounts.oracle.key();
-    let is_oracle = config.oracles[..config.oracle_count as usize]
-        .contains(&oracle_key);
+    let is_oracle = config.oracles[..config.oracle_count as usize].contains(&oracle_key);
     require!(is_oracle, FiveAError::NotOracle);
-    
+
     let clock = Clock::get()?;
 
     // M-19: Increment epoch AFTER all validation has passed (moved from before snapshot creation)
@@ -35,15 +34,14 @@ pub fn handler(
     snapshot.timestamp = clock.unix_timestamp;
     snapshot.submitter = oracle_key;
     snapshot.bump = ctx.bumps.snapshot;
-    
+
     emit!(SnapshotCreated {
         epoch: snapshot.epoch,
         merkle_root,
         user_count,
         timestamp: clock.unix_timestamp,
     });
-    
+
     msg!("Snapshot created: epoch {}", snapshot.epoch);
     Ok(())
 }
-

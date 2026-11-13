@@ -10,4 +10,3 @@ pub fn handler(ctx: Context<GetIdentity>) -> Result<()> {
     msg!("Active: {}", identity.is_active);
     Ok(())
 }
-

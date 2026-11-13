@@ -28,8 +28,8 @@ impl UserVouchStatus {
         8 +  // vouch_completed_at
         2 +  // reward_multiplier
         1 +  // is_fully_vouched
-        1;   // bump
-    
+        1; // bump
+
     /// Get reward multiplier based on vouch count
     pub fn get_multiplier(&self) -> u16 {
         match self.vouches_received {
@@ -40,4 +40,3 @@ impl UserVouchStatus {
         }
     }
 }
-

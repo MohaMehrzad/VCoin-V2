@@ -6,7 +6,7 @@ use crate::state::StakingPool;
 #[derive(Accounts)]
 pub struct AdminAction<'info> {
     pub authority: Signer<'info>,
-    
+
     #[account(
         mut,
         seeds = [STAKING_POOL_SEED],
@@ -14,4 +14,3 @@ pub struct AdminAction<'info> {
     )]
     pub pool: Account<'info, StakingPool>,
 }
-

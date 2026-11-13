@@ -62,6 +62,5 @@ impl ViLinkAction {
         4 +  // execution_count
         4 +  // max_executions
         8 +  // action_nonce (M-04)
-        1;   // bump
+        1; // bump
 }
-

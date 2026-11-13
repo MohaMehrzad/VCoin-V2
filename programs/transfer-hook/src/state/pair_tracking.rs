@@ -37,6 +37,5 @@ impl PairTracking {
         2 +  // wash_flags
         8 +  // last_flag_time (M-AUDIT-10)
         2 +  // trust_score
-        1;   // bump
+        1; // bump
 }
-

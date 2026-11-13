@@ -5,6 +5,7 @@ use crate::contexts::EnablePrivateVoting;
 use crate::crypto::constants::RISTRETTO_IDENTITY;
 use crate::errors::GovernanceError;
 
+#[allow(clippy::needless_range_loop)]
 pub fn handler(
     ctx: Context<EnablePrivateVoting>,
     encryption_pubkey: [u8; 32],
@@ -55,7 +56,10 @@ pub fn handler(
     private_config.total_private_votes = 0;
     private_config.bump = ctx.bumps.private_voting_config;
 
-    msg!("Private voting enabled with {}-of-{} threshold",
-        decryption_threshold, committee_size);
+    msg!(
+        "Private voting enabled with {}-of-{} threshold",
+        decryption_threshold,
+        committee_size
+    );
     Ok(())
 }

@@ -40,6 +40,5 @@ impl UserSASAttestation {
         8 +  // last_verified_at
         8 +  // expires_at
         2 +  // portable_score
-        1;   // bump
+        1; // bump
 }
-

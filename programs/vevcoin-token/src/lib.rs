@@ -15,10 +15,10 @@ use contexts::*;
 declare_id!("FB39ae9x53FxVL3pER9LqCPEx2TRnEnQP55i838Upnjx");
 
 /// veVCoin Token - Vote-Escrowed VCoin (Soulbound)
-/// 
+///
 /// Token-2022 with Non-Transferable extension making it truly soulbound.
 /// Users receive veVCoin when they stake VCoin, representing their voting power.
-/// 
+///
 /// Key Properties:
 /// - Non-Transferable: Cannot be traded on secondary markets
 /// - Mint Authority: Only Staking Protocol can mint
@@ -30,10 +30,7 @@ pub mod vevcoin_token {
     use super::*;
 
     /// Initialize the veVCoin mint with Token-2022 Non-Transferable extension
-    pub fn initialize_mint(
-        ctx: Context<InitializeMint>,
-        staking_protocol: Pubkey,
-    ) -> Result<()> {
+    pub fn initialize_mint(ctx: Context<InitializeMint>, staking_protocol: Pubkey) -> Result<()> {
         instructions::admin::initialize::handler(ctx, staking_protocol)
     }
 

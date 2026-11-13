@@ -1,6 +1,11 @@
 //! Unit tests for Staking Protocol
-//! 
+//!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
@@ -15,32 +20,59 @@ mod tests {
     #[test]
     fn test_tier_none() {
         assert_eq!(StakingTier::from_amount(0), StakingTier::None);
-        assert_eq!(StakingTier::from_amount(999 * 1_000_000_000), StakingTier::None);
+        assert_eq!(
+            StakingTier::from_amount(999 * 1_000_000_000),
+            StakingTier::None
+        );
     }
 
     #[test]
     fn test_tier_bronze() {
-        assert_eq!(StakingTier::from_amount(BRONZE_THRESHOLD), StakingTier::Bronze);
-        assert_eq!(StakingTier::from_amount(BRONZE_THRESHOLD + 1), StakingTier::Bronze);
-        assert_eq!(StakingTier::from_amount(SILVER_THRESHOLD - 1), StakingTier::Bronze);
+        assert_eq!(
+            StakingTier::from_amount(BRONZE_THRESHOLD),
+            StakingTier::Bronze
+        );
+        assert_eq!(
+            StakingTier::from_amount(BRONZE_THRESHOLD + 1),
+            StakingTier::Bronze
+        );
+        assert_eq!(
+            StakingTier::from_amount(SILVER_THRESHOLD - 1),
+            StakingTier::Bronze
+        );
     }
 
     #[test]
     fn test_tier_silver() {
-        assert_eq!(StakingTier::from_amount(SILVER_THRESHOLD), StakingTier::Silver);
-        assert_eq!(StakingTier::from_amount(GOLD_THRESHOLD - 1), StakingTier::Silver);
+        assert_eq!(
+            StakingTier::from_amount(SILVER_THRESHOLD),
+            StakingTier::Silver
+        );
+        assert_eq!(
+            StakingTier::from_amount(GOLD_THRESHOLD - 1),
+            StakingTier::Silver
+        );
     }
 
     #[test]
     fn test_tier_gold() {
         assert_eq!(StakingTier::from_amount(GOLD_THRESHOLD), StakingTier::Gold);
-        assert_eq!(StakingTier::from_amount(PLATINUM_THRESHOLD - 1), StakingTier::Gold);
+        assert_eq!(
+            StakingTier::from_amount(PLATINUM_THRESHOLD - 1),
+            StakingTier::Gold
+        );
     }
 
     #[test]
     fn test_tier_platinum() {
-        assert_eq!(StakingTier::from_amount(PLATINUM_THRESHOLD), StakingTier::Platinum);
-        assert_eq!(StakingTier::from_amount(PLATINUM_THRESHOLD * 10), StakingTier::Platinum);
+        assert_eq!(
+            StakingTier::from_amount(PLATINUM_THRESHOLD),
+            StakingTier::Platinum
+        );
+        assert_eq!(
+            StakingTier::from_amount(PLATINUM_THRESHOLD * 10),
+            StakingTier::Platinum
+        );
     }
 
     #[test]
@@ -79,20 +111,20 @@ mod tests {
 
     #[test]
     fn test_boost_multipliers() {
-        assert_eq!(StakingTier::None.boost_multiplier(), 1000);     // 1.0x
-        assert_eq!(StakingTier::Bronze.boost_multiplier(), 1100);   // 1.1x
-        assert_eq!(StakingTier::Silver.boost_multiplier(), 1200);   // 1.2x
-        assert_eq!(StakingTier::Gold.boost_multiplier(), 1300);     // 1.3x
+        assert_eq!(StakingTier::None.boost_multiplier(), 1000); // 1.0x
+        assert_eq!(StakingTier::Bronze.boost_multiplier(), 1100); // 1.1x
+        assert_eq!(StakingTier::Silver.boost_multiplier(), 1200); // 1.2x
+        assert_eq!(StakingTier::Gold.boost_multiplier(), 1300); // 1.3x
         assert_eq!(StakingTier::Platinum.boost_multiplier(), 1400); // 1.4x
     }
 
     #[test]
     fn test_fee_discounts() {
-        assert_eq!(StakingTier::None.fee_discount_bps(), 0);       // 0%
-        assert_eq!(StakingTier::Bronze.fee_discount_bps(), 1000);  // 10%
-        assert_eq!(StakingTier::Silver.fee_discount_bps(), 2000);  // 20%
-        assert_eq!(StakingTier::Gold.fee_discount_bps(), 3000);    // 30%
-        assert_eq!(StakingTier::Platinum.fee_discount_bps(), 5000);// 50%
+        assert_eq!(StakingTier::None.fee_discount_bps(), 0); // 0%
+        assert_eq!(StakingTier::Bronze.fee_discount_bps(), 1000); // 10%
+        assert_eq!(StakingTier::Silver.fee_discount_bps(), 2000); // 20%
+        assert_eq!(StakingTier::Gold.fee_discount_bps(), 3000); // 30%
+        assert_eq!(StakingTier::Platinum.fee_discount_bps(), 5000); // 50%
     }
 
     // ========================================================================
@@ -113,7 +145,7 @@ mod tests {
         let amount = 1000 * 1_000_000_000u64; // 1000 VCoin
         let result = calculate_vevcoin(amount, MAX_LOCK_DURATION, StakingTier::None);
         assert!(result.is_ok());
-        
+
         // Should equal stake amount at max lock with no boost
         let vevcoin = result.unwrap();
         assert_eq!(vevcoin, amount);
@@ -125,7 +157,7 @@ mod tests {
         let amount = 100_000 * 1_000_000_000u64; // 100,000 VCoin
         let result = calculate_vevcoin(amount, MAX_LOCK_DURATION, StakingTier::Platinum);
         assert!(result.is_ok());
-        
+
         let vevcoin = result.unwrap();
         // Expected: amount * 1.4 = 140,000 VCoin worth of veVCoin
         let expected = amount * 1400 / 1000;
@@ -141,7 +173,7 @@ mod tests {
         let two_years = MAX_LOCK_DURATION / 2;
         let result = calculate_vevcoin(amount, two_years, StakingTier::None);
         assert!(result.is_ok());
-        
+
         let vevcoin = result.unwrap();
         assert_eq!(vevcoin, amount / 2);
     }
@@ -151,7 +183,7 @@ mod tests {
         let amount = 1000 * 1_000_000_000u64;
         let result = calculate_vevcoin(amount, MIN_LOCK_DURATION, StakingTier::None);
         assert!(result.is_ok());
-        
+
         let vevcoin = result.unwrap();
         // Min lock is 1 week out of 4 years ≈ 0.48%
         // Using actual formula: ve_vcoin = amount * (duration * 1000 / 4y) * tier_boost / 1_000_000
@@ -166,11 +198,13 @@ mod tests {
     #[test]
     fn test_vevcoin_increases_with_duration() {
         let amount = 10_000 * 1_000_000_000u64;
-        
-        let vevcoin_1y = calculate_vevcoin(amount, MAX_LOCK_DURATION / 4, StakingTier::None).unwrap();
-        let vevcoin_2y = calculate_vevcoin(amount, MAX_LOCK_DURATION / 2, StakingTier::None).unwrap();
+
+        let vevcoin_1y =
+            calculate_vevcoin(amount, MAX_LOCK_DURATION / 4, StakingTier::None).unwrap();
+        let vevcoin_2y =
+            calculate_vevcoin(amount, MAX_LOCK_DURATION / 2, StakingTier::None).unwrap();
         let vevcoin_4y = calculate_vevcoin(amount, MAX_LOCK_DURATION, StakingTier::None).unwrap();
-        
+
         assert!(vevcoin_2y > vevcoin_1y);
         assert!(vevcoin_4y > vevcoin_2y);
     }
@@ -179,13 +213,13 @@ mod tests {
     fn test_vevcoin_increases_with_tier() {
         let amount = 100_000 * 1_000_000_000u64;
         let duration = MAX_LOCK_DURATION;
-        
+
         let ve_none = calculate_vevcoin(amount, duration, StakingTier::None).unwrap();
         let ve_bronze = calculate_vevcoin(amount, duration, StakingTier::Bronze).unwrap();
         let ve_silver = calculate_vevcoin(amount, duration, StakingTier::Silver).unwrap();
         let ve_gold = calculate_vevcoin(amount, duration, StakingTier::Gold).unwrap();
         let ve_platinum = calculate_vevcoin(amount, duration, StakingTier::Platinum).unwrap();
-        
+
         assert!(ve_bronze > ve_none);
         assert!(ve_silver > ve_bronze);
         assert!(ve_gold > ve_silver);
@@ -200,7 +234,11 @@ mod tests {
     fn test_vevcoin_no_overflow_max_values() {
         // Test with very large values
         let max_reasonable_stake = 1_000_000_000 * 1_000_000_000u64; // 1 billion VCoin
-        let result = calculate_vevcoin(max_reasonable_stake, MAX_LOCK_DURATION, StakingTier::Platinum);
+        let result = calculate_vevcoin(
+            max_reasonable_stake,
+            MAX_LOCK_DURATION,
+            StakingTier::Platinum,
+        );
         assert!(result.is_ok());
     }
 
@@ -224,11 +262,11 @@ mod tests {
         let base_amount = 1000 * 1_000_000_000u64;
         let duration = MAX_LOCK_DURATION;
         let tier = StakingTier::None;
-        
+
         let ve1 = calculate_vevcoin(base_amount, duration, tier).unwrap();
         let ve2 = calculate_vevcoin(base_amount * 2, duration, tier).unwrap();
         let ve10 = calculate_vevcoin(base_amount * 10, duration, tier).unwrap();
-        
+
         // veVCoin should scale linearly with stake
         assert_eq!(ve2, ve1 * 2);
         assert_eq!(ve10, ve1 * 10);
@@ -238,16 +276,15 @@ mod tests {
     fn test_tier_boost_exact_ratios() {
         let amount = 100_000 * 1_000_000_000u64;
         let duration = MAX_LOCK_DURATION;
-        
+
         let ve_none = calculate_vevcoin(amount, duration, StakingTier::None).unwrap();
         let ve_bronze = calculate_vevcoin(amount, duration, StakingTier::Bronze).unwrap();
         let ve_platinum = calculate_vevcoin(amount, duration, StakingTier::Platinum).unwrap();
-        
+
         // Bronze = 1.1x of None
         assert_eq!(ve_bronze * 1000, ve_none * 1100);
-        
+
         // Platinum = 1.4x of None
         assert_eq!(ve_platinum * 1000, ve_none * 1400);
     }
 }
-

@@ -1,6 +1,6 @@
-/// VCoin Token Constants
-/// 
-/// Token configuration and PDA seeds
+// VCoin Token Constants
+//
+// Token configuration and PDA seeds
 
 /// Token decimals (9 for VCoin)
 pub const VCOIN_DECIMALS: u8 = 9;
@@ -29,4 +29,3 @@ pub const SLASH_STATUS_CANCELLED: u8 = 4;
 
 /// H-NEW-01: Authority transfer timelock (24 hours in seconds)
 pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 24 * 60 * 60;
-

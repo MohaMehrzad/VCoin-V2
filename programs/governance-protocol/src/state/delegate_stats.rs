@@ -49,8 +49,8 @@ impl DelegateStats {
         8 +  // tier_updated_at
         1 +  // promotion_eligible
         1 +  // demotion_warning
-        1;   // bump
-    
+        1; // bump
+
     /// Get max delegation percent based on tier
     pub fn max_delegation_pct(&self) -> u16 {
         match self.league_tier {
@@ -62,4 +62,3 @@ impl DelegateStats {
         }
     }
 }
-

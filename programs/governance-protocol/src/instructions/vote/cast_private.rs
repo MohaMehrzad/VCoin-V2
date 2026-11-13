@@ -1,15 +1,13 @@
 use anchor_lang::prelude::*;
-use solana_curve25519::ristretto::{
-    add_ristretto, validate_ristretto, PodRistrettoPoint,
-};
+use solana_curve25519::ristretto::{add_ristretto, validate_ristretto, PodRistrettoPoint};
 
-use crate::constants::{USER_STAKE_SEED, USER_SCORE_SEED};
+use crate::constants::{USER_SCORE_SEED, USER_STAKE_SEED};
 use crate::contexts::CastPrivateVote;
-use crate::crypto::types::{ElGamalCiphertext, VoteValidityProof, CompressedOrProof, SumProof};
+use crate::crypto::types::{CompressedOrProof, ElGamalCiphertext, SumProof, VoteValidityProof};
 use crate::crypto::verify_vote::verify_vote_validity_proof;
 use crate::errors::GovernanceError;
 use crate::events::PrivateVoteCast;
-use crate::state::{PrivateVotingConfig, calculate_voting_power};
+use crate::state::{calculate_voting_power, PrivateVotingConfig};
 
 /// Vote validity proof size: 3 * 96 (OR proofs) + 64 (sum proof) = 352 bytes
 const VOTE_PROOF_SIZE: usize = 352;
@@ -22,15 +20,24 @@ pub fn handler(
     proof_data: Vec<u8>,
 ) -> Result<()> {
     // Parse proof from heap-allocated Vec to avoid stack overflow
-    require!(proof_data.len() == VOTE_PROOF_SIZE, GovernanceError::InvalidZKProof);
+    require!(
+        proof_data.len() == VOTE_PROOF_SIZE,
+        GovernanceError::InvalidZKProof
+    );
     let proof = parse_proof(&proof_data)?;
 
     let proposal = &ctx.accounts.proposal;
     let private_config = &mut ctx.accounts.private_voting_config;
     let voter_key = ctx.accounts.voter.key();
 
-    require!(proposal.is_private_voting, GovernanceError::ZKVotingNotEnabled);
-    require!(private_config.is_enabled, GovernanceError::ZKVotingNotEnabled);
+    require!(
+        proposal.is_private_voting,
+        GovernanceError::ZKVotingNotEnabled
+    );
+    require!(
+        private_config.is_enabled,
+        GovernanceError::ZKVotingNotEnabled
+    );
 
     let clock = Clock::get()?;
     require!(
@@ -127,10 +134,15 @@ fn compute_weight(
         (0u64, 0u8)
     } else {
         let stake_data = user_stake.try_borrow_data()?;
-        require!(stake_data.len() >= 82, GovernanceError::InvalidUserStakeData);
+        require!(
+            stake_data.len() >= 82,
+            GovernanceError::InvalidUserStakeData
+        );
         let tier = stake_data[72];
         let ve_vcoin_amount = u64::from_le_bytes(
-            stake_data[73..81].try_into().map_err(|_| GovernanceError::InvalidUserStakeData)?
+            stake_data[73..81]
+                .try_into()
+                .map_err(|_| GovernanceError::InvalidUserStakeData)?,
         );
         (ve_vcoin_amount, tier)
     };
@@ -139,9 +151,14 @@ fn compute_weight(
         0u16
     } else {
         let score_data = user_score.try_borrow_data()?;
-        require!(score_data.len() >= 52, GovernanceError::InvalidUserScoreData);
+        require!(
+            score_data.len() >= 52,
+            GovernanceError::InvalidUserScoreData
+        );
         u16::from_le_bytes(
-            score_data[50..52].try_into().map_err(|_| GovernanceError::InvalidUserScoreData)?
+            score_data[50..52]
+                .try_into()
+                .map_err(|_| GovernanceError::InvalidUserScoreData)?,
         )
     };
 
@@ -158,10 +175,14 @@ fn accumulate_ciphertexts(
 ) -> Result<()> {
     config.accumulated_ct_for_r = point_add(&config.accumulated_ct_for_r, &ct_for[..32])?;
     config.accumulated_ct_for_c = point_add(&config.accumulated_ct_for_c, &ct_for[32..64])?;
-    config.accumulated_ct_against_r = point_add(&config.accumulated_ct_against_r, &ct_against[..32])?;
-    config.accumulated_ct_against_c = point_add(&config.accumulated_ct_against_c, &ct_against[32..64])?;
-    config.accumulated_ct_abstain_r = point_add(&config.accumulated_ct_abstain_r, &ct_abstain[..32])?;
-    config.accumulated_ct_abstain_c = point_add(&config.accumulated_ct_abstain_c, &ct_abstain[32..64])?;
+    config.accumulated_ct_against_r =
+        point_add(&config.accumulated_ct_against_r, &ct_against[..32])?;
+    config.accumulated_ct_against_c =
+        point_add(&config.accumulated_ct_against_c, &ct_against[32..64])?;
+    config.accumulated_ct_abstain_r =
+        point_add(&config.accumulated_ct_abstain_r, &ct_abstain[..32])?;
+    config.accumulated_ct_abstain_c =
+        point_add(&config.accumulated_ct_abstain_c, &ct_abstain[32..64])?;
     Ok(())
 }
 
@@ -227,8 +248,8 @@ fn point_add(acc: &[u8; 32], new: &[u8]) -> Result<[u8; 32]> {
         return Ok(new_point.0);
     }
 
-    let result = add_ristretto(&acc_point, &new_point)
-        .ok_or(GovernanceError::InvalidRistrettoPoint)?;
+    let result =
+        add_ristretto(&acc_point, &new_point).ok_or(GovernanceError::InvalidRistrettoPoint)?;
 
     Ok(result.0)
 }

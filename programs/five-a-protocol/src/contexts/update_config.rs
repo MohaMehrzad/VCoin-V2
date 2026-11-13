@@ -13,7 +13,6 @@ pub struct UpdateConfig<'info> {
         has_one = authority @ FiveAError::Unauthorized
     )]
     pub five_a_config: Account<'info, FiveAConfig>,
-    
+
     pub authority: Signer<'info>,
 }
-

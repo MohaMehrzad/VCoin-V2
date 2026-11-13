@@ -11,7 +11,7 @@ pub struct CreateSnapshot<'info> {
         bump = five_a_config.bump
     )]
     pub five_a_config: Account<'info, FiveAConfig>,
-    
+
     #[account(
         init,
         payer = oracle,
@@ -20,10 +20,9 @@ pub struct CreateSnapshot<'info> {
         bump
     )]
     pub snapshot: Account<'info, ScoreSnapshot>,
-    
+
     #[account(mut)]
     pub oracle: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

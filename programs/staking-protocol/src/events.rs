@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-/// L-01: Events for staking protocol state changes
+// L-01: Events for staking protocol state changes
 
 /// Emitted when a user stakes VCoin
 #[event]
@@ -88,4 +88,3 @@ pub struct StakingPoolInitialized {
     pub vevcoin_mint: Pubkey,
     pub timestamp: i64,
 }
-

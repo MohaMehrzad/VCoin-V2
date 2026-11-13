@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::PROPOSAL_SEED;
 use crate::state::Proposal;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct ExecuteProposal<'info> {
@@ -10,7 +10,6 @@ pub struct ExecuteProposal<'info> {
         bump = proposal.bump
     )]
     pub proposal: Account<'info, Proposal>,
-    
+
     pub executor: Signer<'info>,
 }
-

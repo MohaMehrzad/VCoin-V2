@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::SESSION_KEY_SEED;
 use crate::state::SessionKey;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct GetSessionInfo<'info> {
@@ -10,4 +10,3 @@ pub struct GetSessionInfo<'info> {
     )]
     pub session_key: Account<'info, SessionKey>,
 }
-

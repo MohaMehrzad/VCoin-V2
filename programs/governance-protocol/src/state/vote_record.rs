@@ -57,6 +57,6 @@ impl VoteRecord {
         64 + // ct_against
         64 + // ct_abstain
         1 +  // revealed
-        1;   // bump
-    // Total: 284 bytes (same as before: 32 + 32 + 128 = 192 = 64 + 64 + 64)
+        1; // bump
+           // Total: 284 bytes (same as before: 32 + 32 + 128 = 192 = 64 + 64 + 64)
 }

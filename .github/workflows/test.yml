@@ -1,260 +1,87 @@
-# ViWoApp Solana Smart Contract Testing Pipeline
-# Comprehensive CI/CD for all 11 programs
+# ViWo protocol CI
 #
-# Triggers:
-# - Push to main/develop branches
-# - Pull requests to main
-# - Manual dispatch
-#
-# Jobs:
-# 1. Build - Compile all programs
-# 2. Unit Tests - Rust unit tests
-# 3. Integration Tests - TypeScript integration tests
-# 4. Property Tests - Property-based tests with proptest
-# 5. Security Tests - Security-focused tests
-# 6. Coverage - Code coverage reporting
+# Every job is blocking: no `|| true`, no `continue-on-error`.
+#   rust  - fmt, clippy (-D warnings), anchor build (IDL on, stack-frame guard), cargo test
+#   sdk   - typecheck, unit tests and build of @viwoapp/sdk
+#   audit - RustSec advisory scan of Cargo.lock
 
-name: ViWoApp Test Suite
+name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, audit-remediation]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 env:
-  SOLANA_VERSION: "2.0.0"
+  AGAVE_VERSION: "3.0.13"
   ANCHOR_VERSION: "0.32.0"
-  RUST_TOOLCHAIN: "1.79.0"
-  NODE_VERSION: "20"
+  CARGO_TERM_COLOR: always
 
 jobs:
-  # ============================================================================
-  # Build Job
-  # ============================================================================
-  build:
-    name: Build Programs
+  rust:
+    name: Rust (fmt, clippy, build, test)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+
+      # Reads the channel (1.89.0) and components from rust-toolchain.toml.
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
-      
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-      
-      - name: Install Solana
+
+      - name: Install Agave (Solana) CLI
         run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-      
-      - name: Install Anchor
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${AGAVE_VERSION}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
-      
-      - name: Build Programs
-        run: |
-          anchor build
-      
-      - name: Check Formatting
-        run: |
-          cargo fmt --all -- --check
-      
-      - name: Clippy Lints
-        run: |
-          cargo clippy --all-targets --all-features -- -D warnings
-      
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: program-builds
-          path: target/deploy/*.so
-          retention-days: 7
+          avm install "${ANCHOR_VERSION}"
+          avm use "${ANCHOR_VERSION}"
 
-  # ============================================================================
-  # Rust Unit Tests
-  # ============================================================================
-  rust-tests:
-    name: Rust Unit Tests
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-      
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-      
-      - name: Install Solana
-        run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-      
-      - name: Install Anchor
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
-      
-      - name: Run Workspace Tests
-        run: |
-          cargo test --workspace --lib -- --nocapture
-      
-      - name: Run Program Tests
-        run: |
-          cargo test --workspace --test "*" -- --nocapture
+      - name: Format
+        run: cargo fmt --all -- --check
 
-  # ============================================================================
-  # TypeScript Integration Tests
-  # ============================================================================
-  typescript-tests:
-    name: TypeScript Integration Tests
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: yarn
-      
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-      
-      - name: Install Solana
-        run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-      
-      - name: Install Anchor
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
-      
-      - name: Install Dependencies
-        run: yarn install
-      
-      - name: Build Programs
-        run: anchor build
-      
-      - name: Run Anchor Tests
-        run: |
-          solana-keygen new --no-bip39-passphrase --silent
-          anchor test
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-  # ============================================================================
-  # Code Coverage
-  # ============================================================================
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: nightly
-          components: llvm-tools-preview
-      
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
-      
-      - name: Install Solana
+      - name: Anchor build (IDL on) with stack-frame guard
         run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-      
-      - name: Install Anchor
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
-      
-      - name: Run Tests with Coverage
-        run: |
-          cargo tarpaulin --workspace --timeout 300 --out Lcov --output-dir ./coverage
-        continue-on-error: true
-      
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
-          verbose: true
-        continue-on-error: true
-
-  # ============================================================================
-  # Security Audit
-  # ============================================================================
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-      
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-      
-      - name: Run Security Audit
-        run: cargo audit
-        continue-on-error: true
-      
-      - name: Install cargo-deny
-        run: cargo install cargo-deny
-      
-      - name: Check Dependencies
-        run: cargo deny check
-        continue-on-error: true
-
-  # ============================================================================
-  # All Tests Passed
-  # ============================================================================
-  all-tests-passed:
-    name: All Tests Passed
-    runs-on: ubuntu-latest
-    needs: [build, rust-tests, typescript-tests]
-    if: always()
-    steps:
-      - name: Check Results
-        run: |
-          if [[ "${{ needs.build.result }}" == "success" && \
-                "${{ needs.rust-tests.result }}" == "success" && \
-                "${{ needs.typescript-tests.result }}" == "success" ]]; then
-            echo "✅ All tests passed!"
-            exit 0
-          else
-            echo "❌ Some tests failed"
-            echo "Build: ${{ needs.build.result }}"
-            echo "Rust Tests: ${{ needs.rust-tests.result }}"
-            echo "TypeScript Tests: ${{ needs.typescript-tests.result }}"
+          anchor build 2>&1 | tee anchor-build.log
+          if grep -q "Stack offset" anchor-build.log; then
+            echo "::error::An SBF function exceeds the 4096-byte stack frame (see log)"
             exit 1
           fi
 
+      - name: Tests (unit + LiteSVM integration)
+        run: cargo test --workspace
+
+  sdk:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/viwoapp-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: packages/viwoapp-sdk/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npm test
+      - run: npm run build
+
+  audit:
+    name: RustSec advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

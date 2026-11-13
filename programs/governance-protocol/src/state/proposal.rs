@@ -77,6 +77,5 @@ impl Proposal {
         8 +   // execution_time
         1 +   // executed
         1 +   // is_private_voting
-        1;    // bump
+        1; // bump
 }
-

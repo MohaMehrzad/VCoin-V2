@@ -27,7 +27,7 @@ impl StakingTier {
             StakingTier::None
         }
     }
-    
+
     pub fn boost_multiplier(&self) -> u64 {
         match self {
             StakingTier::None => TIER_BOOST_NONE,
@@ -37,7 +37,7 @@ impl StakingTier {
             StakingTier::Platinum => TIER_BOOST_PLATINUM,
         }
     }
-    
+
     pub fn fee_discount_bps(&self) -> u16 {
         match self {
             StakingTier::None => FEE_DISCOUNT_NONE,
@@ -47,7 +47,7 @@ impl StakingTier {
             StakingTier::Platinum => FEE_DISCOUNT_PLATINUM,
         }
     }
-    
+
     pub fn as_u8(&self) -> u8 {
         match self {
             StakingTier::None => 0,
@@ -58,4 +58,3 @@ impl StakingTier {
         }
     }
 }
-

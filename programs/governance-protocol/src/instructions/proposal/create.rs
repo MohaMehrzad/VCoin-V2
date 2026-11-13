@@ -1,16 +1,19 @@
-use anchor_lang::prelude::*;
-use crate::constants::{VALID_URI_PREFIX_IPFS, VALID_URI_PREFIX_HTTPS, VALID_URI_PREFIX_AR, MAX_URI_LENGTH, USER_STAKE_SEED};
+use crate::constants::{
+    MAX_URI_LENGTH, USER_STAKE_SEED, VALID_URI_PREFIX_AR, VALID_URI_PREFIX_HTTPS,
+    VALID_URI_PREFIX_IPFS,
+};
 use crate::contexts::CreateProposal;
 use crate::errors::GovernanceError;
 use crate::events::ProposalCreated;
 use crate::state::ProposalStatus;
+use anchor_lang::prelude::*;
 
 /// Check if URI has a valid prefix (L-04 Security Fix)
 fn is_valid_uri(uri: &str) -> bool {
     let bytes = uri.as_bytes();
-    bytes.starts_with(VALID_URI_PREFIX_IPFS) ||
-    bytes.starts_with(VALID_URI_PREFIX_HTTPS) ||
-    bytes.starts_with(VALID_URI_PREFIX_AR)
+    bytes.starts_with(VALID_URI_PREFIX_IPFS)
+        || bytes.starts_with(VALID_URI_PREFIX_HTTPS)
+        || bytes.starts_with(VALID_URI_PREFIX_AR)
 }
 
 pub fn handler(
@@ -22,64 +25,76 @@ pub fn handler(
 ) -> Result<()> {
     let config = &mut ctx.accounts.governance_config;
     let proposer_key = ctx.accounts.proposer.key();
-    
+
     require!(!config.paused, GovernanceError::GovernancePaused);
-    require!(description_uri.len() <= MAX_URI_LENGTH, GovernanceError::Overflow);
-    
+    require!(
+        description_uri.len() <= MAX_URI_LENGTH,
+        GovernanceError::Overflow
+    );
+
     // L-04: Validate URI format
-    require!(is_valid_uri(&description_uri), GovernanceError::InvalidDescriptionUri);
-    
+    require!(
+        is_valid_uri(&description_uri),
+        GovernanceError::InvalidDescriptionUri
+    );
+
     // =========================================================================
     // H-NEW-05: Enforce proposal threshold - verify proposer has enough veVCoin
     // =========================================================================
-    
+
     // Verify UserStake PDA derivation from staking program
     let (expected_proposer_stake_pda, _) = Pubkey::find_program_address(
         &[USER_STAKE_SEED, proposer_key.as_ref()],
-        &config.staking_program
+        &config.staking_program,
     );
     require!(
         ctx.accounts.proposer_stake.key() == expected_proposer_stake_pda,
         GovernanceError::InvalidUserStakePDA
     );
-    
+
     // Read veVCoin balance from UserStake account
-    // UserStake layout: discriminator(8) + owner(32) + staked_amount(8) + lock_duration(8) 
+    // UserStake layout: discriminator(8) + owner(32) + staked_amount(8) + lock_duration(8)
     //                   + lock_end(8) + stake_start(8) + tier(1) + ve_vcoin_amount(8) + bump(1)
     let proposer_vevcoin = if ctx.accounts.proposer_stake.data_is_empty() {
         0u64
     } else {
         let stake_data = ctx.accounts.proposer_stake.try_borrow_data()?;
-        require!(stake_data.len() >= 82, GovernanceError::InvalidUserStakeData);
-        
+        require!(
+            stake_data.len() >= 82,
+            GovernanceError::InvalidUserStakeData
+        );
+
         // ve_vcoin_amount is at offset 73-80 (u64 little-endian)
         u64::from_le_bytes(
-            stake_data[73..81].try_into().map_err(|_| GovernanceError::InvalidUserStakeData)?
+            stake_data[73..81]
+                .try_into()
+                .map_err(|_| GovernanceError::InvalidUserStakeData)?,
         )
     };
-    
+
     // Verify proposer meets the threshold
     require!(
         proposer_vevcoin >= config.proposal_threshold,
         GovernanceError::InsufficientVeVCoin
     );
-    
+
     let clock = Clock::get()?;
-    
+
     // M-17: Use checked_add to return error instead of silently saturating at u64::MAX
-    config.proposal_count = config.proposal_count
+    config.proposal_count = config
+        .proposal_count
         .checked_add(1)
         .ok_or(GovernanceError::Overflow)?;
-    
+
     let proposal = &mut ctx.accounts.proposal;
     proposal.id = config.proposal_count;
     proposal.proposer = ctx.accounts.proposer.key();
     proposal.title_hash = title_hash;
-    
+
     let uri_bytes = description_uri.as_bytes();
     proposal.description_uri[..uri_bytes.len()].copy_from_slice(uri_bytes);
     proposal.uri_len = uri_bytes.len() as u8;
-    
+
     proposal.proposal_type = proposal_type;
     proposal.start_time = clock.unix_timestamp;
     proposal.end_time = clock.unix_timestamp + config.voting_period;
@@ -91,7 +106,7 @@ pub fn handler(
     proposal.executed = false;
     proposal.is_private_voting = enable_private_voting;
     proposal.bump = ctx.bumps.proposal;
-    
+
     emit!(ProposalCreated {
         id: proposal.id,
         proposer: proposal.proposer,
@@ -99,8 +114,7 @@ pub fn handler(
         start_time: proposal.start_time,
         end_time: proposal.end_time,
     });
-    
+
     msg!("Proposal created: {}", proposal.id);
     Ok(())
 }
-

@@ -13,7 +13,7 @@ pub struct RegisterOracle<'info> {
         has_one = authority @ FiveAError::Unauthorized
     )]
     pub five_a_config: Account<'info, FiveAConfig>,
-    
+
     #[account(
         init,
         payer = authority,
@@ -22,13 +22,12 @@ pub struct RegisterOracle<'info> {
         bump
     )]
     pub oracle: Account<'info, Oracle>,
-    
+
     /// CHECK: Oracle wallet to register
     pub oracle_wallet: UncheckedAccount<'info>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

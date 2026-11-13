@@ -8,4 +8,3 @@ pub enum DelegationType {
     PerCategory = 1,
     PerProposal = 2,
 }
-

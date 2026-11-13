@@ -37,6 +37,5 @@ impl CircuitBreaker {
         4 +  // trigger_count
         8 +  // last_trigger_at
         1 +  // last_trigger_reason
-        1;   // bump
+        1; // bump
 }
-

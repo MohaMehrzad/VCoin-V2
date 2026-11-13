@@ -73,5 +73,5 @@ impl ContentRecord {
         2 +  // energy_spent
         1 +  // refund_claimed
         4 +  // engagement_count
-        1;   // bump
+        1; // bump
 }

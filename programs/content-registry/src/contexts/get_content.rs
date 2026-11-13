@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::CONTENT_RECORD_SEED;
 use crate::state::ContentRecord;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct GetContent<'info> {
@@ -10,4 +10,3 @@ pub struct GetContent<'info> {
     )]
     pub content_record: Account<'info, ContentRecord>,
 }
-

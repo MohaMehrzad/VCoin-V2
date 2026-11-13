@@ -15,8 +15,7 @@ pub struct AcceptAuthority<'info> {
         constraint = five_a_config.pending_authority != Pubkey::default() @ FiveAError::NoPendingTransfer
     )]
     pub five_a_config: Account<'info, FiveAConfig>,
-    
+
     /// The new authority accepting the transfer - must sign
     pub new_authority: Signer<'info>,
 }
-

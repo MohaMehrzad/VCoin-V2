@@ -12,7 +12,6 @@ pub struct UpdateIdentity<'info> {
         has_one = owner
     )]
     pub identity: Account<'info, Identity>,
-    
+
     pub owner: Signer<'info>,
 }
-

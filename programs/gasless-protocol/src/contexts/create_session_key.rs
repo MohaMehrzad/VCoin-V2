@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::state::{GaslessConfig, SessionKey, UserGaslessStats};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 #[instruction(session_pubkey: Pubkey)]
@@ -10,7 +10,7 @@ pub struct CreateSessionKey<'info> {
         bump = config.bump
     )]
     pub config: Account<'info, GaslessConfig>,
-    
+
     #[account(
         init,
         payer = user,
@@ -19,7 +19,7 @@ pub struct CreateSessionKey<'info> {
         bump
     )]
     pub session_key: Account<'info, SessionKey>,
-    
+
     #[account(
         init_if_needed,
         payer = user,
@@ -28,10 +28,9 @@ pub struct CreateSessionKey<'info> {
         bump
     )]
     pub user_stats: Account<'info, UserGaslessStats>,
-    
+
     #[account(mut)]
     pub user: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

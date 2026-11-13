@@ -36,24 +36,24 @@ pub enum ViLinkError {
     InvalidMint,
     #[msg("Invalid treasury account")]
     InvalidTreasury,
-    
+
     // H-02: Two-step authority transfer errors
     #[msg("Not the pending authority")]
     NotPendingAuthority,
-    
+
     #[msg("No pending authority transfer")]
     NoPendingTransfer,
-    
+
     #[msg("Cannot propose self as new authority")]
     CannotProposeSelf,
-    
+
     #[msg("Invalid authority address (zero)")]
     InvalidAuthority,
-    
+
     // M-02: Platform fee bounds validation
     #[msg("Platform fee must be between 0.1% and 10%")]
     InvalidFeeRange,
-    
+
     // M-04: Nonce validation for deterministic PDA derivation
     #[msg("Invalid nonce: must match expected action_nonce from user stats")]
     InvalidNonce,
@@ -66,4 +66,3 @@ pub enum ViLinkError {
     #[msg("Invalid expiry: must be > 0 and <= max action expiry")]
     InvalidExpiry,
 }
-

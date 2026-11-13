@@ -5,10 +5,10 @@ use anchor_lang::prelude::*;
 pub enum VerificationLevel {
     #[default]
     None = 0,
-    Basic = 1,      // Email + phone
-    KYC = 2,        // Identity documents
-    Full = 3,       // KYC + biometric
-    Enhanced = 4,   // Full + UniqueHuman
+    Basic = 1,    // Email + phone
+    KYC = 2,      // Identity documents
+    Full = 3,     // KYC + biometric
+    Enhanced = 4, // Full + UniqueHuman
 }
 
 impl VerificationLevel {
@@ -23,4 +23,3 @@ impl VerificationLevel {
         }
     }
 }
-

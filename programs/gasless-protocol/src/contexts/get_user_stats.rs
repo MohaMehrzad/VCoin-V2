@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::USER_GASLESS_SEED;
 use crate::state::UserGaslessStats;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct GetUserStats<'info> {
@@ -10,4 +10,3 @@ pub struct GetUserStats<'info> {
     )]
     pub user_stats: Account<'info, UserGaslessStats>,
 }
-

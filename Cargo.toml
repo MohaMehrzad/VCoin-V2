@@ -11,8 +11,16 @@ members = [
     "programs/sscre-protocol",
     "programs/vilink-protocol",
     "programs/gasless-protocol",
+    "integration-tests",
 ]
 resolver = "2"
+
+# Single pinned toolchain for every program and test crate.
+[workspace.dependencies]
+anchor-lang = { version = "=0.32.1" }
+anchor-spl = { version = "=0.32.1" }
+litesvm = "0.7.1"
+solana-sdk = "2.3"
 
 [profile.release]
 overflow-checks = true

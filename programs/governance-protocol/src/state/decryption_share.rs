@@ -40,8 +40,8 @@ impl DecryptionShare {
         32 +  // dleq_challenge
         32 +  // dleq_response
         8 +   // submitted_at
-        1;    // bump
-    // Total: 242 bytes
+        1; // bump
+           // Total: 242 bytes
 
     pub const SEED: &'static [u8] = DECRYPTION_SHARE_SEED;
 }

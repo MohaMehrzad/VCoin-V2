@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::errors::ContentError;
 use crate::state::{ContentRecord, RegistryConfig};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct UpdateEngagement<'info> {
@@ -11,14 +11,13 @@ pub struct UpdateEngagement<'info> {
         bump = content_record.bump
     )]
     pub content_record: Account<'info, ContentRecord>,
-    
+
     #[account(
         seeds = [REGISTRY_CONFIG_SEED],
         bump = registry_config.bump,
         has_one = authority @ ContentError::Unauthorized
     )]
     pub registry_config: Account<'info, RegistryConfig>,
-    
+
     pub authority: Signer<'info>,
 }
-

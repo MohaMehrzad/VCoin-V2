@@ -59,4 +59,3 @@ pub struct ZKRevealComplete {
     /// Number of DecryptionShare PDAs verified on-chain
     pub shares_verified: u8,
 }
-

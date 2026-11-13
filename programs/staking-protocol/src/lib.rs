@@ -17,11 +17,11 @@ use instructions::query::get_stake_info::UserStakeInfo;
 declare_id!("6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu");
 
 /// VCoin Staking Protocol
-/// 
+///
 /// Stake VCoin → Get veVCoin (voting power)
 /// - Longer stake = More voting power
 /// - Higher tier = Bonus veVCoin
-/// 
+///
 /// Staking Tiers:
 /// - None:     0 VCoin        → 0% fee discount, 1.0x veVCoin boost
 /// - Bronze:   1,000 VCoin    → 10% fee discount, 1.1x veVCoin boost

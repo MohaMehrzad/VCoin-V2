@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{VCOIN_CONFIG_SEED, SLASH_REQUEST_SEED};
+use crate::constants::{SLASH_REQUEST_SEED, VCOIN_CONFIG_SEED};
 use crate::errors::VCoinError;
-use crate::state::{VCoinConfig, SlashRequest};
+use crate::state::{SlashRequest, VCoinConfig};
 
 /// Context for approving a slash request (H-01 Security Fix)
 /// Only the governance authority can approve slashes
@@ -15,7 +15,7 @@ pub struct ApproveSlash<'info> {
         constraint = authority.key() == config.authority @ VCoinError::GovernanceApprovalRequired
     )]
     pub config: Account<'info, VCoinConfig>,
-    
+
     #[account(
         mut,
         seeds = [SLASH_REQUEST_SEED, slash_request.target.as_ref(), &slash_request.created_at.to_le_bytes()],
@@ -23,8 +23,7 @@ pub struct ApproveSlash<'info> {
         constraint = slash_request.is_pending() @ VCoinError::InvalidSlashStatus
     )]
     pub slash_request: Account<'info, SlashRequest>,
-    
+
     /// The governance authority approving the slash
     pub authority: Signer<'info>,
 }
-

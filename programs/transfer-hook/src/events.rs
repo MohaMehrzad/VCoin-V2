@@ -24,4 +24,3 @@ pub struct ActivityScoreUpdated {
     pub new_contribution: u16,
     pub transfers_this_hour: u8,
 }
-

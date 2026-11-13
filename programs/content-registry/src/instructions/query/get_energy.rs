@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::GetEnergy;
+use anchor_lang::prelude::*;
 
 pub fn handler(ctx: Context<GetEnergy>) -> Result<()> {
     let energy = &ctx.accounts.user_energy;
@@ -9,4 +9,3 @@ pub fn handler(ctx: Context<GetEnergy>) -> Result<()> {
     msg!("Tier: {}", energy.tier);
     Ok(())
 }
-

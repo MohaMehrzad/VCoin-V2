@@ -36,8 +36,8 @@ gasless_protocol = "FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
+test = "cargo test --workspace"

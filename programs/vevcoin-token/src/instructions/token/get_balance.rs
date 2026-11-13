@@ -6,4 +6,3 @@ use crate::contexts::GetBalance;
 pub fn handler(ctx: Context<GetBalance>) -> Result<u64> {
     Ok(ctx.accounts.user_account.balance)
 }
-

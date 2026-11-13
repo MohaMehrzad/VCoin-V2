@@ -25,6 +25,5 @@ impl DailyBudget {
         8 +  // spent
         8 +  // tx_count
         4 +  // unique_users
-        1;   // bump
+        1; // bump
 }
-

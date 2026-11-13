@@ -46,6 +46,5 @@ impl EpochDistribution {
         32 + // submitter
         2 +  // avg_five_a_score
         8 +  // eligible_users
-        1;   // bump
+        1; // bump
 }
-

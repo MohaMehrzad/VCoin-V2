@@ -10,28 +10,27 @@ use crate::state::VCoinConfig;
 pub struct MintTokens<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     #[account(
         mut,
         seeds = [VCOIN_CONFIG_SEED],
         bump = config.bump
     )]
     pub config: Account<'info, VCoinConfig>,
-    
+
     /// The VCoin mint
     #[account(
         mut,
         constraint = mint.key() == config.mint @ VCoinError::InvalidMint
     )]
     pub mint: InterfaceAccount<'info, Mint>,
-    
+
     /// Destination token account - MUST use VCoin mint
     #[account(
         mut,
         constraint = destination.mint == config.mint @ VCoinError::InvalidMint
     )]
     pub destination: InterfaceAccount<'info, TokenAccount>,
-    
+
     pub token_program: Program<'info, Token2022>,
 }
-

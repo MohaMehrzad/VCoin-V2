@@ -1,11 +1,16 @@
 //! Unit tests for veVCoin Token (Soulbound)
 //!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
     use crate::constants::*;
-    use crate::state::{VeVCoinConfig, UserVeVCoin};
+    use crate::state::{UserVeVCoin, VeVCoinConfig};
     use anchor_lang::prelude::Pubkey;
 
     // ========================================================================
@@ -47,12 +52,8 @@ mod tests {
     #[test]
     fn test_config_pda_derivation() {
         let program_id = Pubkey::new_unique();
-        let (pda, bump) = Pubkey::find_program_address(
-            &[VEVCOIN_CONFIG_SEED],
-            &program_id
-        );
-        
-        assert!(bump <= 255);
+        let (pda, _bump) = Pubkey::find_program_address(&[VEVCOIN_CONFIG_SEED], &program_id);
+
         assert_ne!(pda, Pubkey::default());
     }
 
@@ -60,13 +61,10 @@ mod tests {
     fn test_user_pda_derivation() {
         let program_id = Pubkey::new_unique();
         let user = Pubkey::new_unique();
-        
-        let (pda, bump) = Pubkey::find_program_address(
-            &[USER_VEVCOIN_SEED, user.as_ref()],
-            &program_id
-        );
-        
-        assert!(bump <= 255);
+
+        let (pda, _bump) =
+            Pubkey::find_program_address(&[USER_VEVCOIN_SEED, user.as_ref()], &program_id);
+
         assert_ne!(pda, Pubkey::default());
     }
 
@@ -76,14 +74,24 @@ mod tests {
 
     #[test]
     fn test_vevcoin_config_size() {
-        let expected_size = 8 + 32 + 32 + 32 + 8 + 8 + 1;
-        assert_eq!(VeVCoinConfig::LEN, expected_size, "Config size mismatch");
+        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
+        let mut buf = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(&VeVCoinConfig::default(), &mut buf).unwrap();
+        assert_eq!(
+            VeVCoinConfig::LEN,
+            8 + buf.len(),
+            "VeVCoinConfig::LEN out of sync with struct"
+        );
     }
 
     #[test]
     fn test_user_vevcoin_size() {
         let expected_size = 8 + 32 + 8 + 8 + 8 + 1;
-        assert_eq!(UserVeVCoin::LEN, expected_size, "User account size mismatch");
+        assert_eq!(
+            UserVeVCoin::LEN,
+            expected_size,
+            "User account size mismatch"
+        );
     }
 
     #[test]
@@ -110,10 +118,10 @@ mod tests {
     fn test_mint_increases_balance() {
         let mut user = UserVeVCoin::default();
         let mint_amount = 1000u64 * 1_000_000_000u64; // 1000 veVCoin
-        
+
         // Simulate mint
         user.balance = user.balance.checked_add(mint_amount).unwrap();
-        
+
         assert_eq!(user.balance, mint_amount);
     }
 
@@ -121,10 +129,10 @@ mod tests {
     fn test_burn_decreases_balance() {
         let mut user = UserVeVCoin::default();
         user.balance = 1000u64 * 1_000_000_000u64;
-        
+
         let burn_amount = 400u64 * 1_000_000_000u64;
         user.balance = user.balance.checked_sub(burn_amount).unwrap();
-        
+
         assert_eq!(user.balance, 600u64 * 1_000_000_000u64);
     }
 
@@ -132,10 +140,10 @@ mod tests {
     fn test_burn_exact_balance() {
         let mut user = UserVeVCoin::default();
         user.balance = 1000u64 * 1_000_000_000u64;
-        
+
         // Burn everything
         user.balance = user.balance.checked_sub(user.balance).unwrap();
-        
+
         assert_eq!(user.balance, 0);
     }
 
@@ -143,10 +151,10 @@ mod tests {
     fn test_burn_more_than_balance_fails() {
         let user = UserVeVCoin::default();
         // user.balance is 0
-        
+
         let burn_amount = 100u64;
         let result = user.balance.checked_sub(burn_amount);
-        
+
         assert!(result.is_none(), "Burning more than balance should fail");
     }
 
@@ -157,13 +165,13 @@ mod tests {
     #[test]
     fn test_total_supply_increases_on_mint() {
         let mut config = VeVCoinConfig::default();
-        
+
         let mint1 = 1000u64 * 1_000_000_000u64;
         let mint2 = 500u64 * 1_000_000_000u64;
-        
+
         config.total_supply = config.total_supply.checked_add(mint1).unwrap();
         config.total_supply = config.total_supply.checked_add(mint2).unwrap();
-        
+
         assert_eq!(config.total_supply, 1500u64 * 1_000_000_000u64);
     }
 
@@ -171,10 +179,10 @@ mod tests {
     fn test_total_supply_decreases_on_burn() {
         let mut config = VeVCoinConfig::default();
         config.total_supply = 2000u64 * 1_000_000_000u64;
-        
+
         let burn = 500u64 * 1_000_000_000u64;
         config.total_supply = config.total_supply.checked_sub(burn).unwrap();
-        
+
         assert_eq!(config.total_supply, 1500u64 * 1_000_000_000u64);
     }
 
@@ -186,12 +194,12 @@ mod tests {
     fn test_holder_count_on_first_mint() {
         let mut config = VeVCoinConfig::default();
         let user = UserVeVCoin::default();
-        
+
         // First mint to a new user should increment holders
         if user.balance == 0 {
             config.total_holders = config.total_holders.checked_add(1).unwrap();
         }
-        
+
         assert_eq!(config.total_holders, 1);
     }
 
@@ -199,16 +207,16 @@ mod tests {
     fn test_holder_count_on_full_burn() {
         let mut config = VeVCoinConfig::default();
         config.total_holders = 5;
-        
+
         let mut user = UserVeVCoin::default();
         user.balance = 1000u64 * 1_000_000_000u64;
-        
+
         // Full burn should decrement holders
         user.balance = 0;
         if user.balance == 0 {
             config.total_holders = config.total_holders.checked_sub(1).unwrap();
         }
-        
+
         assert_eq!(config.total_holders, 4);
     }
 
@@ -220,11 +228,11 @@ mod tests {
     fn test_invariant_total_supply_equals_sum_of_balances() {
         // In a real scenario:
         // config.total_supply == sum(all user.balance)
-        
+
         let config_supply = 3000u64 * 1_000_000_000u64;
         let user1_balance = 1000u64 * 1_000_000_000u64;
         let user2_balance = 2000u64 * 1_000_000_000u64;
-        
+
         assert_eq!(config_supply, user1_balance + user2_balance);
     }
 
@@ -237,24 +245,19 @@ mod tests {
         // veVCoin is non-transferable
         // This is enforced by Token-2022 NonTransferable extension
         // Here we just verify the concept
-        
+
         let user1 = Pubkey::new_unique();
         let user2 = Pubkey::new_unique();
-        
+
         // Different users should have different PDAs
         let program_id = Pubkey::new_unique();
-        
-        let (pda1, _) = Pubkey::find_program_address(
-            &[USER_VEVCOIN_SEED, user1.as_ref()],
-            &program_id
-        );
-        
-        let (pda2, _) = Pubkey::find_program_address(
-            &[USER_VEVCOIN_SEED, user2.as_ref()],
-            &program_id
-        );
-        
+
+        let (pda1, _) =
+            Pubkey::find_program_address(&[USER_VEVCOIN_SEED, user1.as_ref()], &program_id);
+
+        let (pda2, _) =
+            Pubkey::find_program_address(&[USER_VEVCOIN_SEED, user2.as_ref()], &program_id);
+
         assert_ne!(pda1, pda2, "Each user should have unique veVCoin account");
     }
 }
-

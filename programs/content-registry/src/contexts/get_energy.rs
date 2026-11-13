@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::USER_ENERGY_SEED;
 use crate::state::UserEnergy;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct GetEnergy<'info> {
@@ -10,4 +10,3 @@ pub struct GetEnergy<'info> {
     )]
     pub user_energy: Account<'info, UserEnergy>,
 }
-

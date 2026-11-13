@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-/// L-01: Events for veVCoin token protocol state changes
+// L-01: Events for veVCoin token protocol state changes
 
 /// Emitted when veVCoin is initialized
 #[event]
@@ -60,4 +60,3 @@ pub struct AuthorityTransferCancelled {
     pub cancelled_pending: Pubkey,
     pub timestamp: i64,
 }
-

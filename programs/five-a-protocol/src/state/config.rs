@@ -46,6 +46,5 @@ impl FiveAConfig {
         8 +  // current_epoch
         8 +  // last_snapshot_time
         1 +  // paused
-        1;   // bump
+        1; // bump
 }
-

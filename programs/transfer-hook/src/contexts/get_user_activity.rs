@@ -11,8 +11,7 @@ pub struct GetUserActivity<'info> {
         bump = user_activity.bump
     )]
     pub user_activity: Account<'info, UserActivity>,
-    
+
     /// CHECK: Just used for PDA derivation
     pub user: UncheckedAccount<'info>,
 }
-

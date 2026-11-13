@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
 use crate::constants::GASLESS_CONFIG_SEED;
 use crate::errors::GaslessError;
 use crate::state::GaslessConfig;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct UpdateConfig<'info> {
@@ -12,7 +12,6 @@ pub struct UpdateConfig<'info> {
         has_one = authority @ GaslessError::Unauthorized
     )]
     pub config: Account<'info, GaslessConfig>,
-    
+
     pub authority: Signer<'info>,
 }
-

@@ -12,7 +12,6 @@ pub struct UpdateUserScore<'info> {
         constraint = user_score.user == user.key()
     )]
     pub user_score: Account<'info, UserScore>,
-    
+
     pub user: Signer<'info>,
 }
-

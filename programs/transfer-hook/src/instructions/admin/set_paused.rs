@@ -8,4 +8,3 @@ pub fn handler(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     msg!("Hook paused status: {}", paused);
     Ok(())
 }
-

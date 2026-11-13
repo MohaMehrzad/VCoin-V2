@@ -22,7 +22,7 @@ impl SubscriptionTier {
             _ => None,
         }
     }
-    
+
     pub fn price(&self) -> u64 {
         match self {
             SubscriptionTier::Free => SUBSCRIPTION_FREE,
@@ -32,4 +32,3 @@ impl SubscriptionTier {
         }
     }
 }
-

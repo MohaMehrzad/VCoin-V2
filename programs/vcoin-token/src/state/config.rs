@@ -35,6 +35,5 @@ impl VCoinConfig {
         32 + // permanent_delegate
         8 +  // total_minted
         1 +  // paused
-        1;   // bump
+        1; // bump
 }
-

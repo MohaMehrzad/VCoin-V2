@@ -1,8 +1,8 @@
-use anchor_lang::prelude::*;
 use crate::contexts::SubmitDecryptionShare;
 use crate::crypto::verify_dleq::verify_batched_dleq;
 use crate::errors::GovernanceError;
 use crate::events::DecryptionShareVerified;
+use anchor_lang::prelude::*;
 
 /// Submit a decryption share for ZK vote reveal with DLEQ proof verification
 pub fn handler(
@@ -17,8 +17,14 @@ pub fn handler(
     let private_config = &mut ctx.accounts.private_voting_config;
 
     // Validations
-    require!(private_config.reveal_started, GovernanceError::RevealNotStarted);
-    require!(!private_config.reveal_completed, GovernanceError::RevealAlreadyComplete);
+    require!(
+        private_config.reveal_started,
+        GovernanceError::RevealNotStarted
+    );
+    require!(
+        !private_config.reveal_completed,
+        GovernanceError::RevealAlreadyComplete
+    );
 
     // Validate committee index is in range
     require!(
@@ -84,8 +90,10 @@ pub fn handler(
         shares_received: private_config.shares_received,
     });
 
-    msg!("Decryption share {} of {} verified and stored on-chain",
+    msg!(
+        "Decryption share {} of {} verified and stored on-chain",
         private_config.shares_received,
-        private_config.decryption_threshold);
+        private_config.decryption_threshold
+    );
     Ok(())
 }

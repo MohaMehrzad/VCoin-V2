@@ -28,6 +28,5 @@ impl Oracle {
         8 +  // total_submissions
         2 +  // accuracy_rate
         8 +  // last_submission
-        1;   // bump
+        1; // bump
 }
-

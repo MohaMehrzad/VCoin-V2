@@ -7,7 +7,7 @@ use crate::state::VeVCoinConfig;
 pub struct UpdateConfig<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     #[account(
         mut,
         seeds = [VEVCOIN_CONFIG_SEED],
@@ -15,4 +15,3 @@ pub struct UpdateConfig<'info> {
     )]
     pub config: Account<'info, VeVCoinConfig>,
 }
-

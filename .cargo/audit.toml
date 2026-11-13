@@ -1,0 +1,17 @@
+# cargo-audit configuration (read by `cargo audit` and rustsec/audit-check in CI).
+#
+# Each ignore below is reachable ONLY through test tooling (litesvm / solana-sdk keypair
+# helpers used by `integration-tests`). None of the on-chain program crates depend on
+# these versions; verify with:
+#   cargo tree -p <program> -e normal | grep -E "ed25519-dalek v1|curve25519-dalek v3"
+# Re-evaluate when litesvm moves past ed25519-dalek 1.x.
+
+[advisories]
+ignore = [
+    # ed25519-dalek 1.0.1: double public-key signing oracle. Test-only signing of local
+    # throwaway keypairs; the oracle requires attacker-chosen public keys.
+    "RUSTSEC-2022-0093",
+    # curve25519-dalek 3.2.0: timing variability in Scalar sub (via ed25519-dalek 1.x above).
+    # Test-only; on-chain curve ops use the solana-curve25519 syscalls (dalek 4.x on host).
+    "RUSTSEC-2024-0344",
+]

@@ -37,6 +37,5 @@ impl UserActivity {
         8 +  // total_amount_received
         8 +  // last_transfer_time
         2 +  // activity_score_contribution
-        1;   // bump
+        1; // bump
 }
-

@@ -65,4 +65,3 @@ pub struct AuthorityTransferCancelled {
     pub authority: Pubkey,
     pub cancelled_pending: Pubkey,
 }
-

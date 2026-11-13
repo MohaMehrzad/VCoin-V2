@@ -8,7 +8,9 @@ pub fn handler(ctx: Context<GetUserActivity>) -> Result<()> {
     msg!("User: {}", activity.user);
     msg!("Total sent: {}", activity.total_transfers_sent);
     msg!("Total received: {}", activity.total_transfers_received);
-    msg!("Activity contribution: {}", activity.activity_score_contribution);
+    msg!(
+        "Activity contribution: {}",
+        activity.activity_score_contribution
+    );
     Ok(())
 }
-

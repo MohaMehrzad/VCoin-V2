@@ -28,6 +28,5 @@ impl ScoreSnapshot {
         2 +  // avg_score
         8 +  // timestamp
         32 + // submitter
-        1;   // bump
+        1; // bump
 }
-

@@ -8,4 +8,3 @@ pub enum FeeMethod {
     VCoinDeduction,
     SSCREDeduction,
 }
-

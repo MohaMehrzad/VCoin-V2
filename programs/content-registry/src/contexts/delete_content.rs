@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{RegistryConfig, ContentRecord};
+use crate::state::{ContentRecord, RegistryConfig};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct DeleteContent<'info> {
@@ -10,7 +10,7 @@ pub struct DeleteContent<'info> {
         bump = registry_config.bump
     )]
     pub registry_config: Account<'info, RegistryConfig>,
-    
+
     #[account(
         mut,
         seeds = [CONTENT_RECORD_SEED, content_record.tracking_id.as_ref()],
@@ -18,7 +18,6 @@ pub struct DeleteContent<'info> {
         has_one = author
     )]
     pub content_record: Account<'info, ContentRecord>,
-    
+
     pub author: Signer<'info>,
 }
-

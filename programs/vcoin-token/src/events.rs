@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-/// L-01: Events for VCoin token protocol state changes
+// L-01: Events for VCoin token protocol state changes
 
 /// Emitted when VCoin is initialized
 #[event]
@@ -103,4 +103,3 @@ pub struct AuthorityTransferCancelled {
     pub cancelled_pending: Pubkey,
     pub timestamp: i64,
 }
-

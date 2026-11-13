@@ -1,13 +1,13 @@
-/// Transfer Hook Constants
-///
-/// L-AUDIT-07: All constants below are hardcoded at compile time.
-/// Changing any value requires a program upgrade (redeployment).
-/// This is intentional for on-chain determinism and auditability.
-/// Future versions may migrate select parameters to on-chain config
-/// accounts to allow runtime governance updates.
+// Transfer Hook Constants
+//
+// L-AUDIT-07: All constants below are hardcoded at compile time.
+// Changing any value requires a program upgrade (redeployment).
+// This is intentional for on-chain determinism and auditability.
+// Future versions may migrate select parameters to on-chain config
+// accounts to allow runtime governance updates.
 
-/// Minimum transfer amount to count as activity (1 VCoin)
-/// L-AUDIT-07: Changing this threshold requires a program upgrade.
+// Minimum transfer amount to count as activity (1 VCoin)
+// L-AUDIT-07: Changing this threshold requires a program upgrade.
 pub const MIN_ACTIVITY_THRESHOLD: u64 = 1_000_000_000;
 
 /// Maximum transfers per hour before diminishing activity score
@@ -35,4 +35,3 @@ pub const HOOK_CONFIG_SEED: &[u8] = b"hook-config";
 pub const TRANSFER_RECORD_SEED: &[u8] = b"transfer-record";
 pub const USER_ACTIVITY_SEED: &[u8] = b"user-activity";
 pub const PAIR_TRACKING_SEED: &[u8] = b"pair-tracking";
-

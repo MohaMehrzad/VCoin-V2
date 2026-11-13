@@ -14,4 +14,3 @@ pub fn handler(ctx: Context<GetScore>) -> Result<()> {
     msg!("A5 Approved: {}", score.approved);
     Ok(())
 }
-

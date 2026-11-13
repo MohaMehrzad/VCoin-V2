@@ -22,16 +22,19 @@ pub fn handler(ctx: Context<AcceptAuthority>) -> Result<()> {
     config.authority = new_authority;
     config.pending_authority = Pubkey::default();
     config.pending_authority_activated_at = 0;
-    
+
     // L-01: Emit authority transfer accepted event
     emit!(AuthorityTransferAccepted {
         old_authority,
         new_authority,
         timestamp: clock.unix_timestamp,
     });
-    
-    msg!("Authority transferred from {} to {}", old_authority, new_authority);
-    
+
+    msg!(
+        "Authority transferred from {} to {}",
+        old_authority,
+        new_authority
+    );
+
     Ok(())
 }
-

@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::GetUserStats;
+use anchor_lang::prelude::*;
 
 pub fn handler(ctx: Context<GetUserStats>) -> Result<()> {
     let stats = &ctx.accounts.user_stats;
@@ -10,4 +10,3 @@ pub fn handler(ctx: Context<GetUserStats>) -> Result<()> {
     msg!("Sessions created: {}", stats.sessions_created);
     Ok(())
 }
-

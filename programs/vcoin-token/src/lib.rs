@@ -18,7 +18,7 @@ declare_id!("Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn");
 /// - Metadata: On-chain token metadata (Name: VCoin, Symbol: VIWO)
 /// - Permanent Delegate: Slashing authority for governance multisig
 /// - Transfer Hook: Auto-update 5A scores (prepared, hook program separate)
-/// 
+///
 /// Total Supply: 1,000,000,000 (1B)
 /// Decimals: 9
 
@@ -27,10 +27,7 @@ pub mod vcoin_token {
     use super::*;
 
     /// Initialize the VCoin mint with Token-2022 extensions
-    pub fn initialize_mint(
-        ctx: Context<InitializeMint>,
-        permanent_delegate: Pubkey,
-    ) -> Result<()> {
+    pub fn initialize_mint(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Result<()> {
         instructions::admin::initialize::handler(ctx, permanent_delegate)
     }
 

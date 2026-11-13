@@ -37,6 +37,5 @@ impl Identity {
         8 +  // created_at
         8 +  // updated_at
         1 +  // is_active
-        1;   // bump
+        1; // bump
 }
-

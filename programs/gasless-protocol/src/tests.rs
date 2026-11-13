@@ -1,11 +1,16 @@
 //! Unit tests for Gasless Protocol
 //!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
     use crate::constants::*;
-    use crate::state::{GaslessConfig, SessionKey, UserGaslessStats, FeeMethod};
+    use crate::state::{FeeMethod, GaslessConfig, SessionKey, UserGaslessStats};
     use anchor_lang::prelude::Pubkey;
 
     // ========================================================================
@@ -60,8 +65,14 @@ mod tests {
 
     #[test]
     fn test_gasless_config_size() {
-        let expected = 8 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 2 + 4 + 8 + 8 + 8 + 1 + 4 + 8 + 1;
-        assert_eq!(GaslessConfig::LEN, expected, "Config size mismatch");
+        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
+        let mut buf = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(&GaslessConfig::default(), &mut buf).unwrap();
+        assert_eq!(
+            GaslessConfig::LEN,
+            8 + buf.len(),
+            "GaslessConfig::LEN out of sync with struct"
+        );
     }
 
     #[test]
@@ -72,8 +83,14 @@ mod tests {
 
     #[test]
     fn test_user_gasless_stats_size() {
-        let expected = 8 + 32 + 8 + 8 + 8 + 8 + 4 + 32 + 4 + 4 + 8 + 8 + 1;
-        assert_eq!(UserGaslessStats::LEN, expected, "User stats size mismatch");
+        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
+        let mut buf = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(&UserGaslessStats::default(), &mut buf).unwrap();
+        assert_eq!(
+            UserGaslessStats::LEN,
+            8 + buf.len(),
+            "UserGaslessStats::LEN out of sync with struct"
+        );
     }
 
     // ========================================================================
@@ -86,7 +103,7 @@ mod tests {
             scope: SCOPE_ALL,
             ..Default::default()
         };
-        
+
         assert!(session.is_action_in_scope(SCOPE_TIP));
         assert!(session.is_action_in_scope(SCOPE_VOUCH));
         assert!(session.is_action_in_scope(SCOPE_GOVERNANCE));
@@ -98,7 +115,7 @@ mod tests {
             scope: SCOPE_TIP | SCOPE_CONTENT,
             ..Default::default()
         };
-        
+
         assert!(session.is_action_in_scope(SCOPE_TIP));
         assert!(session.is_action_in_scope(SCOPE_CONTENT));
         assert!(!session.is_action_in_scope(SCOPE_VOUCH));
@@ -111,7 +128,7 @@ mod tests {
             scope: 0,
             ..Default::default()
         };
-        
+
         assert!(!session.is_action_in_scope(SCOPE_TIP));
         assert!(!session.is_action_in_scope(SCOPE_VOUCH));
     }
@@ -129,7 +146,7 @@ mod tests {
             is_revoked: false,
             ..Default::default()
         };
-        
+
         assert!(session.is_valid(1500), "Should be valid");
     }
 
@@ -142,7 +159,7 @@ mod tests {
             is_revoked: false,
             ..Default::default()
         };
-        
+
         assert!(!session.is_valid(1500), "Should be expired");
     }
 
@@ -155,7 +172,7 @@ mod tests {
             is_revoked: true,
             ..Default::default()
         };
-        
+
         assert!(!session.is_valid(1500), "Should be invalid (revoked)");
     }
 
@@ -168,8 +185,11 @@ mod tests {
             is_revoked: false,
             ..Default::default()
         };
-        
-        assert!(!session.is_valid(1500), "Should be invalid (actions exhausted)");
+
+        assert!(
+            !session.is_valid(1500),
+            "Should be invalid (actions exhausted)"
+        );
     }
 
     // ========================================================================
@@ -206,10 +226,10 @@ mod tests {
             current_day: 10,
             ..Default::default()
         };
-        
+
         let day_10_timestamp = 10 * 86400i64;
         let day_11_timestamp = 11 * 86400i64;
-        
+
         assert!(!config.should_reset_daily_budget(day_10_timestamp));
         assert!(config.should_reset_daily_budget(day_11_timestamp));
     }
@@ -225,10 +245,10 @@ mod tests {
             today_subsidized: 25,
             ..Default::default()
         };
-        
+
         let day_11_timestamp = 11 * 86400i64;
         stats.check_daily_reset(day_11_timestamp);
-        
+
         assert_eq!(stats.current_day, 11);
         assert_eq!(stats.today_subsidized, 0);
     }
@@ -240,10 +260,10 @@ mod tests {
             today_subsidized: 25,
             ..Default::default()
         };
-        
+
         let day_10_timestamp = 10 * 86400i64 + 1000;
         stats.check_daily_reset(day_10_timestamp);
-        
+
         assert_eq!(stats.current_day, 10);
         assert_eq!(stats.today_subsidized, 25); // Not reset
     }
@@ -258,17 +278,17 @@ mod tests {
         let user = Pubkey::new_unique();
         let session1 = Pubkey::new_unique();
         let session2 = Pubkey::new_unique();
-        
+
         let (pda1, _) = Pubkey::find_program_address(
             &[SESSION_KEY_SEED, user.as_ref(), session1.as_ref()],
-            &program_id
+            &program_id,
         );
-        
+
         let (pda2, _) = Pubkey::find_program_address(
             &[SESSION_KEY_SEED, user.as_ref(), session2.as_ref()],
-            &program_id
+            &program_id,
         );
-        
+
         assert_ne!(pda1, pda2);
     }
 
@@ -283,7 +303,7 @@ mod tests {
             max_actions: 1000,
             ..Default::default()
         };
-        
+
         assert!(session.actions_used <= session.max_actions);
     }
 
@@ -294,7 +314,7 @@ mod tests {
             max_spend: 100_000_000_000_000,
             ..Default::default()
         };
-        
+
         assert!(session.vcoin_spent <= session.max_spend);
     }
 
@@ -304,8 +324,7 @@ mod tests {
             today_subsidized: 30,
             ..Default::default()
         };
-        
+
         assert!(stats.today_subsidized <= MAX_SUBSIDIZED_TX_PER_USER);
     }
 }
-

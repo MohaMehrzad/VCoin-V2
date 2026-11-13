@@ -20,20 +20,9 @@ custom-heap = []
 custom-panic = []
 
 [dependencies]
-anchor-lang = { version = "0.32.0", features = ["init-if-needed"] }
-anchor-spl = { version = "0.32.0", features = ["token_2022"] }
-spl-token-2022 = "6.0"
-spl-token-metadata-interface = "0.6"
-
-[dev-dependencies]
-solana-program-test = "2.0"
-solana-sdk = "2.0"
-tokio = { version = "1.14", features = ["full"] }
+anchor-lang = { workspace = true, features = ["init-if-needed"] }
+anchor-spl = { workspace = true, features = ["token_2022", "token_2022_extensions"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
-
-
-
-
 

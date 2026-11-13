@@ -34,6 +34,5 @@ impl Delegation {
         8 +  // delegated_at
         8 +  // expires_at
         1 +  // revocable
-        1;   // bump
+        1; // bump
 }
-

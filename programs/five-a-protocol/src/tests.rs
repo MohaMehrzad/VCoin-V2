@@ -1,6 +1,11 @@
 //! Unit tests for 5A Protocol
-//! 
+//!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
@@ -14,18 +19,21 @@ mod tests {
 
     #[test]
     fn test_weights_sum_to_100_percent() {
-        let total = AUTHENTICITY_WEIGHT + ACCURACY_WEIGHT + AGILITY_WEIGHT + 
-                   ACTIVITY_WEIGHT + APPROVED_WEIGHT;
+        let total = AUTHENTICITY_WEIGHT
+            + ACCURACY_WEIGHT
+            + AGILITY_WEIGHT
+            + ACTIVITY_WEIGHT
+            + APPROVED_WEIGHT;
         assert_eq!(total, 10000, "Weights should sum to 10000 (100%)");
     }
 
     #[test]
     fn test_individual_weights() {
-        assert_eq!(AUTHENTICITY_WEIGHT, 2500);  // 25%
-        assert_eq!(ACCURACY_WEIGHT, 2000);      // 20%
-        assert_eq!(AGILITY_WEIGHT, 1500);       // 15%
-        assert_eq!(ACTIVITY_WEIGHT, 2500);      // 25%
-        assert_eq!(APPROVED_WEIGHT, 1500);      // 15%
+        assert_eq!(AUTHENTICITY_WEIGHT, 2500); // 25%
+        assert_eq!(ACCURACY_WEIGHT, 2000); // 20%
+        assert_eq!(AGILITY_WEIGHT, 1500); // 15%
+        assert_eq!(ACTIVITY_WEIGHT, 2500); // 25%
+        assert_eq!(APPROVED_WEIGHT, 1500); // 15%
     }
 
     // ========================================================================
@@ -35,15 +43,29 @@ mod tests {
     #[test]
     fn test_vouch_constants() {
         assert_eq!(MIN_VOUCHER_SCORE, 6000, "Min voucher score should be 60%");
-        assert_eq!(VOUCH_STAKE_AMOUNT, 5_000_000_000, "Vouch stake should be 5 VCoin");
+        assert_eq!(
+            VOUCH_STAKE_AMOUNT, 5_000_000_000,
+            "Vouch stake should be 5 VCoin"
+        );
         assert_eq!(VOUCHES_REQUIRED, 3, "Should require 3 vouches");
-        assert_eq!(VOUCH_EVALUATION_PERIOD, 90 * 24 * 60 * 60, "90 days in seconds");
-        assert_eq!(VOUCH_REWARD, 10_000_000_000, "Vouch reward should be 10 VCoin");
+        assert_eq!(
+            VOUCH_EVALUATION_PERIOD,
+            90 * 24 * 60 * 60,
+            "90 days in seconds"
+        );
+        assert_eq!(
+            VOUCH_REWARD, 10_000_000_000,
+            "Vouch reward should be 10 VCoin"
+        );
     }
 
     #[test]
     fn test_snapshot_interval() {
-        assert_eq!(SNAPSHOT_INTERVAL, 24 * 60 * 60, "Daily snapshot = 86400 seconds");
+        assert_eq!(
+            SNAPSHOT_INTERVAL,
+            24 * 60 * 60,
+            "Daily snapshot = 86400 seconds"
+        );
     }
 
     // ========================================================================
@@ -98,14 +120,14 @@ mod tests {
     #[test]
     fn test_composite_weighted_properly() {
         // Test that higher weighted dimensions have more impact
-        
+
         // High authenticity (25% weight) vs low approved (15% weight)
         let high_auth = create_test_score(10000, 0, 0, 0, 0);
         let high_app = create_test_score(0, 0, 0, 0, 10000);
-        
+
         assert_eq!(high_auth.calculate_composite(), 2500); // 10000 * 0.25
-        assert_eq!(high_app.calculate_composite(), 1500);  // 10000 * 0.15
-        
+        assert_eq!(high_app.calculate_composite(), 1500); // 10000 * 0.15
+
         // Auth should contribute more than Approved
         assert!(high_auth.calculate_composite() > high_app.calculate_composite());
     }
@@ -115,8 +137,11 @@ mod tests {
         // Both are 25%
         let high_auth = create_test_score(10000, 0, 0, 0, 0);
         let high_act = create_test_score(0, 0, 0, 10000, 0);
-        
-        assert_eq!(high_auth.calculate_composite(), high_act.calculate_composite());
+
+        assert_eq!(
+            high_auth.calculate_composite(),
+            high_act.calculate_composite()
+        );
     }
 
     #[test]
@@ -124,8 +149,11 @@ mod tests {
         // Both are 15%
         let high_agi = create_test_score(0, 0, 10000, 0, 0);
         let high_app = create_test_score(0, 0, 0, 0, 10000);
-        
-        assert_eq!(high_agi.calculate_composite(), high_app.calculate_composite());
+
+        assert_eq!(
+            high_agi.calculate_composite(),
+            high_app.calculate_composite()
+        );
     }
 
     // ========================================================================
@@ -136,7 +164,7 @@ mod tests {
     fn test_composite_no_overflow() {
         // Max values shouldn't overflow u32 multiplication
         let max_score = create_test_score(10000, 10000, 10000, 10000, 10000);
-        
+
         // Max calculation: 10000 * 10000 = 100_000_000 per dimension
         // Total: 5 * 100_000_000 = 500_000_000
         // Fits easily in u32
@@ -151,7 +179,10 @@ mod tests {
             let score = create_test_score(i, i, i, i, i);
             let composite = score.calculate_composite();
             assert!(composite <= 10000, "Composite should not exceed 10000");
-            assert_eq!(composite, i, "With all same scores, composite equals individual");
+            assert_eq!(
+                composite, i,
+                "With all same scores, composite equals individual"
+            );
         }
     }
 
@@ -164,7 +195,7 @@ mod tests {
         // User needs 60% (6000) to vouch
         let eligible_score = create_test_score(6000, 6000, 6000, 6000, 6000);
         let ineligible_score = create_test_score(5999, 5999, 5999, 5999, 5999);
-        
+
         assert!(eligible_score.calculate_composite() >= MIN_VOUCHER_SCORE);
         assert!(ineligible_score.calculate_composite() < MIN_VOUCHER_SCORE);
     }
@@ -180,4 +211,3 @@ mod tests {
         assert_eq!(UserScore::LEN, expected_size);
     }
 }
-

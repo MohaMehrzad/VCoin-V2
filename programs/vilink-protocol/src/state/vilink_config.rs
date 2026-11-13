@@ -55,11 +55,10 @@ impl ViLinkConfig {
         8 +  // total_tip_volume
         1 +  // paused
         2 +  // platform_fee_bps
-        1;   // bump
-    
+        1; // bump
+
     /// Check if action type is enabled
     pub fn is_action_enabled(&self, action_type: u8) -> bool {
         (self.enabled_actions & (1 << action_type)) != 0
     }
 }
-

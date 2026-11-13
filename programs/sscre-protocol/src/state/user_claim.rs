@@ -45,8 +45,8 @@ impl UserClaim {
         (8 * 4) + // claimed_epochs_bitmap_ext (epochs 256-511)
         (8 * 8) + // high_epochs_bitmap (epochs 512-1023) - H-NEW-04
         8 +  // _reserved
-        1;   // bump
-    
+        1; // bump
+
     /// Check if a specific epoch has been claimed
     /// H-04 + H-NEW-04: Properly handles all epoch ranges 0-1023 using bitmaps
     pub fn is_epoch_claimed(&self, epoch: u64) -> bool {
@@ -72,7 +72,7 @@ impl UserClaim {
             false
         }
     }
-    
+
     /// Mark an epoch as claimed
     /// H-04 + H-NEW-04: Handles epochs 0-1023 with bitmap storage
     pub fn mark_epoch_claimed(&mut self, epoch: u64) -> Result<()> {
@@ -97,12 +97,11 @@ impl UserClaim {
             // Epochs 1024+: Not supported
             require!(false, SSCREError::TooManyEpochsClaimed);
         }
-        
+
         if epoch > self.last_claimed_epoch {
             self.last_claimed_epoch = epoch;
         }
-        
+
         Ok(())
     }
 }
-

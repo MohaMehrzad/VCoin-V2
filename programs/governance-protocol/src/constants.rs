@@ -34,17 +34,17 @@ pub const COUNCIL_THRESHOLD: u64 = 10_000;
 
 /// Default governance parameters
 /// L-02: Configurable via program upgrade
-pub const DEFAULT_VOTING_PERIOD: i64 = 7 * 24 * 60 * 60;  // 7 days
-pub const DEFAULT_TIMELOCK_DELAY: i64 = 48 * 60 * 60;     // 48 hours
-pub const DEFAULT_QUORUM: u64 = 1_000_000;                 // 1M effective votes
-pub const DEFAULT_PROPOSAL_THRESHOLD: u64 = 1_000;         // 1000 veVCoin to propose
+pub const DEFAULT_VOTING_PERIOD: i64 = 7 * 24 * 60 * 60; // 7 days
+pub const DEFAULT_TIMELOCK_DELAY: i64 = 48 * 60 * 60; // 48 hours
+pub const DEFAULT_QUORUM: u64 = 1_000_000; // 1M effective votes
+pub const DEFAULT_PROPOSAL_THRESHOLD: u64 = 1_000; // 1000 veVCoin to propose
 
 /// Tier multipliers (x1000 for precision)
 /// L-02: Configurable via program upgrade
-pub const TIER_MULT_NONE: u64 = 1000;      // 1.0x
-pub const TIER_MULT_BRONZE: u64 = 1000;    // 1.0x
-pub const TIER_MULT_SILVER: u64 = 2000;    // 2.0x
-pub const TIER_MULT_GOLD: u64 = 5000;      // 5.0x
+pub const TIER_MULT_NONE: u64 = 1000; // 1.0x
+pub const TIER_MULT_BRONZE: u64 = 1000; // 1.0x
+pub const TIER_MULT_SILVER: u64 = 2000; // 2.0x
+pub const TIER_MULT_GOLD: u64 = 5000; // 5.0x
 pub const TIER_MULT_PLATINUM: u64 = 10000; // 10.0x
 
 /// Anti-plutocracy threshold
@@ -71,4 +71,3 @@ pub const MAX_URI_LENGTH: usize = 128;
 /// These must match the seeds used by staking-protocol and five-a-protocol
 pub const USER_STAKE_SEED: &[u8] = b"user-stake";
 pub const USER_SCORE_SEED: &[u8] = b"user-score";
-

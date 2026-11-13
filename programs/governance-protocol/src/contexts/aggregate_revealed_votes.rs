@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{Proposal, PrivateVotingConfig};
+use crate::state::{PrivateVotingConfig, Proposal};
+use anchor_lang::prelude::*;
 
 /// Permissionless tally aggregation — anyone can submit the tally since on-chain
 /// cryptographic verification (tally * H == C_sum - D) prevents fabrication.

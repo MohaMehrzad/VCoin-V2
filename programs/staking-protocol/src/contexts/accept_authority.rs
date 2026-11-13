@@ -16,8 +16,7 @@ pub struct AcceptAuthority<'info> {
         constraint = pool.pending_authority != Pubkey::default() @ StakingError::NoPendingTransfer
     )]
     pub pool: Account<'info, StakingPool>,
-    
+
     /// The new authority accepting the transfer - must sign
     pub new_authority: Signer<'info>,
 }
-

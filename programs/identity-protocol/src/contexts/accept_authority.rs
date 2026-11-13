@@ -15,8 +15,7 @@ pub struct AcceptAuthority<'info> {
         constraint = identity_config.pending_authority != Pubkey::default() @ IdentityError::NoPendingTransfer
     )]
     pub identity_config: Account<'info, IdentityConfig>,
-    
+
     /// The new authority accepting the transfer - must sign
     pub new_authority: Signer<'info>,
 }
-

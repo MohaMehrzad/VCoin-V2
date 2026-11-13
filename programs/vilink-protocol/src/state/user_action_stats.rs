@@ -52,6 +52,5 @@ impl UserActionStats {
         8 +  // last_action_at
         8 +  // action_nonce (M-04)
         8 +  // batch_nonce (Finding #5)
-        1;   // bump
+        1; // bump
 }
-

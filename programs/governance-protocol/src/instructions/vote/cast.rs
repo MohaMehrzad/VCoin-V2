@@ -1,26 +1,23 @@
-use anchor_lang::prelude::*;
-use crate::constants::{USER_STAKE_SEED, USER_SCORE_SEED};
+use crate::constants::{USER_SCORE_SEED, USER_STAKE_SEED};
 use crate::contexts::CastVote;
 use crate::errors::GovernanceError;
 use crate::events::VoteCast;
-use crate::state::{VoteChoice, calculate_voting_power};
+use crate::state::{calculate_voting_power, VoteChoice};
+use anchor_lang::prelude::*;
 
 /// C-NEW-01 Security Fix: On-chain verification of voting power
-/// 
+///
 /// All voting power components are now read directly from on-chain accounts:
 /// - veVCoin balance: from UserStake.ve_vcoin_amount (staking-protocol)
 /// - Tier: from UserStake.tier (staking-protocol)
 /// - 5A Score: from UserScore.composite_score (five-a-protocol)
-/// 
+///
 /// This prevents vote manipulation where attackers could claim arbitrary values.
-pub fn handler(
-    ctx: Context<CastVote>,
-    choice: u8,
-) -> Result<()> {
+pub fn handler(ctx: Context<CastVote>, choice: u8) -> Result<()> {
     let config = &ctx.accounts.config;
     let proposal = &mut ctx.accounts.proposal;
     let voter_key = ctx.accounts.voter.key();
-    
+
     // Verify voting period
     let clock = Clock::get()?;
     require!(
@@ -37,31 +34,31 @@ pub fn handler(
         !proposal.is_private_voting,
         GovernanceError::ZKVotingNotEnabled
     );
-    
+
     // =========================================================================
     // C-NEW-01: Verify and read voting power from on-chain accounts
     // =========================================================================
-    
+
     // Verify UserStake PDA derivation from staking program
     let (expected_user_stake_pda, _) = Pubkey::find_program_address(
         &[USER_STAKE_SEED, voter_key.as_ref()],
-        &config.staking_program
+        &config.staking_program,
     );
     require!(
         ctx.accounts.user_stake.key() == expected_user_stake_pda,
         GovernanceError::InvalidUserStakePDA
     );
-    
-    // Verify UserScore PDA derivation from five-a program  
+
+    // Verify UserScore PDA derivation from five-a program
     let (expected_user_score_pda, _) = Pubkey::find_program_address(
         &[USER_SCORE_SEED, voter_key.as_ref()],
-        &config.five_a_program
+        &config.five_a_program,
     );
     require!(
         ctx.accounts.user_score.key() == expected_user_score_pda,
         GovernanceError::InvalidUserScorePDA
     );
-    
+
     // M-02: Read veVCoin balance and tier from UserStake account data
     // IMPORTANT: These byte offsets are tightly coupled to staking-protocol's UserStake struct.
     // If UserStake fields are reordered or new fields inserted before these offsets,
@@ -73,17 +70,22 @@ pub fn handler(
         (0u64, 0u8)
     } else {
         let stake_data = ctx.accounts.user_stake.try_borrow_data()?;
-        require!(stake_data.len() >= 82, GovernanceError::InvalidUserStakeData);
-        
+        require!(
+            stake_data.len() >= 82,
+            GovernanceError::InvalidUserStakeData
+        );
+
         // tier is at offset 72 (8+32+8+8+8+8)
         let tier = stake_data[72];
         // ve_vcoin_amount is at offset 73-80 (u64 little-endian)
         let ve_vcoin_amount = u64::from_le_bytes(
-            stake_data[73..81].try_into().map_err(|_| GovernanceError::InvalidUserStakeData)?
+            stake_data[73..81]
+                .try_into()
+                .map_err(|_| GovernanceError::InvalidUserStakeData)?,
         );
         (ve_vcoin_amount, tier)
     };
-    
+
     // M-02: Read 5A composite score from UserScore account data
     // IMPORTANT: These byte offsets are tightly coupled to five-a-protocol's UserScore struct.
     // If UserScore fields are reordered or new fields inserted before these offsets,
@@ -95,14 +97,19 @@ pub fn handler(
         0u16
     } else {
         let score_data = ctx.accounts.user_score.try_borrow_data()?;
-        require!(score_data.len() >= 52, GovernanceError::InvalidUserScoreData);
-        
+        require!(
+            score_data.len() >= 52,
+            GovernanceError::InvalidUserScoreData
+        );
+
         // composite_score is at offset 50 (8+32+2+2+2+2+2)
         u16::from_le_bytes(
-            score_data[50..52].try_into().map_err(|_| GovernanceError::InvalidUserScoreData)?
+            score_data[50..52]
+                .try_into()
+                .map_err(|_| GovernanceError::InvalidUserScoreData)?,
         )
     };
-    
+
     // M-07 Security Fix: Validate delegation expiry if voting with delegated power
     // H-NEW-03: Also validate that veVCoin balance doesn't exceed delegated amount
     // H-19: Design note - expires_at == 0 means permanent delegation. This is an
@@ -126,13 +133,12 @@ pub fn handler(
             GovernanceError::ExceedsDelegatedAmount
         );
     }
-    
-    let vote_choice = VoteChoice::from_u8(choice)
-        .ok_or(GovernanceError::InvalidVoteChoice)?;
-    
+
+    let vote_choice = VoteChoice::from_u8(choice).ok_or(GovernanceError::InvalidVoteChoice)?;
+
     // Calculate voting power using verified on-chain values
     let vote_weight = calculate_voting_power(vevcoin_balance, five_a_score, tier);
-    
+
     // Record vote
     let vote_record = &mut ctx.accounts.vote_record;
     vote_record.voter = voter_key;
@@ -143,7 +149,7 @@ pub fn handler(
     vote_record.is_private = false;
     vote_record.revealed = true;
     vote_record.bump = ctx.bumps.vote_record;
-    
+
     // Update proposal vote counts
     match vote_choice {
         VoteChoice::For => {
@@ -156,7 +162,7 @@ pub fn handler(
             proposal.votes_abstain = proposal.votes_abstain.saturating_add(vote_weight as u128);
         }
     }
-    
+
     emit!(VoteCast {
         proposal_id: proposal.id,
         voter: vote_record.voter,
@@ -164,9 +170,14 @@ pub fn handler(
         weight: vote_weight,
         is_private: false,
     });
-    
-    msg!("Vote cast: {} with verified weight {} (veVCoin: {}, tier: {}, 5A: {})", 
-         choice, vote_weight, vevcoin_balance, tier, five_a_score);
+
+    msg!(
+        "Vote cast: {} with verified weight {} (veVCoin: {}, tier: {}, 5A: {})",
+        choice,
+        vote_weight,
+        vevcoin_balance,
+        tier,
+        five_a_score
+    );
     Ok(())
 }
-

@@ -31,6 +31,5 @@ impl TransferRecord {
         8 +  // timestamp
         1 +  // wash_trading_flag
         1 +  // is_tip
-        1;   // bump
+        1; // bump
 }
-

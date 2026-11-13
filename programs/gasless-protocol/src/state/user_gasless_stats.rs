@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use super::GaslessConfig;
+use anchor_lang::prelude::*;
 
 /// User gasless statistics
 #[account]
@@ -47,8 +47,8 @@ impl UserGaslessStats {
         4 +  // today_subsidized
         8 +  // first_gasless_at
         8 +  // last_gasless_at
-        1;   // bump
-    
+        1; // bump
+
     /// Reset daily limits if new day
     pub fn check_daily_reset(&mut self, current_timestamp: i64) {
         let day = GaslessConfig::get_day_number(current_timestamp);
@@ -58,4 +58,3 @@ impl UserGaslessStats {
         }
     }
 }
-

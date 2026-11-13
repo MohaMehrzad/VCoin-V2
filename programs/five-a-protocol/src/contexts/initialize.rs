@@ -13,13 +13,12 @@ pub struct Initialize<'info> {
         bump
     )]
     pub five_a_config: Account<'info, FiveAConfig>,
-    
+
     /// CHECK: Vouch stake vault
     pub vouch_vault: UncheckedAccount<'info>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

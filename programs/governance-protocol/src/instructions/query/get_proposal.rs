@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::GetProposal;
+use anchor_lang::prelude::*;
 
 pub fn handler(ctx: Context<GetProposal>) -> Result<()> {
     let proposal = &ctx.accounts.proposal;
@@ -10,4 +10,3 @@ pub fn handler(ctx: Context<GetProposal>) -> Result<()> {
     msg!("Abstain: {}", proposal.votes_abstain);
     Ok(())
 }
-

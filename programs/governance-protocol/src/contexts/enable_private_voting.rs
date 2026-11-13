@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{Proposal, PrivateVotingConfig};
+use crate::state::{PrivateVotingConfig, Proposal};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct EnablePrivateVoting<'info> {
@@ -10,7 +10,7 @@ pub struct EnablePrivateVoting<'info> {
         has_one = proposer
     )]
     pub proposal: Account<'info, Proposal>,
-    
+
     #[account(
         init,
         payer = proposer,
@@ -19,10 +19,9 @@ pub struct EnablePrivateVoting<'info> {
         bump
     )]
     pub private_voting_config: Account<'info, PrivateVotingConfig>,
-    
+
     #[account(mut)]
     pub proposer: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

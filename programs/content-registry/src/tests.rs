@@ -1,6 +1,11 @@
 //! Unit tests for Content Registry
 //!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
@@ -110,11 +115,17 @@ mod tests {
         for tier in 0..4u8 {
             let current_max = UserEnergy::max_energy_for_tier(tier);
             let next_max = UserEnergy::max_energy_for_tier(tier + 1);
-            assert!(next_max > current_max, "Max energy should increase with tier");
-            
+            assert!(
+                next_max > current_max,
+                "Max energy should increase with tier"
+            );
+
             let current_regen = UserEnergy::regen_rate_for_tier(tier);
             let next_regen = UserEnergy::regen_rate_for_tier(tier + 1);
-            assert!(next_regen > current_regen, "Regen rate should increase with tier");
+            assert!(
+                next_regen > current_regen,
+                "Regen rate should increase with tier"
+            );
         }
     }
 
@@ -127,7 +138,7 @@ mod tests {
         let regen_rate = REGEN_RATE_BRONZE; // 50 per hour
         let hours_passed = 2;
         let regen_amount = (regen_rate as u32) * hours_passed;
-        
+
         assert_eq!(regen_amount, 100, "Should regen 100 energy in 2 hours");
     }
 
@@ -137,12 +148,12 @@ mod tests {
         energy.tier = 2; // Silver
         energy.max_energy = UserEnergy::max_energy_for_tier(2);
         energy.current_energy = 700;
-        
+
         // Simulate regen that would exceed max
         let regen_amount = 200u16;
         let new_energy = energy.current_energy.saturating_add(regen_amount);
         let capped_energy = new_energy.min(energy.max_energy);
-        
+
         assert_eq!(capped_energy, MAX_ENERGY_SILVER, "Energy should cap at max");
     }
 
@@ -156,7 +167,7 @@ mod tests {
             current_energy: 100,
             ..Default::default()
         };
-        
+
         assert!(energy.current_energy >= ENERGY_COST_TEXT_POST);
         assert!(energy.current_energy >= ENERGY_COST_IMAGE_POST);
         assert!(energy.current_energy >= ENERGY_COST_VIDEO_POST);
@@ -168,7 +179,7 @@ mod tests {
             current_energy: 5,
             ..Default::default()
         };
-        
+
         // Can only post replies with this energy
         assert!(energy.current_energy >= ENERGY_COST_REPLY);
         assert!(energy.current_energy < ENERGY_COST_TEXT_POST);
@@ -181,7 +192,7 @@ mod tests {
     #[test]
     fn test_content_record_default() {
         let record = ContentRecord::default();
-        
+
         assert_eq!(record.version, 0);
         assert_eq!(record.state, 0);
         assert!(!record.refund_claimed);
@@ -191,10 +202,10 @@ mod tests {
     #[test]
     fn test_content_edit_increments_version() {
         let mut record = ContentRecord::default();
-        
+
         record.version = record.version.saturating_add(1);
         assert_eq!(record.version, 1);
-        
+
         record.version = record.version.saturating_add(1);
         assert_eq!(record.version, 2);
     }
@@ -207,11 +218,11 @@ mod tests {
     fn test_refund_tier_10_likes() {
         let engagement = 15u32;
         let energy_spent = 20u16;
-        
+
         // 10-49 likes = 25% refund
         assert!(engagement >= REFUND_THRESHOLD_10);
         assert!(engagement < REFUND_THRESHOLD_50);
-        
+
         let refund = (energy_spent as u32 * 25) / 100;
         assert_eq!(refund, 5);
     }
@@ -220,11 +231,11 @@ mod tests {
     fn test_refund_tier_50_likes() {
         let engagement = 75u32;
         let energy_spent = 20u16;
-        
+
         // 50-99 likes = 50% refund
         assert!(engagement >= REFUND_THRESHOLD_50);
         assert!(engagement < REFUND_THRESHOLD_100);
-        
+
         let refund = (energy_spent as u32 * 50) / 100;
         assert_eq!(refund, 10);
     }
@@ -233,10 +244,10 @@ mod tests {
     fn test_refund_tier_viral() {
         let engagement = 2000u32;
         let energy_spent = 20u16;
-        
+
         // 1000+ likes = 150% refund
         assert!(engagement >= REFUND_THRESHOLD_1000);
-        
+
         let refund = (energy_spent as u32 * 150) / 100;
         assert_eq!(refund, 30);
     }
@@ -250,18 +261,17 @@ mod tests {
         let program_id = Pubkey::new_unique();
         let tracking_id_1 = [1u8; 32];
         let tracking_id_2 = [2u8; 32];
-        
-        let (pda1, _) = Pubkey::find_program_address(
-            &[CONTENT_RECORD_SEED, &tracking_id_1],
-            &program_id
+
+        let (pda1, _) =
+            Pubkey::find_program_address(&[CONTENT_RECORD_SEED, &tracking_id_1], &program_id);
+
+        let (pda2, _) =
+            Pubkey::find_program_address(&[CONTENT_RECORD_SEED, &tracking_id_2], &program_id);
+
+        assert_ne!(
+            pda1, pda2,
+            "Different tracking IDs should have different PDAs"
         );
-        
-        let (pda2, _) = Pubkey::find_program_address(
-            &[CONTENT_RECORD_SEED, &tracking_id_2],
-            &program_id
-        );
-        
-        assert_ne!(pda1, pda2, "Different tracking IDs should have different PDAs");
     }
 
     #[test]
@@ -269,17 +279,13 @@ mod tests {
         let program_id = Pubkey::new_unique();
         let user1 = Pubkey::new_unique();
         let user2 = Pubkey::new_unique();
-        
-        let (pda1, _) = Pubkey::find_program_address(
-            &[USER_ENERGY_SEED, user1.as_ref()],
-            &program_id
-        );
-        
-        let (pda2, _) = Pubkey::find_program_address(
-            &[USER_ENERGY_SEED, user2.as_ref()],
-            &program_id
-        );
-        
+
+        let (pda1, _) =
+            Pubkey::find_program_address(&[USER_ENERGY_SEED, user1.as_ref()], &program_id);
+
+        let (pda2, _) =
+            Pubkey::find_program_address(&[USER_ENERGY_SEED, user2.as_ref()], &program_id);
+
         assert_ne!(pda1, pda2);
     }
 
@@ -293,7 +299,7 @@ mod tests {
         energy.tier = 4; // Platinum
         energy.max_energy = MAX_ENERGY_PLATINUM;
         energy.current_energy = MAX_ENERGY_PLATINUM;
-        
+
         // Energy should never exceed max
         assert!(energy.current_energy <= energy.max_energy);
     }
@@ -301,11 +307,10 @@ mod tests {
     #[test]
     fn test_invariant_version_monotonic() {
         let mut record = ContentRecord::default();
-        
+
         for expected in 1..=10u16 {
             record.version = record.version.saturating_add(1);
             assert_eq!(record.version, expected);
         }
     }
 }
-

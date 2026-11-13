@@ -1,15 +1,11 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::contexts::Initialize;
 use crate::errors::GaslessError;
 use crate::events::GaslessConfigInitialized;
 use crate::state::GaslessConfig;
+use anchor_lang::prelude::*;
 
-pub fn handler(
-    ctx: Context<Initialize>,
-    fee_payer: Pubkey,
-    daily_budget: u64,
-) -> Result<()> {
+pub fn handler(ctx: Context<Initialize>, fee_payer: Pubkey, daily_budget: u64) -> Result<()> {
     // M-AUDIT-22: Validate fee_payer is not the default/zero pubkey
     require!(fee_payer != Pubkey::default(), GaslessError::InvalidAddress);
 
@@ -32,14 +28,16 @@ pub fn handler(
     config.current_day = GaslessConfig::get_day_number(Clock::get()?.unix_timestamp);
     config.day_spent = 0;
     config.bump = ctx.bumps.config;
-    
+
     emit!(GaslessConfigInitialized {
         authority: config.authority,
         fee_payer,
         daily_budget,
     });
-    
-    msg!("Gasless Protocol initialized with {} lamports daily budget", daily_budget);
+
+    msg!(
+        "Gasless Protocol initialized with {} lamports daily budget",
+        daily_budget
+    );
     Ok(())
 }
-

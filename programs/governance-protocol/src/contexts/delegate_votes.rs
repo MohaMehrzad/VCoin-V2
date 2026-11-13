@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
-use crate::state::{Delegation, DelegateStats, GovernanceConfig};
+use crate::state::{DelegateStats, Delegation, GovernanceConfig};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct DelegateVotes<'info> {
@@ -41,4 +41,3 @@ pub struct DelegateVotes<'info> {
 
     pub system_program: Program<'info, System>,
 }
-

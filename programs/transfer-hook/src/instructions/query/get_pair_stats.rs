@@ -12,4 +12,3 @@ pub fn handler(ctx: Context<GetPairStats>) -> Result<()> {
     msg!("Trust score: {}", pair.trust_score);
     Ok(())
 }
-

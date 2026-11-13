@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 
-use crate::constants::{VCOIN_CONFIG_SEED, SLASH_REQUEST_SEED};
+use crate::constants::{SLASH_REQUEST_SEED, VCOIN_CONFIG_SEED};
 use crate::errors::VCoinError;
-use crate::state::{VCoinConfig, SlashRequest};
+use crate::state::{SlashRequest, VCoinConfig};
 
 /// Context for proposing a slash (H-01 Security Fix)
 /// Only the permanent delegate can propose slashes
@@ -16,7 +16,7 @@ pub struct ProposeSlash<'info> {
         constraint = config.permanent_delegate == authority.key() @ VCoinError::Unauthorized
     )]
     pub config: Account<'info, VCoinConfig>,
-    
+
     #[account(
         init,
         payer = authority,
@@ -25,7 +25,7 @@ pub struct ProposeSlash<'info> {
         bump
     )]
     pub slash_request: Account<'info, SlashRequest>,
-    
+
     /// The target token account to slash (for validation)
     /// H-04 Security Fix: Verify target_account matches the target parameter
     #[account(
@@ -33,11 +33,10 @@ pub struct ProposeSlash<'info> {
         constraint = target_account.key() == target @ VCoinError::InvalidTarget
     )]
     pub target_account: InterfaceAccount<'info, TokenAccount>,
-    
+
     /// The permanent delegate proposing the slash
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

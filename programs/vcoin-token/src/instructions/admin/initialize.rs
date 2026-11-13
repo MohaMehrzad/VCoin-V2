@@ -17,7 +17,7 @@ use crate::events::VCoinInitialized;
 /// which is critical for incident response scenarios.
 pub fn handler(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.config;
-    
+
     config.authority = ctx.accounts.authority.key();
     config.mint = ctx.accounts.mint.key();
     config.treasury = ctx.accounts.treasury.key();
@@ -25,9 +25,9 @@ pub fn handler(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Resu
     config.total_minted = 0;
     config.paused = false;
     config.bump = ctx.bumps.config;
-    
+
     let clock = Clock::get()?;
-    
+
     // L-01: Emit initialization event
     emit!(VCoinInitialized {
         authority: config.authority,
@@ -35,12 +35,11 @@ pub fn handler(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Resu
         permanent_delegate,
         timestamp: clock.unix_timestamp,
     });
-    
+
     msg!("VCoin mint initialized");
     msg!("Mint: {}", config.mint);
     msg!("Authority: {}", config.authority);
     msg!("Permanent Delegate: {}", permanent_delegate);
-    
+
     Ok(())
 }
-

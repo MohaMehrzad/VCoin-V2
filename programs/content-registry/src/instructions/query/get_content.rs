@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::GetContent;
+use anchor_lang::prelude::*;
 
 pub fn handler(ctx: Context<GetContent>) -> Result<()> {
     let content = &ctx.accounts.content_record;
@@ -10,4 +10,3 @@ pub fn handler(ctx: Context<GetContent>) -> Result<()> {
     msg!("Version: {}", content.version);
     Ok(())
 }
-

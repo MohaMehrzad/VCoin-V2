@@ -23,37 +23,36 @@ pub fn get_five_a_multiplier(score: u16) -> u64 {
 /// M-03 Security Fix: Added domain separation to prevent second preimage attacks
 pub fn compute_leaf(user: &anchor_lang::prelude::Pubkey, amount: u64, epoch: u64) -> [u8; 32] {
     use solana_program::keccak;
-    
+
     // M-03: Domain separator + user (32) + amount (8) + epoch (8) = 62 bytes
     let mut data = Vec::with_capacity(62);
-    data.extend_from_slice(SSCRE_LEAF_DOMAIN);  // Domain separator for uniqueness
+    data.extend_from_slice(SSCRE_LEAF_DOMAIN); // Domain separator for uniqueness
     data.extend_from_slice(user.as_ref());
     data.extend_from_slice(&amount.to_le_bytes());
     data.extend_from_slice(&epoch.to_le_bytes());
-    
+
     keccak::hash(&data).to_bytes()
 }
 
 /// Verify merkle proof
 pub fn verify_merkle_proof(proof: &[[u8; 32]], root: &[u8; 32], leaf: &[u8; 32]) -> bool {
     use solana_program::keccak;
-    
+
     let mut computed_hash = *leaf;
-    
+
     for proof_element in proof {
         let (left, right) = if computed_hash < *proof_element {
             (computed_hash, *proof_element)
         } else {
             (*proof_element, computed_hash)
         };
-        
+
         let mut combined = [0u8; 64];
         combined[..32].copy_from_slice(&left);
         combined[32..].copy_from_slice(&right);
-        
+
         computed_hash = keccak::hash(&combined).to_bytes();
     }
-    
+
     computed_hash == *root
 }
-

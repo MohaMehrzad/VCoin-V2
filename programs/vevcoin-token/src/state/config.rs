@@ -31,6 +31,5 @@ impl VeVCoinConfig {
         8 +  // total_supply
         8 +  // total_holders
         8 +  // pending_authority_activated_at (C-01)
-        1;   // bump
+        1; // bump
 }
-

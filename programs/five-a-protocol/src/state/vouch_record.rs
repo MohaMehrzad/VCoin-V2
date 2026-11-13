@@ -28,6 +28,5 @@ impl VouchRecord {
         8 +  // vouch_stake
         1 +  // status
         1 +  // outcome_evaluated
-        1;   // bump
+        1; // bump
 }
-

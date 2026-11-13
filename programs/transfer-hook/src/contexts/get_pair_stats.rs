@@ -10,11 +10,10 @@ pub struct GetPairStats<'info> {
         bump = pair_tracking.bump
     )]
     pub pair_tracking: Account<'info, PairTracking>,
-    
+
     /// CHECK: Just used for PDA derivation
     pub sender: UncheckedAccount<'info>,
-    
+
     /// CHECK: Just used for PDA derivation
     pub receiver: UncheckedAccount<'info>,
 }
-

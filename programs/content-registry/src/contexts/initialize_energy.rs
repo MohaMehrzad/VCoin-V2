@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::constants::ENERGY_CONFIG_SEED;
 use crate::state::EnergyConfig;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct InitializeEnergy<'info> {
@@ -12,10 +12,9 @@ pub struct InitializeEnergy<'info> {
         bump
     )]
     pub energy_config: Account<'info, EnergyConfig>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
-

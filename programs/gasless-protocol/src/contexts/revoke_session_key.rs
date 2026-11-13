@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::errors::GaslessError;
 use crate::state::{SessionKey, UserGaslessStats};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct RevokeSessionKey<'info> {
@@ -12,14 +12,13 @@ pub struct RevokeSessionKey<'info> {
         constraint = session_key.user == user.key() @ GaslessError::Unauthorized
     )]
     pub session_key: Account<'info, SessionKey>,
-    
+
     #[account(
         mut,
         seeds = [USER_GASLESS_SEED, user.key().as_ref()],
         bump = user_stats.bump
     )]
     pub user_stats: Account<'info, UserGaslessStats>,
-    
+
     pub user: Signer<'info>,
 }
-

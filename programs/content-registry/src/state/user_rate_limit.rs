@@ -28,8 +28,8 @@ impl UserRateLimit {
         8 +  // last_post_time
         8 +  // day_reset_time
         8 +  // hour_reset_time
-        1;   // bump
-    
+        1; // bump
+
     /// Get daily cap based on tier
     pub fn daily_cap_for_tier(tier: u8) -> u16 {
         match tier {

@@ -11,40 +11,42 @@ pub fn handler(
     new_level: u8,
     verification_hash: [u8; 32],
 ) -> Result<()> {
-    let _level = VerificationLevel::from_u8(new_level)
-        .ok_or(IdentityError::InvalidVerificationLevel)?;
-    
+    let _level =
+        VerificationLevel::from_u8(new_level).ok_or(IdentityError::InvalidVerificationLevel)?;
+
     let clock = Clock::get()?;
     let identity = &mut ctx.accounts.identity;
     let old_level = identity.verification_level;
 
     // C-AUDIT-17: Require SAS attestation before verification upgrade
-    require!(identity.verification_hash != [0u8; 32], IdentityError::SASAttestationRequired);
+    require!(
+        identity.verification_hash != [0u8; 32],
+        IdentityError::SASAttestationRequired
+    );
 
     // Cannot downgrade verification
     require!(
         new_level >= old_level,
         IdentityError::CannotDowngradeVerification
     );
-    
+
     identity.verification_level = new_level;
     identity.verification_hash = verification_hash;
     identity.updated_at = clock.unix_timestamp;
-    
+
     // Update verified count if upgrading from None
     if old_level == 0 && new_level > 0 {
         let config = &mut ctx.accounts.identity_config;
         config.verified_identities = config.verified_identities.saturating_add(1);
     }
-    
+
     emit!(VerificationUpdated {
         owner: identity.owner,
         old_level,
         new_level,
         timestamp: clock.unix_timestamp,
     });
-    
+
     msg!("Verification updated: {} -> {}", old_level, new_level);
     Ok(())
 }
-

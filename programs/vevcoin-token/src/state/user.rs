@@ -25,8 +25,7 @@ impl UserVeVCoin {
         8 +  // balance
         8 +  // first_mint_at
         8 +  // last_update_at
-        1;   // bump
-        
+        1; // bump
+
     pub const SEED: &'static [u8] = USER_VEVCOIN_SEED;
 }
-

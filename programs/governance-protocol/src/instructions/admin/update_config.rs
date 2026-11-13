@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::UpdateConfig;
+use anchor_lang::prelude::*;
 
 pub fn handler(
     ctx: Context<UpdateConfig>,
@@ -9,7 +9,7 @@ pub fn handler(
     timelock_delay: Option<i64>,
 ) -> Result<()> {
     let config = &mut ctx.accounts.governance_config;
-    
+
     if let Some(threshold) = proposal_threshold {
         config.proposal_threshold = threshold;
     }
@@ -22,8 +22,7 @@ pub fn handler(
     if let Some(delay) = timelock_delay {
         config.timelock_delay = delay;
     }
-    
+
     msg!("Governance config updated");
     Ok(())
 }
-

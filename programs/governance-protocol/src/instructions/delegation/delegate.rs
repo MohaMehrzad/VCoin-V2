@@ -1,8 +1,8 @@
-use anchor_lang::prelude::*;
 use crate::constants::USER_STAKE_SEED;
 use crate::contexts::DelegateVotes;
 use crate::errors::GovernanceError;
 use crate::events::DelegationCreated;
+use anchor_lang::prelude::*;
 
 pub fn handler(
     ctx: Context<DelegateVotes>,
@@ -15,7 +15,10 @@ pub fn handler(
     let delegator_key = ctx.accounts.delegator.key();
     let delegate_key = ctx.accounts.delegate.key();
 
-    require!(delegator_key != delegate_key, GovernanceError::CannotDelegateSelf);
+    require!(
+        delegator_key != delegate_key,
+        GovernanceError::CannotDelegateSelf
+    );
 
     // H-NEW-03: Validate delegation amount against actual veVCoin balance
     let delegator_balance = get_delegator_vevcoin_balance(&ctx)?;
@@ -36,7 +39,7 @@ pub fn handler(
     delegation.expires_at = expires_at;
     delegation.revocable = revocable;
     delegation.bump = ctx.bumps.delegation;
-    
+
     // Update delegate stats
     let delegate_stats = &mut ctx.accounts.delegate_stats;
     delegate_stats.delegate = delegate_key;
@@ -45,7 +48,7 @@ pub fn handler(
         .total_delegated_vevcoin
         .saturating_add(vevcoin_amount);
     delegate_stats.bump = ctx.bumps.delegate_stats;
-    
+
     emit!(DelegationCreated {
         delegator: delegator_key,
         delegate: delegate_key,
@@ -82,7 +85,10 @@ fn get_delegator_vevcoin_balance(ctx: &Context<DelegateVotes>) -> Result<u64> {
     // Read veVCoin balance from staking account
     // Layout: UserStake struct has vevcoin_amount at bytes 73-81
     let stake_data = user_stake.try_borrow_data()?;
-    require!(stake_data.len() >= 81, GovernanceError::InvalidUserStakeData);
+    require!(
+        stake_data.len() >= 81,
+        GovernanceError::InvalidUserStakeData
+    );
 
     let vevcoin_balance = u64::from_le_bytes(
         stake_data[73..81]
@@ -92,4 +98,3 @@ fn get_delegator_vevcoin_balance(ctx: &Context<DelegateVotes>) -> Result<u64> {
 
     Ok(vevcoin_balance)
 }
-

@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::contexts::GetConfigStats;
+use anchor_lang::prelude::*;
 
 pub fn handler(ctx: Context<GetConfigStats>) -> Result<()> {
     let config = &ctx.accounts.config;
@@ -11,4 +11,3 @@ pub fn handler(ctx: Context<GetConfigStats>) -> Result<()> {
     msg!("Paused: {}", config.paused);
     Ok(())
 }
-

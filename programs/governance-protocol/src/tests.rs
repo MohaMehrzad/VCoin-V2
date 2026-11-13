@@ -1,12 +1,17 @@
 //! Unit tests for Governance Protocol
 //!
 //! These tests run against the ACTUAL program code.
+#![allow(
+    clippy::module_inception,
+    clippy::field_reassign_with_default,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 mod tests {
     use crate::constants::*;
-    use crate::state::{GovernanceConfig, Proposal, VoteRecord, ProposalStatus};
     use crate::state::utils::{calculate_voting_power, integer_sqrt};
+    use crate::state::{GovernanceConfig, Proposal, ProposalStatus, VoteRecord};
     use anchor_lang::prelude::Pubkey;
 
     // ========================================================================
@@ -24,13 +29,20 @@ mod tests {
     #[test]
     fn test_governance_thresholds() {
         assert_eq!(COMMUNITY_THRESHOLD, 1, "1 veVCoin to vote");
-        assert_eq!(DELEGATE_THRESHOLD, 1_000, "1000 veVCoin to create proposals");
+        assert_eq!(
+            DELEGATE_THRESHOLD, 1_000,
+            "1000 veVCoin to create proposals"
+        );
         assert_eq!(COUNCIL_THRESHOLD, 10_000, "10000 veVCoin for council");
     }
 
     #[test]
     fn test_default_voting_period() {
-        assert_eq!(DEFAULT_VOTING_PERIOD, 7 * 24 * 60 * 60, "7 days voting period");
+        assert_eq!(
+            DEFAULT_VOTING_PERIOD,
+            7 * 24 * 60 * 60,
+            "7 days voting period"
+        );
     }
 
     #[test]
@@ -54,7 +66,10 @@ mod tests {
 
     #[test]
     fn test_diminishing_threshold() {
-        assert_eq!(DIMINISHING_THRESHOLD, 100_000, "100K vote cap before diminishing");
+        assert_eq!(
+            DIMINISHING_THRESHOLD, 100_000,
+            "100K vote cap before diminishing"
+        );
     }
 
     #[test]
@@ -69,8 +84,14 @@ mod tests {
 
     #[test]
     fn test_governance_config_size() {
-        let expected = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 1;
-        assert_eq!(GovernanceConfig::LEN, expected, "Config size mismatch");
+        // LEN must equal the discriminator plus the Borsh size of a maximal instance.
+        let mut buf = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(&GovernanceConfig::default(), &mut buf).unwrap();
+        assert_eq!(
+            GovernanceConfig::LEN,
+            8 + buf.len(),
+            "GovernanceConfig::LEN out of sync with struct"
+        );
     }
 
     #[test]
@@ -135,7 +156,7 @@ mod tests {
     fn test_voting_power_basic() {
         // 10000 veVCoin, 0 5A score, no tier
         let power = calculate_voting_power(10_000, 0, 0);
-        
+
         // sqrt(10000) = 100
         // 5A boost = 1000 + 0 = 1000
         // tier mult = 1000
@@ -147,7 +168,7 @@ mod tests {
     fn test_voting_power_with_5a() {
         // 10000 veVCoin, max 5A score (10000 = 100%), no tier
         let power = calculate_voting_power(10_000, 10_000, 0);
-        
+
         // sqrt(10000) = 100
         // 5A boost = 1000 + 1000 = 2000 (2.0x)
         // tier mult = 1000
@@ -159,7 +180,7 @@ mod tests {
     fn test_voting_power_platinum_tier() {
         // 10000 veVCoin, 0 5A score, Platinum tier
         let power = calculate_voting_power(10_000, 0, 4);
-        
+
         // sqrt(10000) = 100
         // 5A boost = 1000
         // tier mult = 10000 (10x)
@@ -171,7 +192,7 @@ mod tests {
     fn test_voting_power_all_boosts() {
         // 10000 veVCoin, max 5A, Platinum tier
         let power = calculate_voting_power(10_000, 10_000, 4);
-        
+
         // sqrt(10000) = 100
         // 5A boost = 2000 (2.0x)
         // tier mult = 10000 (10x)
@@ -184,7 +205,7 @@ mod tests {
         // Very large stake to trigger diminishing returns
         let vevcoin = 100_000_000_000u64; // 100B (extreme case)
         let power = calculate_voting_power(vevcoin, 10_000, 4);
-        
+
         // raw votes would be enormous, but diminishing returns kicks in
         // Should be capped: DIMINISHING_THRESHOLD + sqrt(excess)
         assert!(power > DIMINISHING_THRESHOLD);
@@ -237,7 +258,7 @@ mod tests {
         proposal.votes_for = 1000;
         proposal.votes_against = 500;
         proposal.votes_abstain = 200;
-        
+
         let total = proposal.votes_for + proposal.votes_against + proposal.votes_abstain;
         assert_eq!(total, 1700);
     }
@@ -249,7 +270,7 @@ mod tests {
             votes_against: 500,
             ..Default::default()
         };
-        
+
         assert!(proposal.votes_for > proposal.votes_against, "Should pass");
     }
 
@@ -260,8 +281,11 @@ mod tests {
             votes_against: 600,
             ..Default::default()
         };
-        
-        assert!(proposal.votes_for < proposal.votes_against, "Should be rejected");
+
+        assert!(
+            proposal.votes_for < proposal.votes_against,
+            "Should be rejected"
+        );
     }
 
     // ========================================================================
@@ -277,7 +301,7 @@ mod tests {
             votes_abstain: 100_000,
             ..Default::default()
         };
-        
+
         let total = proposal.votes_for + proposal.votes_against + proposal.votes_abstain;
         assert!(total as u64 >= quorum, "Quorum should be reached");
     }
@@ -290,7 +314,7 @@ mod tests {
             votes_against: 50_000,
             ..Default::default()
         };
-        
+
         let total = proposal.votes_for + proposal.votes_against + proposal.votes_abstain;
         assert!((total as u64) < quorum, "Quorum should not be reached");
     }
@@ -303,7 +327,7 @@ mod tests {
     fn test_timelock_calculation() {
         let end_time = 1000i64;
         let execution_time = end_time + DEFAULT_TIMELOCK_DELAY;
-        
+
         assert_eq!(execution_time, 1000 + 48 * 60 * 60);
     }
 
@@ -311,7 +335,7 @@ mod tests {
     fn test_can_execute_after_timelock() {
         let execution_time = 1000i64;
         let current_time = 2000i64;
-        
+
         assert!(current_time >= execution_time, "Should be executable");
     }
 
@@ -319,7 +343,7 @@ mod tests {
     fn test_cannot_execute_before_timelock() {
         let execution_time = 1000i64;
         let current_time = 500i64;
-        
+
         assert!(current_time < execution_time, "Should not be executable");
     }
 
@@ -349,7 +373,7 @@ mod tests {
             votes_abstain: 200,
             ..Default::default()
         };
-        
+
         let calculated_total = proposal.votes_for + proposal.votes_against + proposal.votes_abstain;
         assert_eq!(calculated_total, 1700);
     }
@@ -359,7 +383,7 @@ mod tests {
         // Even with max inputs, voting power should be bounded
         let max_vevcoin = u64::MAX / 1000; // Prevent overflow in calculation
         let power = calculate_voting_power(max_vevcoin, 10_000, 4);
-        
+
         assert!(power < u64::MAX, "Voting power should not overflow");
     }
 
@@ -369,7 +393,7 @@ mod tests {
         // Pending -> Active
         // Active -> Passed | Rejected | Cancelled
         // Passed -> Executed
-        
+
         let valid_transitions = [
             (0, 1), // Pending -> Active
             (1, 2), // Active -> Passed
@@ -377,7 +401,7 @@ mod tests {
             (1, 5), // Active -> Cancelled
             (2, 4), // Passed -> Executed
         ];
-        
+
         for (from, to) in valid_transitions {
             let from_status = ProposalStatus::from_u8(from);
             let to_status = ProposalStatus::from_u8(to);
@@ -392,18 +416,17 @@ mod tests {
     #[test]
     fn test_proposal_pda_unique() {
         let program_id = Pubkey::new_unique();
-        
-        let (pda1, _) = Pubkey::find_program_address(
-            &[PROPOSAL_SEED, &1u64.to_le_bytes()],
-            &program_id
+
+        let (pda1, _) =
+            Pubkey::find_program_address(&[PROPOSAL_SEED, &1u64.to_le_bytes()], &program_id);
+
+        let (pda2, _) =
+            Pubkey::find_program_address(&[PROPOSAL_SEED, &2u64.to_le_bytes()], &program_id);
+
+        assert_ne!(
+            pda1, pda2,
+            "Different proposal IDs should have different PDAs"
         );
-        
-        let (pda2, _) = Pubkey::find_program_address(
-            &[PROPOSAL_SEED, &2u64.to_le_bytes()],
-            &program_id
-        );
-        
-        assert_ne!(pda1, pda2, "Different proposal IDs should have different PDAs");
     }
 
     #[test]
@@ -412,18 +435,20 @@ mod tests {
         let voter = Pubkey::new_unique();
         let proposal1 = Pubkey::new_unique();
         let proposal2 = Pubkey::new_unique();
-        
+
         let (pda1, _) = Pubkey::find_program_address(
             &[VOTE_RECORD_SEED, voter.as_ref(), proposal1.as_ref()],
-            &program_id
+            &program_id,
         );
-        
+
         let (pda2, _) = Pubkey::find_program_address(
             &[VOTE_RECORD_SEED, voter.as_ref(), proposal2.as_ref()],
-            &program_id
+            &program_id,
         );
-        
-        assert_ne!(pda1, pda2, "Same voter, different proposals = different PDAs");
+
+        assert_ne!(
+            pda1, pda2,
+            "Same voter, different proposals = different PDAs"
+        );
     }
 }
-
