@@ -4,7 +4,7 @@ use vevcoin_token::program::VevcoinToken;
 
 use crate::constants::*;
 use crate::errors::StakingError;
-use crate::state::{MaxVoterWeightRecord, Registrar, Voter, VoterWeightRecord};
+use crate::state::{MaxVoterWeightRecord, Registrar, SlashRequest, Voter, VoterWeightRecord};
 
 /// Creates the registrar and its VCoin vault. Upgrade authority only (audit X-1/STK-07).
 #[derive(Accounts)]
@@ -81,7 +81,14 @@ pub struct MoveStake<'info> {
 
     #[account(mut)]
     pub vevcoin_mint: Box<InterfaceAccount<'info, Mint>>,
-    #[account(mut, token::mint = vevcoin_mint, token::authority = owner, token::token_program = token_program)]
+    /// The owner's canonical veVCoin ATA: receipts live in exactly one account per owner, so
+    /// a slash can always burn them (anyone can recreate the ATA).
+    #[account(
+        mut,
+        associated_token::mint = vevcoin_mint,
+        associated_token::authority = owner,
+        associated_token::token_program = token_program,
+    )]
     pub owner_vevcoin: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK: veVCoin config PDA; validated by the veVCoin program (seeds + has_one).
     pub vevcoin_config: UncheckedAccount<'info>,
@@ -193,4 +200,115 @@ pub struct UpdateMaxVoterWeightRecord<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
     #[account(mut, seeds = [MAX_VOTER_WEIGHT_RECORD_SEED], bump)]
     pub max_voter_weight_record: Box<Account<'info, MaxVoterWeightRecord>>,
+}
+
+/// Opens a slash request against `voter` (registrar authority = the DAO).
+#[derive(Accounts)]
+pub struct ProposeSlash<'info> {
+    #[account(mut, seeds = [REGISTRAR_SEED], bump = registrar.bump)]
+    pub registrar: Box<Account<'info, Registrar>>,
+    pub authority: Signer<'info>,
+    #[account(mut, seeds = [VOTER_SEED, voter.owner.as_ref()], bump = voter.bump)]
+    pub voter: Box<Account<'info, Voter>>,
+    #[account(
+        init,
+        payer = payer,
+        space = SlashRequest::LEN,
+        seeds = [SLASH_SEED, voter.key().as_ref(), &registrar.slash_nonce.to_le_bytes()],
+        bump,
+    )]
+    pub slash_request: Box<Account<'info, SlashRequest>>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+/// Cancel (authority) or expire (anyone, after the window): closes the request.
+#[derive(Accounts)]
+pub struct CloseSlash<'info> {
+    #[account(seeds = [REGISTRAR_SEED], bump = registrar.bump)]
+    pub registrar: Box<Account<'info, Registrar>>,
+    #[account(mut, seeds = [VOTER_SEED, voter.owner.as_ref()], bump = voter.bump)]
+    pub voter: Box<Account<'info, Voter>>,
+    #[account(
+        mut,
+        seeds = [SLASH_SEED, voter.key().as_ref(), &slash_request.nonce.to_le_bytes()],
+        bump = slash_request.bump,
+        has_one = voter,
+        has_one = rent_payer,
+        close = rent_payer,
+    )]
+    pub slash_request: Box<Account<'info, SlashRequest>>,
+    /// CHECK: receives the request's rent; bound by `has_one`.
+    #[account(mut)]
+    pub rent_payer: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CancelSlash<'info> {
+    pub close: CloseSlash<'info>,
+    pub authority: Signer<'info>,
+}
+
+/// Executes a ready slash request (permissionless): vault -> slash destination, receipts
+/// burned from the owner's ATA.
+#[derive(Accounts)]
+pub struct ExecuteSlash<'info> {
+    #[account(
+        mut,
+        seeds = [REGISTRAR_SEED],
+        bump = registrar.bump,
+        has_one = vault,
+        has_one = vcoin_mint,
+        has_one = vevcoin_mint,
+        has_one = slash_destination,
+    )]
+    pub registrar: Box<Account<'info, Registrar>>,
+    #[account(mut, seeds = [VOTER_SEED, voter.owner.as_ref()], bump = voter.bump)]
+    pub voter: Box<Account<'info, Voter>>,
+    #[account(
+        mut,
+        seeds = [SLASH_SEED, voter.key().as_ref(), &slash_request.nonce.to_le_bytes()],
+        bump = slash_request.bump,
+        has_one = voter,
+        has_one = rent_payer,
+        close = rent_payer,
+    )]
+    pub slash_request: Box<Account<'info, SlashRequest>>,
+    /// CHECK: receives the request's rent; bound by `has_one`.
+    #[account(mut)]
+    pub rent_payer: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub vcoin_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(mut)]
+    pub slash_destination: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(mut)]
+    pub vevcoin_mint: Box<InterfaceAccount<'info, Mint>>,
+    /// CHECK: the slashed owner; only used to derive the receipt ATA.
+    #[account(address = voter.owner)]
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        associated_token::mint = vevcoin_mint,
+        associated_token::authority = owner,
+        associated_token::token_program = token_program,
+    )]
+    pub owner_vevcoin: Box<InterfaceAccount<'info, TokenAccount>>,
+    /// CHECK: veVCoin config PDA; validated by the veVCoin program (seeds + has_one).
+    pub vevcoin_config: UncheckedAccount<'info>,
+    pub vevcoin_program: Program<'info, VevcoinToken>,
+    pub token_program: Program<'info, Token2022>,
+}
+
+/// Repoints slashed funds to another VCoin token account (authority = the DAO).
+#[derive(Accounts)]
+pub struct SetSlashDestination<'info> {
+    #[account(mut, seeds = [REGISTRAR_SEED], bump = registrar.bump, has_one = vcoin_mint)]
+    pub registrar: Box<Account<'info, Registrar>>,
+    pub authority: Signer<'info>,
+    pub vcoin_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(token::mint = vcoin_mint, token::token_program = token_program)]
+    pub slash_destination: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_program: Program<'info, Token2022>,
 }

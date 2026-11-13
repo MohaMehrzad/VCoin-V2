@@ -2,7 +2,7 @@
 //! behaviour is covered by `integration-tests/tests/staking.rs`.
 
 use crate::constants::*;
-use crate::state::{DepositEntry, Registrar, Voter};
+use crate::state::{DepositEntry, Registrar, SlashRequest, Voter};
 use anchor_lang::prelude::*;
 
 #[test]
@@ -13,6 +13,9 @@ fn account_lens_match_borsh_size() {
     buf.clear();
     Voter::default().serialize(&mut buf).unwrap();
     assert_eq!(Voter::LEN, 8 + buf.len());
+    buf.clear();
+    SlashRequest::default().serialize(&mut buf).unwrap();
+    assert_eq!(SlashRequest::LEN, 8 + buf.len());
 }
 
 #[test]

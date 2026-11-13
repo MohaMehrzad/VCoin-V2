@@ -53,3 +53,9 @@ pub const GOVERNANCE_SEED: &[u8] = b"governance";
 
 /// 5A composite score upper bound (scores are 0..=10000).
 pub const MAX_FIVE_A_SCORE: u16 = 10_000;
+
+/// Slashing: DAO-proposed, executable after a 48h appeal window, void after 7 more days.
+#[constant]
+pub const SLASH_SEED: &[u8] = b"slash";
+pub const SLASH_DELAY: i64 = 48 * 60 * 60;
+pub const SLASH_EXECUTION_WINDOW: i64 = 7 * 24 * 60 * 60;

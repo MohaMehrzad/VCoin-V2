@@ -412,13 +412,33 @@ pub mod stack {
         account
     }
 
-    /// A funded user with VCoin, an empty veVCoin account and a voter account.
+    /// The owner's veVCoin receipt ATA (the only account staking mints receipts into).
+    pub fn receipt_ata(s: &Stack, owner: &Pubkey) -> Pubkey {
+        anchor_spl::associated_token::get_associated_token_address_with_program_id(
+            owner,
+            &s.vevcoin_mint,
+            &spl_token_2022::ID,
+        )
+    }
+
+    /// Creates `owner`'s receipt ATA if missing (anyone may pay).
+    pub fn create_receipt_ata(s: &mut Stack, owner: &Pubkey) -> Pubkey {
+        let admin = s.admin.insecure_clone();
+        let create = anchor_spl::associated_token::spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            &admin.pubkey(),
+            owner,
+            &s.vevcoin_mint,
+            &spl_token_2022::ID,
+        );
+        send(&mut s.svm, &[create], &admin, &[]).expect("create receipt ATA");
+        receipt_ata(s, owner)
+    }
+
+    /// A funded user with VCoin, an empty veVCoin receipt ATA and a voter account.
     pub fn new_staker(s: &mut Stack, vcoin_amount: u64) -> Staker {
         let kp = funded_keypair(&mut s.svm, 10);
         let vcoin = fund_vcoin(s, &kp.pubkey(), vcoin_amount);
-        let admin = s.admin.insecure_clone();
-        let vevcoin =
-            token::create_token_account(&mut s.svm, &admin, &s.vevcoin_mint, &kp.pubkey());
+        let vevcoin = create_receipt_ata(s, &kp.pubkey());
         let voter = pda(
             &[
                 staking_protocol::constants::VOTER_SEED,

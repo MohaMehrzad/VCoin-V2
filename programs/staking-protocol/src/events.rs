@@ -84,3 +84,41 @@ pub struct GateParamsUpdated {
     pub min_vote_score: u16,
     pub min_propose_score: u16,
 }
+
+#[event]
+pub struct SlashProposed {
+    pub request: Pubkey,
+    pub owner: Pubkey,
+    pub amount: u64,
+    pub reason_hash: [u8; 32],
+    pub executable_at: i64,
+    pub expires_at: i64,
+}
+
+#[event]
+pub struct SlashCancelled {
+    pub request: Pubkey,
+    pub owner: Pubkey,
+}
+
+#[event]
+pub struct SlashExecuted {
+    pub request: Pubkey,
+    pub owner: Pubkey,
+    pub requested: u64,
+    pub slashed: u64,
+    pub receipts_burned: u64,
+    pub total_locked: u64,
+}
+
+#[event]
+pub struct SlashExpired {
+    pub request: Pubkey,
+    pub owner: Pubkey,
+}
+
+#[event]
+pub struct SlashDestinationChanged {
+    pub previous: Pubkey,
+    pub new_destination: Pubkey,
+}

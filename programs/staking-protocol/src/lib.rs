@@ -103,6 +103,32 @@ pub mod staking_protocol {
         instructions::realms::set_gate_params(ctx, min_vote_score, min_propose_score)
     }
 
+    /// Opens a slash of `amount` against a voter (authority = the DAO). Freezes the
+    /// voter's withdrawals; executable by anyone after 48h, void 7 days later.
+    pub fn propose_slash(
+        ctx: Context<ProposeSlash>,
+        amount: u64,
+        reason_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::slash::propose_slash(ctx, amount, reason_hash)
+    }
+
+    pub fn cancel_slash(ctx: Context<CancelSlash>) -> Result<()> {
+        instructions::slash::cancel_slash(ctx)
+    }
+
+    pub fn execute_slash(ctx: Context<ExecuteSlash>) -> Result<()> {
+        instructions::slash::execute_slash(ctx)
+    }
+
+    pub fn expire_slash(ctx: Context<CloseSlash>) -> Result<()> {
+        instructions::slash::expire_slash(ctx)
+    }
+
+    pub fn set_slash_destination(ctx: Context<SetSlashDestination>) -> Result<()> {
+        instructions::slash::set_slash_destination(ctx)
+    }
+
     pub fn set_paused(ctx: Context<UpdateRegistrar>, paused: bool) -> Result<()> {
         instructions::admin::set_paused(ctx, paused)
     }

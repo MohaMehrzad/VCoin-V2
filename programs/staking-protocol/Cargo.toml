@@ -21,7 +21,7 @@ custom-panic = []
 
 [dependencies]
 anchor-lang = { workspace = true }
-anchor-spl = { workspace = true, features = ["token_2022", "token_2022_extensions"] }
+anchor-spl = { workspace = true, features = ["token_2022", "token_2022_extensions", "associated_token"] }
 vcoin-common = { workspace = true }
 vcoin-token = { path = "../vcoin-token", features = ["no-entrypoint"] }
 vevcoin-token = { path = "../vevcoin-token", features = ["cpi"] }

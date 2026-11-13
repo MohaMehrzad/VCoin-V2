@@ -50,6 +50,14 @@ pub enum StakingError {
     InvalidScoreAccount,
     #[msg("Gate scores must be at most 10000")]
     InvalidGateParams,
+    #[msg("Withdrawals are frozen while a slash request is pending")]
+    SlashPending,
+    #[msg("Slash request is still inside its appeal window")]
+    SlashNotReady,
+    #[msg("Slash request has expired")]
+    SlashWindowClosed,
+    #[msg("Slash request has not expired yet")]
+    SlashNotExpired,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

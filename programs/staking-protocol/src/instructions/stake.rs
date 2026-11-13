@@ -10,6 +10,10 @@ use crate::events::*;
 use crate::governance::assert_can_withdraw;
 use crate::state::DepositEntry;
 
+use super::token_ops::{
+    burn_receipt, mint_receipt, vault_transfer, ReceiptAccounts, RegistrarSigner,
+};
+
 pub fn create_voter(ctx: Context<CreateVoter>) -> Result<()> {
     let voter = &mut ctx.accounts.voter;
     voter.owner = ctx.accounts.owner.key();
@@ -93,7 +97,7 @@ pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) 
         .checked_add(credited)
         .ok_or(StakingError::Overflow)?;
 
-    mint_receipt(accs, credited)?;
+    mint_receipt(receipt_accounts(accs), &registrar_signer(accs), credited)?;
 
     emit!(Deposited {
         owner: accs.owner.key(),
@@ -140,30 +144,24 @@ pub fn withdraw(ctx: Context<Withdraw>, index: u8, amount: u64) -> Result<()> {
         require!(now >= entry.lock_end, StakingError::StillLocked);
         require!(amount <= entry.amount, StakingError::InsufficientDeposit);
     }
+    require!(accs.voter.pending_slashes == 0, StakingError::SlashPending);
     assert_can_withdraw(
         &accs.registrar,
         &accs.owner.key(),
         &ctx.accounts.token_owner_record.to_account_info(),
     )?;
 
-    let bump = [accs.registrar.bump];
-    let seeds: &[&[u8]] = &[REGISTRAR_SEED, &bump];
-    transfer_checked(
-        CpiContext::new_with_signer(
-            accs.token_program.to_account_info(),
-            TransferChecked {
-                from: accs.vault.to_account_info(),
-                mint: accs.vcoin_mint.to_account_info(),
-                to: accs.owner_vcoin.to_account_info(),
-                authority: accs.registrar.to_account_info(),
-            },
-            &[seeds],
-        ),
+    let signer = registrar_signer(accs);
+    vault_transfer(
+        accs.token_program.to_account_info(),
+        accs.vault.to_account_info(),
+        accs.vcoin_mint.to_account_info(),
+        accs.owner_vcoin.to_account_info(),
+        &signer,
         amount,
         accs.vcoin_mint.decimals,
     )?;
-
-    burn_receipt(accs, amount)?;
+    burn_receipt(receipt_accounts(accs), &signer, amount)?;
 
     let entry = &mut accs.voter.deposits[i];
     entry.amount -= amount; // amount <= entry.amount checked above
@@ -194,42 +192,19 @@ pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
     Ok(())
 }
 
-fn mint_receipt(accs: &MoveStake, amount: u64) -> Result<()> {
-    let bump = [accs.registrar.bump];
-    let seeds: &[&[u8]] = &[REGISTRAR_SEED, &bump];
-    vevcoin_token::cpi::mint_vevcoin(
-        CpiContext::new_with_signer(
-            accs.vevcoin_program.to_account_info(),
-            vevcoin_token::cpi::accounts::MintVeVCoin {
-                config: accs.vevcoin_config.to_account_info(),
-                mint: accs.vevcoin_mint.to_account_info(),
-                destination: accs.owner_vevcoin.to_account_info(),
-                staking_authority: accs.registrar.to_account_info(),
-                token_program: accs.token_program.to_account_info(),
-            },
-            &[seeds],
-        ),
-        amount,
-    )
+fn receipt_accounts<'info>(accs: &MoveStake<'info>) -> ReceiptAccounts<'info> {
+    ReceiptAccounts {
+        vevcoin_program: accs.vevcoin_program.to_account_info(),
+        config: accs.vevcoin_config.to_account_info(),
+        mint: accs.vevcoin_mint.to_account_info(),
+        account: accs.owner_vevcoin.to_account_info(),
+        token_program: accs.token_program.to_account_info(),
+    }
 }
 
-/// Burns `min(amount, balance)` receipts (the veVCoin program clamps), so a holder who
-/// already burned their own receipt can always withdraw.
-pub(crate) fn burn_receipt(accs: &MoveStake, amount: u64) -> Result<()> {
-    let bump = [accs.registrar.bump];
-    let seeds: &[&[u8]] = &[REGISTRAR_SEED, &bump];
-    vevcoin_token::cpi::burn_vevcoin(
-        CpiContext::new_with_signer(
-            accs.vevcoin_program.to_account_info(),
-            vevcoin_token::cpi::accounts::BurnVeVCoin {
-                config: accs.vevcoin_config.to_account_info(),
-                mint: accs.vevcoin_mint.to_account_info(),
-                source: accs.owner_vevcoin.to_account_info(),
-                staking_authority: accs.registrar.to_account_info(),
-                token_program: accs.token_program.to_account_info(),
-            },
-            &[seeds],
-        ),
-        amount,
-    )
+fn registrar_signer<'info>(accs: &MoveStake<'info>) -> RegistrarSigner<'info> {
+    RegistrarSigner {
+        info: accs.registrar.to_account_info(),
+        bump: accs.registrar.bump,
+    }
 }
