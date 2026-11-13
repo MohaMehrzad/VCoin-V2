@@ -1,0 +1,21 @@
+[package]
+name = "zk-poll-core"
+version = "0.1.0"
+description = "Shared verifier for VCoin private polls: domain tags, hash-to-scalar, transcripts, ballot (CDS), DLEQ, Feldman and tally checks. Runs on-chain (Solana syscalls) and off-chain (curve25519-dalek) with identical results."
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+solana-curve25519 = "2.3"
+solana-sha256-hasher = "2.3"
+
+[dev-dependencies]
+curve25519-dalek = { version = "4", features = ["rand_core"] }
+rand = "0.8"
+sha2 = "0.10"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

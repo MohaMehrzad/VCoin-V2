@@ -35,16 +35,16 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | GOV-11 | Medium | Pause stops only new proposals | 02-governance-protocol.md | C7 (Realms) / C10 | removed with the program (C7: governance engine retired for Realms, which has no partial pause; emergency stop is council veto + cool-off, configured in the C18 runbook) |
 | GOV-12 | Low | The governance docs are wrong in security-relevant ways | 02-governance-protocol.md | C18 | open |
 | GOV-13 | Low | Tests use stale interfaces and lock in wrong values | 02-governance-protocol.md | C10 | open |
-| ZK-01 | Critical | The OR-proof verifier can never accept a proof, so private voting is dead | 03-zk-private-voting.md | C9/C10 | open |
-| ZK-02 | Medium | The SDK reduces challenges mod ℓ but the program compares raw digests, so honest proofs pass about 6% of the time | 03-zk-private-voting.md | C9/C10 | open |
-| ZK-03 | Medium | Privacy rests entirely on keys chosen by the proposer, and none are checked | 03-zk-private-voting.md | C9/C10 | open |
+| ZK-01 | Critical | The OR-proof verifier can never accept a proof, so private voting is dead | 03-zk-private-voting.md | C9/C10 | partial (C9: CDS 1-of-2 proofs, 448-byte ballot proof, one verifier in crates/zk-poll-core shared by SDK and program; 200-ballot SDK→verifier round trip in packages/zk-voting-sdk/tests/round_trip.rs. On-chain wiring in C10) |
+| ZK-02 | Medium | The SDK reduces challenges mod ℓ but the program compares raw digests, so honest proofs pass about 6% of the time | 03-zk-private-voting.md | C9/C10 | partial (C9: one hs() = SHA-256 masked to 252 bits for OR, sum and DLEQ challenges; scalars compared after mod-ℓ add; parity with dalek tested. On-chain wiring in C10) |
+| ZK-03 | Medium | Privacy rests entirely on keys chosen by the proposer, and none are checked | 03-zk-private-voting.md | C9/C10 | partial (C9: Pedersen DKG with Feldman checks, no joint secret anywhere; verify_committee enforces 3≤t≤n≤5, non-identity key, distinct members, A_0 = election key, Feldman per member. Enforced at poll enable in C10) |
 | ZK-04 | Medium | A proposer can zero out a public vote through the reveal path | 03-zk-private-voting.md | C9/C10 | open |
 | ZK-05 | Medium | Finalize ignores reveal state | 03-zk-private-voting.md | C9/C10 | open |
-| ZK-06 | Low | Ballots aren't bound to the voter or the proposal, so they can be copied | 03-zk-private-voting.md | C9/C10 | open |
+| ZK-06 | Low | Ballots aren't bound to the voter or the proposal, so they can be copied | 03-zk-private-voting.md | C9/C10 | partial (C9: every transcript binds program, poll, voter, election key, H, weight; DLEQ binds program, poll, member index and key; replay tests. On-chain wiring in C10) |
 | ZK-07 | Low | "Production-ready" and "disabled by flag" are both false | 03-zk-private-voting.md | C9/C10 | open |
-| ZK-08 | Low | No test anywhere verifies a proof | 03-zk-private-voting.md | C9/C10 | open |
+| ZK-08 | Low | No test anywhere verifies a proof | 03-zk-private-voting.md | C9/C10 | fixed (C9: SDK→zk-poll-core round trip plus negative tests: wrong weight, 2w, skewed w+K/−K, swapped choices, other voter/poll/program, non-canonical scalar, byte flips, bad DLEQ, Feldman, duplicate indices) |
 | ZK-09 | Low | Hygiene problems in the reveal path | 03-zk-private-voting.md | C9/C10 | open |
-| ZK-10 | Low | SDK key hygiene and tally bounds | 03-zk-private-voting.md | C9/C10 | open |
+| ZK-10 | Low | SDK key hygiene and tally bounds | 03-zk-private-voting.md | C9/C10 | fixed (C9: secrets zeroized and redacted from Debug (tested); duplicate/zero indices rejected; BSGS bounded by total weight cast; poll_weight helper (whole VCoin units)) |
 | SSC-01 | High | The `claim_rewards` account-validation stack frame is 4,544 bytes, over the 4,096-byte SBF limit | 04-sscre-protocol.md | C12 | fixed (C1: ClaimRewards accounts boxed; CI fails on any `Stack offset` warning) |
 | SSC-02 | High | Claims are never capped by the epoch's allocation or the emission limits, so one root can drain the vault | 04-sscre-protocol.md | C12 | open |
 | SSC-03 | Medium | Following the documented leaf recipe makes an epoch unclaimable | 04-sscre-protocol.md | C12 | open |

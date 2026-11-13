@@ -11,6 +11,8 @@ members = [
     "programs/vilink-protocol",
     "programs/gasless-protocol",
     "crates/vcoin-common",
+    "crates/zk-poll-core",
+    "packages/zk-voting-sdk",
     "integration-tests",
 ]
 resolver = "2"
@@ -22,6 +24,10 @@ anchor-spl = { version = "=0.32.1" }
 litesvm = "0.7.1"
 solana-sdk = "2.3"
 vcoin-common = { path = "crates/vcoin-common" }
+
+# Curve arithmetic in debug tests would otherwise be ~20x slower.
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
 
 [profile.release]
 overflow-checks = true

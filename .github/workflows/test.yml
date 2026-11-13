@@ -30,6 +30,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
+          target: wasm32-unknown-unknown
 
       - name: Install Agave (Solana) CLI
         run: |
@@ -58,6 +59,9 @@ jobs:
 
       - name: Tests (unit + LiteSVM integration)
         run: cargo test --workspace
+
+      - name: ZK SDK wasm build (TypeScript bindings)
+        run: cargo check -p zk-voting-sdk --features wasm --target wasm32-unknown-unknown
 
   sdk:
     name: TypeScript SDK

@@ -1,13 +1,26 @@
-[workspace]
-
 [package]
 name = "zk-voting-sdk"
-version = "0.1.0"
-description = "Off-chain SDK for VCoin ZK private voting - key generation, vote encryption, decryption, and tally computation"
+version = "0.2.0"
+description = "Off-chain SDK for VCoin private polls: Pedersen DKG with Feldman checks, ballot encryption with CDS proofs, DLEQ partial decryption and tally recovery. Verifies everything with zk-poll-core, the code the program runs."
 edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# wasm-bindgen exports for the TypeScript SDK (voter side: encrypt + verify + weight).
+wasm = ["dep:wasm-bindgen", "dep:getrandom"]
 
 [dependencies]
-curve25519-dalek = { version = "4", features = ["serde", "rand_core"] }
-sha2 = "0.10"
+zk-poll-core = { path = "../../crates/zk-poll-core" }
+curve25519-dalek = { version = "4", features = ["rand_core", "zeroize"] }
 rand = "0.8"
 thiserror = "2"
+zeroize = { version = "1", features = ["derive"] }
+wasm-bindgen = { version = "0.2", optional = true }
+getrandom = { version = "0.2", features = ["js"], optional = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
