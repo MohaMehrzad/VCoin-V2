@@ -1,3 +1,15 @@
+//! 5A reputation: oracle-consensus scores and reputation-only vouching.
+//!
+//! * Up to 7 oracles (24h activation, removable). A user's five dimensions change only when
+//!   `required_consensus` (2..=5) active oracles submit identical values within an hour;
+//!   competing submissions are tallied separately (audit 5A-01/04).
+//! * The composite score gates participation in staking-protocol (Realms) and private-poll.
+//! * Vouching carries no stake or reward: an established user vouches for a new one, an oracle
+//!   records the outcome after 90 days, and unevaluated vouches expire after a year.
+//!
+//! Removed: single-oracle "consensus", vouch stake/reward numbers, private mode, `get_score`,
+//! unread snapshots (audit 5A-05/09, 5A-L2/L4).
+
 use anchor_lang::prelude::*;
 
 pub mod constants;
@@ -11,111 +23,68 @@ pub mod state;
 mod tests;
 
 use contexts::*;
+use state::ScoreValues;
 
 declare_id!("783PbtJw5cc7yatnr9fsvTGSnkKaV6iJe6E8VUPTYrT8");
-
-/// 5A Reputation Protocol
-///
-/// Anti-bot reputation scoring with oracle model and periodic snapshots.
-///
-/// The 5 Stars (Open Source - MIT Licensed - Public Good):
-/// - A1: Authenticity (25%) - "Are you a real person?"
-/// - A2: Accuracy (20%) - "Is your content quality?"
-/// - A3: Agility (15%) - "Are you fast?"
-/// - A4: Activity (25%) - "Do you show up daily?"
-/// - A5: Approved (15%) - "Does the community like you?"
-///
-/// Score Range: 0-100 (stored as 0-10000 for precision)
 
 #[program]
 pub mod five_a_protocol {
     use super::*;
 
-    /// Initialize the 5A protocol
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        identity_program: Pubkey,
-        vcoin_mint: Pubkey,
+    /// Upgrade authority only.
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        instructions::admin::initialize(ctx)
+    }
+
+    pub fn register_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()> {
+        instructions::admin::register_oracle(ctx, oracle)
+    }
+
+    pub fn remove_oracle(ctx: Context<UpdateConfig>, oracle: Pubkey) -> Result<()> {
+        instructions::admin::remove_oracle(ctx, oracle)
+    }
+
+    pub fn set_required_consensus(
+        ctx: Context<UpdateConfig>,
+        required_consensus: u8,
     ) -> Result<()> {
-        instructions::admin::initialize::handler(ctx, identity_program, vcoin_mint)
+        instructions::admin::set_required_consensus(ctx, required_consensus)
     }
 
-    /// Register an oracle
-    pub fn register_oracle(ctx: Context<RegisterOracle>, name: String) -> Result<()> {
-        instructions::admin::register_oracle::handler(ctx, name)
-    }
-
-    /// Submit score update (oracle only)
-    pub fn submit_score(
-        ctx: Context<SubmitScore>,
-        authenticity: u16,
-        accuracy: u16,
-        agility: u16,
-        activity: u16,
-        approved: u16,
-    ) -> Result<()> {
-        instructions::oracle::submit_score::handler(
-            ctx,
-            authenticity,
-            accuracy,
-            agility,
-            activity,
-            approved,
-        )
-    }
-
-    /// Create a score snapshot (oracle only)
-    pub fn create_snapshot(
-        ctx: Context<CreateSnapshot>,
-        merkle_root: [u8; 32],
-        user_count: u64,
-        avg_score: u16,
-    ) -> Result<()> {
-        instructions::oracle::create_snapshot::handler(ctx, merkle_root, user_count, avg_score)
-    }
-
-    /// Vouch for a new user
-    pub fn vouch_for_user(ctx: Context<VouchForUser>) -> Result<()> {
-        instructions::vouch::vouch_for_user::handler(ctx)
-    }
-
-    /// Evaluate vouch outcome after 90 days
-    pub fn evaluate_vouch(ctx: Context<EvaluateVouch>) -> Result<()> {
-        instructions::vouch::evaluate_vouch::handler(ctx)
-    }
-
-    /// Enable private score mode
-    pub fn enable_private_score(ctx: Context<UpdateUserScore>) -> Result<()> {
-        instructions::user::enable_private_score::handler(ctx)
-    }
-
-    /// Disable private score mode
-    pub fn disable_private_score(ctx: Context<UpdateUserScore>) -> Result<()> {
-        instructions::user::disable_private_score::handler(ctx)
-    }
-
-    /// Pause/unpause protocol
     pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
-        instructions::admin::set_paused::handler(ctx, paused)
+        instructions::admin::set_paused(ctx, paused)
     }
 
-    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
-    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
-        instructions::admin::update_authority::handler(ctx, new_authority)
+    pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
+        instructions::admin::propose_authority(ctx, new_authority)
     }
 
-    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateConfig>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer(ctx)
+    }
+
     pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
-        instructions::admin::accept_authority::handler(ctx)
+        instructions::admin::accept_authority(ctx)
     }
 
-    /// Cancel a pending authority transfer (H-02 security fix)
-    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
-        instructions::admin::cancel_authority_transfer::handler(ctx)
+    /// An active oracle submits (or changes) its values for `user`.
+    pub fn submit_score(ctx: Context<SubmitScore>, values: ScoreValues) -> Result<()> {
+        instructions::score::submit_score(ctx, values)
     }
 
-    /// Get user score
-    pub fn get_score(ctx: Context<GetScore>) -> Result<()> {
-        instructions::query::get_score::handler(ctx)
+    pub fn close_expired_round(ctx: Context<CloseExpiredRound>) -> Result<()> {
+        instructions::score::close_expired_round(ctx)
+    }
+
+    pub fn vouch_for_user(ctx: Context<VouchForUser>) -> Result<()> {
+        instructions::vouch::vouch_for_user(ctx)
+    }
+
+    pub fn evaluate_vouch(ctx: Context<EvaluateVouch>) -> Result<()> {
+        instructions::vouch::evaluate_vouch(ctx)
+    }
+
+    pub fn expire_vouch(ctx: Context<CloseVouch>) -> Result<()> {
+        instructions::vouch::expire_vouch(ctx)
     }
 }

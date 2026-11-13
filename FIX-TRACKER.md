@@ -71,15 +71,15 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | CR-11 | Low | Rent is locked forever | 05-content-registry.md | C15 | open |
 | CR-12 | Low | Test helpers use the wrong account order and count | 05-content-registry.md | C15 | open |
 | CR-13 | Low | The docs describe a different program | 05-content-registry.md | C15 | open |
-| 5A-01 | High | "3-of-N consensus" is actually 1-of-N, and oracles can't be removed | 06-five-a-protocol.md | C13 | open |
-| 5A-02 | Medium | Front-runnable `initialize`; unvalidated, immutable config addresses | 06-five-a-protocol.md | C13 | open |
-| 5A-03 | Medium | No 24h timelock on authority transfer | 06-five-a-protocol.md | C13 | open |
-| 5A-04 | Low | The consensus design lets the first oracle block honest updates | 06-five-a-protocol.md | C13 | open |
-| 5A-05 | Low | Vouching has no stake, no slashing, and a gameable evaluation (no program reads the vouch stats, so the gaming has no on-chain effect today) | 06-five-a-protocol.md | C13 | open |
-| 5A-06 | Medium | Vouch slots can be locked permanently | 06-five-a-protocol.md | C13 | open |
-| 5A-07 | Low | Pause doesn't cover all mutating instructions | 06-five-a-protocol.md | C13 | open |
-| 5A-08 | Medium | No test exercises consensus or vouching | 06-five-a-protocol.md | C13 | open |
-| 5A-09 | Low | Docs describe a different program | 06-five-a-protocol.md | C13 | open |
+| 5A-01 | High | "3-of-N consensus" is actually 1-of-N, and oracles can't be removed | 06-five-a-protocol.md | C13 | fixed (C13: consensus default 2, settable 2..=min(registered,5); removable oracles with 24h activation; integration-tests/tests/five_a.rs: a_score_applies_only_when_two_oracles_agree…, removed_or_pending_oracles_do_not_count) |
+| 5A-02 | Medium | Front-runnable `initialize`; unvalidated, immutable config addresses | 06-five-a-protocol.md | C13 | fixed (C13: initialize upgrade-authority gated; unused identity/mint/vault config fields removed) |
+| 5A-03 | Medium | No 24h timelock on authority transfer | 06-five-a-protocol.md | C13 | fixed (C13: vcoin-common AdminState 24h two-step authority transfer) |
+| 5A-04 | Low | The consensus design lets the first oracle block honest updates | 06-five-a-protocol.md | C13 | fixed (C13: competing value sets tallied independently, one changeable submission per oracle, expired rounds reset; a lying first oracle cannot block; consensus ≤ 5 = slots counted) |
+| 5A-05 | Low | Vouching has no stake, no slashing, and a gameable evaluation (no program reads the vouch stats, so the gaming has no on-chain effect today) | 06-five-a-protocol.md | C13 | fixed (C13: vouching is reputation-only (stake/reward numbers removed); only for vouchees below 50%; evaluation oracle-only after 90 days) |
+| 5A-06 | Medium | Vouch slots can be locked permanently | 06-five-a-protocol.md | C13 | fixed (C13: missing vouchee score counts as failed; expire_vouch after 365 days; every outcome closes the record and frees the slot; test vouching_is_for_newcomers…) |
+| 5A-07 | Low | Pause doesn't cover all mutating instructions | 06-five-a-protocol.md | C13 | fixed (C13: pause checked in submit_score, vouch_for_user, evaluate_vouch, expire_vouch; admin paths stay usable for incident response) |
+| 5A-08 | Medium | No test exercises consensus or vouching | 06-five-a-protocol.md | C13 | fixed (C13: integration-tests/tests/five_a.rs covers consensus, competing tallies, expiry, oracle rotation, admin bounds, pause and the vouch lifecycle) |
+| 5A-09 | Low | Docs describe a different program | 06-five-a-protocol.md | C13 | partial (C13: private mode, get_score and snapshots removed so code no longer claims them; docs rewritten in C18) |
 | ID-01 | High | `update_verification` always reverts, and users are stuck at their first attested level | 07-identity-protocol.md | C14 | open |
 | ID-02 | Medium | Levels can never be revoked or downgraded; expiry and attester removal have no effect | 07-identity-protocol.md | C14 | open |
 | ID-03 | Low | The "SAS integration" never reads SAS; one attestation can be reused across wallets (each link still needs a trusted attester's co-signature) | 07-identity-protocol.md | C14 | open |
@@ -153,7 +153,7 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | X-1 | High | Every program's `initialize` can be front-run | 13-cross-cutting-security.md | C2+per-program | partial (C2: `require_upgrade_authority` + Accounts pattern; applied in each program commit) |
 | X-2 | Medium | 7 of 11 programs have no authority-transfer timelock, contrary to the "all 11" claim | 13-cross-cutting-security.md | C2+per-program | partial (C2: `AdminState` 24h two-step transfer; applied in each program commit) |
 | X-3 | Medium | Admin powers that take effect instantly, with no timelock | 13-cross-cutting-security.md | C2+per-program | partial (C7: staking parameters change only through the Realms governance PDA = vote + hold-up; remaining programs in their commits) |
-| X-4 | Low | Instructions anyone can call that change other people's state | 13-cross-cutting-security.md | C2+per-program | open |
+| X-4 | Low | Instructions anyone can call that change other people's state | 13-cross-cutting-security.md | C2+per-program | partial (C13: five-a evaluate_vouch is oracle-only, expiry/cleanup paths only after deadlines; remaining programs in their commits) |
 | X-5 | Low | Raw cross-program reads depend on layout (no spoofing is possible, since only the owning program can allocate the PDA; this is a maintenance risk) | 13-cross-cutting-security.md | C2+per-program | partial (C7: staking's Realms realm/TokenOwnerRecord reads check owner, PDA address and type tag; 5A score read typed via the five-a crate with a pinned program id; remaining programs in their commits) |
 | X-6 | Medium | Almost no account in the system can be closed | 13-cross-cutting-security.md | C2+per-program | open |
 | X-7 | Medium | Global write locks on hot paths | 13-cross-cutting-security.md | C2+per-program | open |

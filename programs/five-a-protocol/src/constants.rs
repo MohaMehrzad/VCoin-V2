@@ -1,60 +1,49 @@
-// 5A Protocol Constants
-// ============================================================================
-// L-02: Hardcoded Constants - Governance Path for Future Updates
-// ============================================================================
-// These constants define 5A scoring weights, vouch economics, and thresholds.
-// To modify these values in production:
-//
-// Option 1: Program Upgrade (Current)
-//   - Create a governance proposal to upgrade the program
-//   - Requires community vote approval
-//   - Deploy new program version with updated constants
-//
-// Option 2: Config Account Migration (Future Enhancement)
-//   - Add these parameters to FiveAConfig account
-//   - Implement governance-protected setter instructions
-//   - Allows runtime parameter changes without upgrades
-//
-// All changes MUST go through governance to maintain scoring fairness.
-// ============================================================================
+use anchor_lang::prelude::*;
 
-/// PDA Seeds
+#[constant]
 pub const FIVE_A_CONFIG_SEED: &[u8] = b"five-a-config";
+#[constant]
 pub const USER_SCORE_SEED: &[u8] = b"user-score";
-pub const SCORE_SNAPSHOT_SEED: &[u8] = b"score-snapshot";
+#[constant]
+pub const PENDING_SCORE_SEED: &[u8] = b"pending-score";
+#[constant]
 pub const VOUCH_RECORD_SEED: &[u8] = b"vouch-record";
+#[constant]
 pub const VOUCH_STATUS_SEED: &[u8] = b"vouch-status";
+#[constant]
 pub const VOUCHER_STATS_SEED: &[u8] = b"voucher-stats";
-pub const ORACLE_SEED: &[u8] = b"oracle";
-pub const PENDING_SCORE_SEED: &[u8] = b"pending-score"; // H-05
 
-/// Score weights (out of 10000)
-/// L-02: Configurable via program upgrade - critical for fair scoring
-pub const AUTHENTICITY_WEIGHT: u16 = 2500; // 25%
-pub const ACCURACY_WEIGHT: u16 = 2000; // 20%
-pub const AGILITY_WEIGHT: u16 = 1500; // 15%
-pub const ACTIVITY_WEIGHT: u16 = 2500; // 25%
-pub const APPROVED_WEIGHT: u16 = 1500; // 15%
+pub const DAY: i64 = 24 * 60 * 60;
 
-/// Vouch system
-/// L-02: Configurable via program upgrade - affects vouching economics
-pub const MIN_VOUCHER_SCORE: u16 = 6000; // 60% 5A score to vouch
-pub const VOUCH_STAKE_AMOUNT: u64 = 5_000_000_000; // 5 VCoin
-pub const VOUCHES_REQUIRED: u8 = 3;
-pub const VOUCH_EVALUATION_PERIOD: i64 = 90 * 24 * 60 * 60; // 90 days
-pub const VOUCH_REWARD: u64 = 10_000_000_000; // 10 VCoin bonus for successful vouch
+/// Every dimension and the composite are in `0..=MAX_SCORE` (10000 = 100%).
+pub const MAX_SCORE: u16 = 10_000;
+/// Composite weights (sum 10000).
+pub const AUTHENTICITY_WEIGHT: u16 = 2500;
+pub const ACCURACY_WEIGHT: u16 = 2000;
+pub const AGILITY_WEIGHT: u16 = 1500;
+pub const ACTIVITY_WEIGHT: u16 = 2500;
+pub const APPROVED_WEIGHT: u16 = 1500;
 
-/// Score update intervals
-/// L-02: Configurable via program upgrade
-pub const SNAPSHOT_INTERVAL: i64 = 24 * 60 * 60; // Daily snapshots
+/// Oracles: up to 7 registered; a score applies when `required_consensus` (2..=5) of the
+/// active ones submit identical values (audit 5A-01).
+pub const MAX_ORACLES: usize = 7;
+pub const MIN_CONSENSUS: u8 = 2;
+pub const MAX_CONSENSUS: u8 = 5;
+pub const DEFAULT_CONSENSUS: u8 = 2;
+/// A newly registered oracle counts only after this delay.
+pub const ORACLE_ACTIVATION_DELAY: i64 = DAY;
+/// An update round that has not reached consensus resets after this long.
+pub const SCORE_UPDATE_EXPIRY: i64 = 60 * 60;
+/// Minimum time between two applied updates for the same user.
+pub const MIN_SCORE_UPDATE_INTERVAL: i64 = 60 * 60;
 
-/// H-05: Oracle consensus constants
-pub const SCORE_UPDATE_EXPIRY: i64 = 60 * 60; // 1 hour for consensus
-pub const MAX_CONFIRMING_ORACLES: usize = 5;
-
-/// L-07: Rate limiting on oracle score submissions
-/// Minimum time between score updates for the same user
-pub const MIN_SCORE_UPDATE_INTERVAL: i64 = 60 * 60; // 1 hour minimum between updates
-
-/// M-18: Maximum vouch age before it expires (1 year)
-pub const MAX_VOUCH_AGE: i64 = 365 * 24 * 60 * 60;
+/// Vouching (reputation only: no stake, no reward).
+pub const MIN_VOUCHER_SCORE: u16 = 6000;
+/// A vouch is meaningful only for users not already established (audit 5A-05).
+pub const MAX_VOUCHEE_SCORE: u16 = 4999;
+/// At evaluation, the vouchee's composite must reach this for the vouch to succeed.
+pub const VOUCH_SUCCESS_SCORE: u16 = 5000;
+/// Vouches a user can receive in total.
+pub const MAX_VOUCHES_RECEIVED: u8 = 3;
+pub const VOUCH_EVALUATION_PERIOD: i64 = 90 * DAY;
+pub const MAX_VOUCH_AGE: i64 = 365 * DAY;

@@ -1,88 +1,51 @@
 use anchor_lang::prelude::*;
 
-/// 5A Protocol Error Codes
 #[error_code]
 pub enum FiveAError {
-    #[msg("Unauthorized: Only the authority can perform this action")]
-    Unauthorized,
-
-    #[msg("Protocol is paused")]
-    ProtocolPaused,
-
-    #[msg("Caller is not a registered oracle")]
-    NotOracle,
-
-    #[msg("Invalid score value (must be 0-10000)")]
-    InvalidScore,
-
-    #[msg("Voucher 5A score too low (need 60%+)")]
-    VoucherScoreTooLow,
-
-    #[msg("User already has 3 vouches")]
-    AlreadyFullyVouched,
-
-    #[msg("Cannot vouch for self")]
-    CannotVouchSelf,
-
-    #[msg("Already vouched for this user")]
-    AlreadyVouched,
-
-    #[msg("Max concurrent vouches reached")]
-    MaxVouchesReached,
-
-    #[msg("Vouch stake amount incorrect")]
-    InvalidStakeAmount,
-
-    #[msg("Vouch evaluation period not complete")]
-    EvaluationNotComplete,
-
-    #[msg("Vouch already evaluated")]
-    AlreadyEvaluated,
-
-    #[msg("User not found")]
-    UserNotFound,
-
+    #[msg("5A is paused")]
+    Paused,
+    #[msg("Program data account does not belong to this program")]
+    InvalidProgramData,
+    #[msg("Invalid oracle key")]
+    InvalidOracle,
     #[msg("Oracle already registered")]
-    OracleAlreadyRegistered,
-
-    #[msg("Maximum oracles reached")]
-    MaxOraclesReached,
-
+    OracleExists,
+    #[msg("All oracle slots are used")]
+    TooManyOracles,
+    #[msg("Oracle not registered")]
+    OracleNotFound,
+    #[msg("Consensus must be between 2 and min(registered oracles, 5)")]
+    InvalidConsensus,
+    #[msg("Signer is not an active oracle")]
+    NotActiveOracle,
+    #[msg("Each score must be at most 10000")]
+    InvalidScore,
+    #[msg("This user's score was updated less than an hour ago")]
+    ScoreUpdateTooFrequent,
+    #[msg("The update round has not expired")]
+    RoundNotExpired,
+    #[msg("Rent payer does not match the round")]
+    WrongRentPayer,
+    #[msg("Score account is not the user's PDA")]
+    InvalidScoreAccount,
+    #[msg("Voucher's 5A score is too low to vouch")]
+    VoucherScoreTooLow,
+    #[msg("Vouchee is already established; vouching is for new or low-score users")]
+    VoucheeAlreadyEstablished,
+    #[msg("Cannot vouch for yourself")]
+    CannotVouchSelf,
+    #[msg("Mutual vouching is not allowed")]
+    MutualVouch,
+    #[msg("Voucher has no free vouch slots")]
+    MaxVouchesReached,
+    #[msg("Vouchee already has the maximum number of vouches")]
+    VoucheeFullyVouched,
+    #[msg("The evaluation period has not passed")]
+    EvaluationTooEarly,
+    #[msg("The vouch expired; use expire_vouch")]
+    VouchExpired,
+    #[msg("The vouch has not expired")]
+    VouchNotExpired,
     #[msg("Arithmetic overflow")]
     Overflow,
-
-    // H-02: Two-step authority transfer errors
-    #[msg("Not the pending authority")]
-    NotPendingAuthority,
-
-    #[msg("No pending authority transfer")]
-    NoPendingTransfer,
-
-    #[msg("Cannot propose self as new authority")]
-    CannotProposeSelf,
-
-    #[msg("Invalid authority address (zero)")]
-    InvalidAuthority,
-
-    // H-05: Oracle consensus errors
-    #[msg("Score update has expired")]
-    ScoreUpdateExpired,
-
-    #[msg("Oracle has already submitted for this update")]
-    OracleAlreadySubmitted,
-
-    #[msg("Score mismatch with pending update")]
-    ScoreMismatch,
-
-    // L-07: Rate limiting
-    #[msg("Score update too frequent - minimum 1 hour between updates for same user")]
-    ScoreUpdateTooFrequent,
-
-    // C-08: Mutual vouch prevention
-    #[msg("Mutual vouching not allowed - target has already vouched for you")]
-    MutualVouchNotAllowed,
-
-    // M-18: Vouch expiry
-    #[msg("Vouch has expired (max age exceeded)")]
-    VouchExpired,
 }
