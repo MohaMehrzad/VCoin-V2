@@ -1,0 +1,19 @@
+[package]
+name = "vcoin-common"
+version = "0.1.0"
+description = "Shared security primitives for the ViWo programs: authority timelock, upgrade-authority gate, Token-2022 mint validation"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["lib"]
+
+[features]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true, features = ["token_2022"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

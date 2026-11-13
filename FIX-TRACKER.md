@@ -150,8 +150,8 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | TOOL-10 | High | The published `@viwoapp/sdk@2.0.1` has broken ESM and subpath exports | 12-tests-ci-tooling.md | C17 | open |
 | TOOL-11 | Medium | Clippy deny-level error: an always-true scope check | 12-tests-ci-tooling.md | C1 | fixed (C1: `scope & !VALID_SCOPE_MASK == 0`) |
 | TOOL-12 | Low | Smaller tooling problems | 12-tests-ci-tooling.md | C1 | partial (C1: fmt + clippy clean; SDK eslint in C17) |
-| X-1 | High | Every program's `initialize` can be front-run | 13-cross-cutting-security.md | C2+per-program | open |
-| X-2 | Medium | 7 of 11 programs have no authority-transfer timelock, contrary to the "all 11" claim | 13-cross-cutting-security.md | C2+per-program | open |
+| X-1 | High | Every program's `initialize` can be front-run | 13-cross-cutting-security.md | C2+per-program | partial (C2: `require_upgrade_authority` + Accounts pattern; applied in each program commit) |
+| X-2 | Medium | 7 of 11 programs have no authority-transfer timelock, contrary to the "all 11" claim | 13-cross-cutting-security.md | C2+per-program | partial (C2: `AdminState` 24h two-step transfer; applied in each program commit) |
 | X-3 | Medium | Admin powers that take effect instantly, with no timelock | 13-cross-cutting-security.md | C2+per-program | open |
 | X-4 | Low | Instructions anyone can call that change other people's state | 13-cross-cutting-security.md | C2+per-program | open |
 | X-5 | Low | Raw cross-program reads depend on layout (no spoofing is possible, since only the owning program can allocate the PDA; this is a maintenance risk) | 13-cross-cutting-security.md | C2+per-program | open |
