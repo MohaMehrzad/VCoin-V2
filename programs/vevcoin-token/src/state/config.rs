@@ -1,35 +1,21 @@
 use anchor_lang::prelude::*;
+use vcoin_common::AdminState;
 
-/// veVCoin Configuration Account (Singleton PDA)
+/// Singleton configuration, PDA `["vevcoin-config"]`. It is the veVCoin mint authority
+/// and permanent delegate, so only this program (on the registrar's instruction) can
+/// mint or burn receipts.
 #[account]
-#[derive(Default)]
+#[derive(Default, InitSpace)]
 pub struct VeVCoinConfig {
-    /// The admin authority (can update staking protocol address)
-    pub authority: Pubkey,
-    /// Pending authority for two-step transfer (H-02 security fix)
-    pub pending_authority: Pubkey,
-    /// The veVCoin mint address
+    pub admin: AdminState,
+    /// veVCoin mint, PDA `["vevcoin-mint"]`.
     pub mint: Pubkey,
-    /// The authorized staking protocol that can mint/burn
-    pub staking_protocol: Pubkey,
-    /// Total veVCoin currently in circulation
-    pub total_supply: u64,
-    /// Total unique holders
-    pub total_holders: u64,
-    /// Timestamp when pending authority was proposed (C-01: timelock enforcement)
-    pub pending_authority_activated_at: i64,
-    /// Bump seed for PDA
+    /// Staking registrar PDA `["registrar"]` under the staking program, derived once at init.
+    pub staking_authority: Pubkey,
     pub bump: u8,
+    pub mint_bump: u8,
 }
 
 impl VeVCoinConfig {
-    pub const LEN: usize = 8 + // discriminator
-        32 + // authority
-        32 + // pending_authority (NEW - H-02)
-        32 + // mint
-        32 + // staking_protocol
-        8 +  // total_supply
-        8 +  // total_holders
-        8 +  // pending_authority_activated_at (C-01)
-        1; // bump
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
 }

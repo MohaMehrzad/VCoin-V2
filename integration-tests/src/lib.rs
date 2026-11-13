@@ -248,3 +248,248 @@ pub mod token {
             .supply
     }
 }
+
+/// Deploys and initializes vcoin-token, vevcoin-token and staking-protocol (the token +
+/// staking stack every other suite builds on).
+pub mod stack {
+    use super::{deploy_upgradeable, funded_keypair, ix, program_so, send, token};
+    use anchor_lang::system_program;
+    use anchor_spl::token_2022::spl_token_2022;
+    use litesvm::LiteSVM;
+    use solana_sdk::{
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+    };
+
+    pub const VCOIN: u64 = 1_000_000_000;
+
+    pub struct Stack {
+        pub svm: LiteSVM,
+        /// Upgrade authority of every program and initial admin.
+        pub admin: Keypair,
+        pub vcoin_config: Pubkey,
+        pub vcoin_mint: Pubkey,
+        pub vevcoin_config: Pubkey,
+        pub vevcoin_mint: Pubkey,
+        pub registrar: Pubkey,
+        pub vault: Pubkey,
+    }
+
+    pub struct Staker {
+        pub kp: Keypair,
+        pub vcoin: Pubkey,
+        pub vevcoin: Pubkey,
+        pub voter: Pubkey,
+    }
+
+    pub fn pda(seeds: &[&[u8]], program: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(seeds, program).0
+    }
+
+    /// Deploys the three programs (upgrade authority = `admin`) without initializing them.
+    pub fn deploy() -> Stack {
+        let mut svm = LiteSVM::new();
+        let admin = funded_keypair(&mut svm, 100);
+        for (id, name) in [
+            (vcoin_token::ID, "vcoin_token"),
+            (vevcoin_token::ID, "vevcoin_token"),
+            (staking_protocol::ID, "staking_protocol"),
+        ] {
+            deploy_upgradeable(&mut svm, id, &program_so(name), Some(admin.pubkey()));
+        }
+        Stack {
+            svm,
+            admin,
+            vcoin_config: pda(
+                &[vcoin_token::constants::VCOIN_CONFIG_SEED],
+                &vcoin_token::ID,
+            ),
+            vcoin_mint: pda(&[vcoin_token::constants::VCOIN_MINT_SEED], &vcoin_token::ID),
+            vevcoin_config: pda(
+                &[vevcoin_token::constants::VEVCOIN_CONFIG_SEED],
+                &vevcoin_token::ID,
+            ),
+            vevcoin_mint: pda(
+                &[vevcoin_token::constants::VEVCOIN_MINT_SEED],
+                &vevcoin_token::ID,
+            ),
+            registrar: pda(
+                &[staking_protocol::constants::REGISTRAR_SEED],
+                &staking_protocol::ID,
+            ),
+            vault: pda(
+                &[staking_protocol::constants::VAULT_SEED],
+                &staking_protocol::ID,
+            ),
+        }
+    }
+
+    pub fn programdata(program: &Pubkey) -> Pubkey {
+        super::programdata_address(program)
+    }
+
+    pub fn init_tokens(s: &mut Stack) {
+        let admin = s.admin.insecure_clone();
+        let vcoin_init = ix(
+            vcoin_token::ID,
+            vcoin_token::accounts::Initialize {
+                authority: admin.pubkey(),
+                config: s.vcoin_config,
+                mint: s.vcoin_mint,
+                program: vcoin_token::ID,
+                program_data: programdata(&vcoin_token::ID),
+                token_program: spl_token_2022::ID,
+                system_program: system_program::ID,
+            },
+            vcoin_token::instruction::Initialize {
+                name: "VCoin".into(),
+                symbol: "VIWO".into(),
+                uri: String::new(),
+            },
+        );
+        let vevcoin_init = ix(
+            vevcoin_token::ID,
+            vevcoin_token::accounts::Initialize {
+                authority: admin.pubkey(),
+                config: s.vevcoin_config,
+                mint: s.vevcoin_mint,
+                program: vevcoin_token::ID,
+                program_data: programdata(&vevcoin_token::ID),
+                token_program: spl_token_2022::ID,
+                system_program: system_program::ID,
+            },
+            vevcoin_token::instruction::Initialize {},
+        );
+        send(&mut s.svm, &[vcoin_init, vevcoin_init], &admin, &[]).expect("init vcoin + vevcoin");
+    }
+
+    pub fn create_registrar_ix(s: &Stack, signer: Pubkey) -> solana_sdk::instruction::Instruction {
+        ix(
+            staking_protocol::ID,
+            staking_protocol::accounts::CreateRegistrar {
+                authority: signer,
+                registrar: s.registrar,
+                vcoin_mint: s.vcoin_mint,
+                vevcoin_mint: s.vevcoin_mint,
+                vault: s.vault,
+                program: staking_protocol::ID,
+                program_data: programdata(&staking_protocol::ID),
+                token_program: spl_token_2022::ID,
+                system_program: system_program::ID,
+            },
+            staking_protocol::instruction::CreateRegistrar {},
+        )
+    }
+
+    /// Deploys and fully initializes the stack.
+    pub fn setup() -> Stack {
+        let mut s = deploy();
+        init_tokens(&mut s);
+        let admin = s.admin.insecure_clone();
+        let ixn = create_registrar_ix(&s, admin.pubkey());
+        send(&mut s.svm, &[ixn], &admin, &[]).expect("create registrar");
+        s
+    }
+
+    /// Mints `amount` VCoin to a fresh token account owned by `owner`.
+    pub fn fund_vcoin(s: &mut Stack, owner: &Pubkey, amount: u64) -> Pubkey {
+        let admin = s.admin.insecure_clone();
+        let account = token::create_token_account(&mut s.svm, &admin, &s.vcoin_mint, owner);
+        if amount > 0 {
+            let mint = ix(
+                vcoin_token::ID,
+                vcoin_token::accounts::MintTokens {
+                    config: s.vcoin_config,
+                    mint: s.vcoin_mint,
+                    destination: account,
+                    authority: admin.pubkey(),
+                    token_program: spl_token_2022::ID,
+                },
+                vcoin_token::instruction::MintTokens { amount },
+            );
+            send(&mut s.svm, &[mint], &admin, &[]).expect("mint vcoin");
+        }
+        account
+    }
+
+    /// A funded user with VCoin, an empty veVCoin account and a voter account.
+    pub fn new_staker(s: &mut Stack, vcoin_amount: u64) -> Staker {
+        let kp = funded_keypair(&mut s.svm, 10);
+        let vcoin = fund_vcoin(s, &kp.pubkey(), vcoin_amount);
+        let admin = s.admin.insecure_clone();
+        let vevcoin =
+            token::create_token_account(&mut s.svm, &admin, &s.vevcoin_mint, &kp.pubkey());
+        let voter = pda(
+            &[
+                staking_protocol::constants::VOTER_SEED,
+                kp.pubkey().as_ref(),
+            ],
+            &staking_protocol::ID,
+        );
+        let create = ix(
+            staking_protocol::ID,
+            staking_protocol::accounts::CreateVoter {
+                registrar: s.registrar,
+                voter,
+                owner: kp.pubkey(),
+                payer: kp.pubkey(),
+                system_program: system_program::ID,
+            },
+            staking_protocol::instruction::CreateVoter {},
+        );
+        send(&mut s.svm, &[create], &kp, &[]).expect("create voter");
+        Staker {
+            kp,
+            vcoin,
+            vevcoin,
+            voter,
+        }
+    }
+
+    pub fn move_stake_accounts(s: &Stack, st: &Staker) -> staking_protocol::accounts::MoveStake {
+        staking_protocol::accounts::MoveStake {
+            registrar: s.registrar,
+            voter: st.voter,
+            owner: st.kp.pubkey(),
+            vault: s.vault,
+            vcoin_mint: s.vcoin_mint,
+            owner_vcoin: st.vcoin,
+            vevcoin_mint: s.vevcoin_mint,
+            owner_vevcoin: st.vevcoin,
+            vevcoin_config: s.vevcoin_config,
+            vevcoin_program: vevcoin_token::ID,
+            token_program: spl_token_2022::ID,
+        }
+    }
+
+    pub fn deposit_ix(
+        s: &Stack,
+        st: &Staker,
+        index: u8,
+        amount: u64,
+        lock_secs: i64,
+    ) -> solana_sdk::instruction::Instruction {
+        ix(
+            staking_protocol::ID,
+            move_stake_accounts(s, st),
+            staking_protocol::instruction::Deposit {
+                index,
+                amount,
+                lock_secs,
+            },
+        )
+    }
+
+    pub fn withdraw_ix(
+        s: &Stack,
+        st: &Staker,
+        index: u8,
+        amount: u64,
+    ) -> solana_sdk::instruction::Instruction {
+        ix(
+            staking_protocol::ID,
+            move_stake_accounts(s, st),
+            staking_protocol::instruction::Withdraw { index, amount },
+        )
+    }
+}

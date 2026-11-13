@@ -1,19 +1,21 @@
-// veVCoin Token Constants
+//! veVCoin constants.
 
-/// Token decimals
+use anchor_lang::prelude::*;
+
+#[constant]
+pub const VEVCOIN_CONFIG_SEED: &[u8] = b"vevcoin-config";
+
+/// Mint PDA seed. The veVCoin mint is created by this program at this address.
+#[constant]
+pub const VEVCOIN_MINT_SEED: &[u8] = b"vevcoin-mint";
+
+#[constant]
 pub const VEVCOIN_DECIMALS: u8 = 9;
 
-/// Token metadata
-pub const TOKEN_NAME: &str = "veVCoin";
-pub const TOKEN_SYMBOL: &str = "veVIWO";
-pub const TOKEN_URI: &str = "https://viwoapp.com/vevcoin-metadata.json";
+/// The staking program; its registrar PDA is the only account allowed to mint/burn.
+/// Pinned (not configurable) so no admin can redirect minting/burning (audit VEV-02).
+pub const STAKING_PROGRAM_ID: Pubkey = pubkey!("6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu");
 
-/// PDA Seeds
-pub const VEVCOIN_CONFIG_SEED: &[u8] = b"vevcoin-config";
-pub const USER_VEVCOIN_SEED: &[u8] = b"user-vevcoin";
-
-/// 4 years in seconds (for veVCoin calculation)
-pub const FOUR_YEARS_SECONDS: i64 = 4 * 365 * 24 * 60 * 60;
-
-/// C-01: 24-hour timelock for authority transfers (in seconds)
-pub const AUTHORITY_TRANSFER_TIMELOCK: i64 = 86400;
+/// Seed of the staking program's registrar PDA (must match `staking_protocol::REGISTRAR_SEED`).
+#[constant]
+pub const STAKING_REGISTRAR_SEED: &[u8] = b"registrar";

@@ -1,8 +1,5 @@
-/// State module - Account structures
-mod pool;
-mod tier;
-mod user_stake;
+pub mod registrar;
+pub mod voter;
 
-pub use pool::*;
-pub use tier::*;
-pub use user_stake::*;
+pub use registrar::*;
+pub use voter::*;

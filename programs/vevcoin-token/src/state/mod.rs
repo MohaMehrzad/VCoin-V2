@@ -1,6 +1,3 @@
-/// State module - Account structures
-mod config;
-mod user;
+pub mod config;
 
 pub use config::*;
-pub use user::*;

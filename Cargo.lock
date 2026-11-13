@@ -1759,8 +1759,10 @@ dependencies = [
  "solana-sdk",
  "solana-sdk-ids",
  "solana-system-interface",
+ "staking-protocol",
  "vcoin-common",
  "vcoin-token",
+ "vevcoin-token",
 ]
 
 [[package]]
@@ -5306,6 +5308,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "vcoin-common",
  "vcoin-token",
  "vevcoin-token",
 ]
@@ -5756,6 +5759,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "vcoin-common",
 ]
 
 [[package]]

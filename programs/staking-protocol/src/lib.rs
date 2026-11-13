@@ -1,3 +1,15 @@
+//! VCoin staking: a Voter-Stake-Registry–style lockup program.
+//!
+//! * Users lock VCoin in up to 8 deposits (1 week – 4 years) and receive a 1:1
+//!   non-transferable veVCoin receipt (audit STK-03: the receipt can never drift).
+//! * Voting weight is computed, not minted: linear in amount plus a lock-time bonus that
+//!   decays to zero at unlock (see [`weight`]); it feeds SPL Governance (Realms) as a
+//!   voter-weight plugin.
+//! * Withdrawals are never paused; deposits credit exactly what the vault receives and the
+//!   VCoin mint must be hook/fee/freeze-free (audit STK-01).
+//! * The registrar is created only by the upgrade authority (audit X-1) and its authority
+//!   moves through a 24h two-step transfer (audit X-2).
+
 use anchor_lang::prelude::*;
 
 pub mod constants;
@@ -6,80 +18,67 @@ pub mod errors;
 pub mod events;
 pub mod instructions;
 pub mod state;
-pub mod utils;
+pub mod weight;
 
 #[cfg(test)]
 mod tests;
 
 use contexts::*;
-use instructions::query::get_stake_info::UserStakeInfo;
+use state::WeightParams;
 
 declare_id!("6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu");
-
-/// VCoin Staking Protocol
-///
-/// Stake VCoin → Get veVCoin (voting power)
-/// - Longer stake = More voting power
-/// - Higher tier = Bonus veVCoin
-///
-/// Staking Tiers:
-/// - None:     0 VCoin        → 0% fee discount, 1.0x veVCoin boost
-/// - Bronze:   1,000 VCoin    → 10% fee discount, 1.1x veVCoin boost
-/// - Silver:   5,000 VCoin    → 20% fee discount, 1.2x veVCoin boost
-/// - Gold:     20,000 VCoin   → 30% fee discount, 1.3x veVCoin boost
-/// - Platinum: 100,000 VCoin  → 50% fee discount, 1.4x veVCoin boost
 
 #[program]
 pub mod staking_protocol {
     use super::*;
 
-    /// Initialize the staking pool
-    pub fn initialize_pool(ctx: Context<InitializePool>, vevcoin_program: Pubkey) -> Result<()> {
-        instructions::admin::initialize_pool::handler(ctx, vevcoin_program)
+    /// Creates the registrar and VCoin vault. Upgrade authority only.
+    pub fn create_registrar(ctx: Context<CreateRegistrar>) -> Result<()> {
+        instructions::admin::create_registrar(ctx)
     }
 
-    /// Stake VCoin with a lock duration
-    pub fn stake(ctx: Context<Stake>, amount: u64, lock_duration: i64) -> Result<()> {
-        instructions::user::stake::handler(ctx, amount, lock_duration)
+    /// Creates the caller's voter account.
+    pub fn create_voter(ctx: Context<CreateVoter>) -> Result<()> {
+        instructions::stake::create_voter(ctx)
     }
 
-    /// Extend lock duration to increase veVCoin
-    pub fn extend_lock(ctx: Context<ExtendLock>, new_lock_duration: i64) -> Result<()> {
-        instructions::user::extend_lock::handler(ctx, new_lock_duration)
+    /// Locks VCoin into deposit slot `index` for at least `lock_secs` seconds.
+    pub fn deposit(ctx: Context<MoveStake>, index: u8, amount: u64, lock_secs: i64) -> Result<()> {
+        instructions::stake::deposit(ctx, index, amount, lock_secs)
     }
 
-    /// Unstake VCoin after lock expires
-    pub fn unstake(ctx: Context<Unstake>, amount: u64) -> Result<()> {
-        instructions::user::unstake::handler(ctx, amount)
+    /// Moves a deposit's lock end to `now + lock_secs` (must be later than today's end).
+    pub fn extend_lock(ctx: Context<ExtendLock>, index: u8, lock_secs: i64) -> Result<()> {
+        instructions::stake::extend_lock(ctx, index, lock_secs)
     }
 
-    /// Update user's tier based on current stake
-    pub fn update_tier(ctx: Context<UpdateTier>) -> Result<()> {
-        instructions::user::update_tier::handler(ctx)
+    /// Withdraws unlocked VCoin from deposit slot `index`.
+    pub fn withdraw(ctx: Context<MoveStake>, index: u8, amount: u64) -> Result<()> {
+        instructions::stake::withdraw(ctx, index, amount)
     }
 
-    /// Pause/unpause the staking pool
-    pub fn set_paused(ctx: Context<AdminAction>, paused: bool) -> Result<()> {
-        instructions::admin::set_paused::handler(ctx, paused)
+    /// Closes an empty voter account and refunds its rent.
+    pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
+        instructions::stake::close_voter(ctx)
     }
 
-    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
-    pub fn propose_authority(ctx: Context<AdminAction>, new_authority: Pubkey) -> Result<()> {
-        instructions::admin::update_authority::handler(ctx, new_authority)
+    pub fn set_paused(ctx: Context<UpdateRegistrar>, paused: bool) -> Result<()> {
+        instructions::admin::set_paused(ctx, paused)
     }
 
-    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn set_weight_params(ctx: Context<UpdateRegistrar>, params: WeightParams) -> Result<()> {
+        instructions::admin::set_weight_params(ctx, params)
+    }
+
+    pub fn propose_authority(ctx: Context<UpdateRegistrar>, new_authority: Pubkey) -> Result<()> {
+        instructions::admin::propose_authority(ctx, new_authority)
+    }
+
+    pub fn cancel_authority_transfer(ctx: Context<UpdateRegistrar>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer(ctx)
+    }
+
     pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
-        instructions::admin::accept_authority::handler(ctx)
-    }
-
-    /// Cancel a pending authority transfer (H-02 security fix)
-    pub fn cancel_authority_transfer(ctx: Context<AdminAction>) -> Result<()> {
-        instructions::admin::cancel_authority_transfer::handler(ctx)
-    }
-
-    /// Get user's staking info (view function)
-    pub fn get_stake_info(ctx: Context<GetStakeInfo>) -> Result<UserStakeInfo> {
-        instructions::query::get_stake_info::handler(ctx)
+        instructions::admin::accept_authority(ctx)
     }
 }
