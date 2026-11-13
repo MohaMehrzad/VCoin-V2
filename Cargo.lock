@@ -1416,17 +1416,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "governance-protocol"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "solana-curve25519",
- "solana-hash",
- "solana-sha256-hasher",
-]
-
-[[package]]
 name = "hash32"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1759,6 +1748,8 @@ dependencies = [
  "five-a-protocol",
  "gasless-protocol",
  "litesvm",
+ "private-poll",
+ "rand 0.8.5",
  "solana-loader-v3-interface 5.0.0",
  "solana-sdk",
  "solana-sdk-ids",
@@ -1768,6 +1759,7 @@ dependencies = [
  "vcoin-common",
  "vcoin-token",
  "vevcoin-token",
+ "zk-voting-sdk",
 ]
 
 [[package]]
@@ -2327,6 +2319,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
+]
+
+[[package]]
+name = "private-poll"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "solana-sha256-hasher",
+ "staking-protocol",
+ "vcoin-common",
+ "zk-poll-core",
 ]
 
 [[package]]

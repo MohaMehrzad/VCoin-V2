@@ -1,0 +1,30 @@
+[package]
+name = "private-poll"
+version = "0.1.0"
+description = "VCoin private polls: encrypted ballots weighted by staking-protocol, threshold-decrypted by a Feldman-verified committee; assert_poll_passed lets a Realms proposal depend on the outcome"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "private_poll"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "vcoin-common/idl-build", "staking-protocol/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+anchor-lang = { workspace = true }
+vcoin-common = { workspace = true }
+staking-protocol = { path = "../staking-protocol", features = ["no-entrypoint"] }
+zk-poll-core = { path = "../../crates/zk-poll-core" }
+solana-sha256-hasher = "2.3"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

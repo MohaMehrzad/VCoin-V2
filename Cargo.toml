@@ -6,7 +6,7 @@ members = [
     "programs/identity-protocol",
     "programs/five-a-protocol",
     "programs/content-registry",
-    "programs/governance-protocol",
+    "programs/private-poll",
     "programs/sscre-protocol",
     "programs/vilink-protocol",
     "programs/gasless-protocol",

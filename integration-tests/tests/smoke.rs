@@ -30,7 +30,7 @@ const PROGRAMS: &[(&str, &str)] = &[
         "MJn1A4MPCBPJGWWuZrtq7bHSo2G289sUwW3ej2wcmLV",
     ),
     (
-        "governance_protocol",
+        "private_poll",
         "3R256kBN9iXozjypQFRAmegBhd6HJqXWqdNG7Th78HYe",
     ),
     (
