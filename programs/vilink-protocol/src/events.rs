@@ -1,49 +1,83 @@
 use anchor_lang::prelude::*;
 
 #[event]
-pub struct ViLinkConfigInitialized {
+pub struct ViLinkInitialized {
     pub authority: Pubkey,
-    pub vcoin_mint: Pubkey,
+    pub treasury: Pubkey,
+    pub fee_bps: u16,
+}
+
+#[event]
+pub struct ConfigChangeProposed {
+    pub fee_bps: u16,
+    pub treasury: Pubkey,
+    pub eta: i64,
+}
+
+#[event]
+pub struct ConfigChangeApplied {
+    pub fee_bps: u16,
+    pub treasury: Pubkey,
+}
+
+#[event]
+pub struct ConfigChangeCancelled {}
+
+#[event]
+pub struct EnabledActionsSet {
     pub enabled_actions: u8,
 }
 
 #[event]
+pub struct PauseChanged {
+    pub paused: bool,
+}
+
+#[event]
 pub struct ActionCreated {
+    pub action: Pubkey,
     pub action_id: [u8; 32],
     pub creator: Pubkey,
-    pub target: Pubkey,
     pub action_type: u8,
+    pub target: Pubkey,
     pub amount: u64,
+    pub fee_bps: u16,
     pub expires_at: i64,
+    pub max_executions: u32,
 }
 
 #[event]
 pub struct ActionExecuted {
-    pub action_id: [u8; 32],
+    pub action: Pubkey,
+    pub action_type: u8,
     pub executor: Pubkey,
     pub target: Pubkey,
-    pub action_type: u8,
     pub amount: u64,
-    pub fee_paid: u64,
+    pub fee: u64,
+    pub execution_count: u32,
+    pub signer: Pubkey,
 }
 
 #[event]
-pub struct DAppRegistered {
-    pub dapp_id: [u8; 32],
-    pub authority: Pubkey,
-    pub allowed_actions: u8,
+pub struct ActionClosed {
+    pub action: Pubkey,
+    pub execution_count: u32,
 }
 
 #[event]
-pub struct BatchCreated {
-    pub batch_id: [u8; 32],
-    pub creator: Pubkey,
-    pub action_count: u8,
+pub struct AuthorityProposed {
+    pub current: Pubkey,
+    pub proposed: Pubkey,
+    pub ready_at: i64,
 }
 
-// L-02: Authority transfer cancellation event
 #[event]
 pub struct AuthorityTransferCancelled {
     pub authority: Pubkey,
-    pub cancelled_pending: Pubkey,
+}
+
+#[event]
+pub struct AuthorityTransferred {
+    pub previous: Pubkey,
+    pub new_authority: Pubkey,
 }

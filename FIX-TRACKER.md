@@ -113,14 +113,14 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | GAS-09 | Medium | Every action write-locks one global account | 09-gasless-protocol.md | C11 | fixed (C11: pay_vcoin_fee takes the config read-only) |
 | GAS-10 | Low | Sybil wallets can exhaust the global subsidy budget | 09-gasless-protocol.md | C11 | removed (C11: on-chain subsidy budget removed; relayer rate limits are off-chain) |
 | GAS-15 | Medium | No test covers the rollover, expiry, scope or budget paths | 09-gasless-protocol.md | C11 | fixed (C11: 5 unit + 7 LiteSVM tests incl. expiry, scope, timelock, idle days) |
-| VL-1 | Medium | Front-runnable `initialize`; the treasury and mint are then permanent | 10-vilink-protocol.md | C16 | open |
-| VL-2 | Low | Disabling an action type doesn't stop existing links (the global pause, which all three execute handlers check, still works as an emergency stop) | 10-vilink-protocol.md | C16 | open |
-| VL-3 | Low | Vouch and Follow links ignore `max_executions` (inflates ViLink-only stats that no other program reads) | 10-vilink-protocol.md | C16 | open |
-| VL-4 | Low | The treasury can never be changed, and the zero key is accepted | 10-vilink-protocol.md | C16 | open |
-| VL-5 | Medium | Tips revert if VCoin has a transfer hook | 10-vilink-protocol.md | C16 | open |
-| VL-6 | Medium | Five action types can be created but never executed, and no action can be closed | 10-vilink-protocol.md | C16 | open |
-| VL-7 | Low | The dApp registry is never enforced | 10-vilink-protocol.md | C16 | open |
-| VL-16 | Low | The fee rate is read at execution, not when the link is created (MON-9) | 10-vilink-protocol.md | C16 | open |
+| VL-1 | Medium | Front-runnable `initialize`; the treasury and mint are then permanent | 10-vilink-protocol.md | C16 | fixed (C16: initialize upgrade-authority gated; VCoin mint PDA pinned and validate_vcoin_mint (Token-2022, no hook)) |
+| VL-2 | Low | Disabling an action type doesn't stop existing links (the global pause, which all three execute handlers check, still works as an emergency stop) | 10-vilink-protocol.md | C16 | fixed (C16: is_enabled checked on create and every execute; integration-tests/tests/vilink.rs: creation_is_validated_and_disabling_a_type_stops_existing_links) |
+| VL-3 | Low | Vouch and Follow links ignore `max_executions` (inflates ViLink-only stats that no other program reads) | 10-vilink-protocol.md | C16 | fixed (C16: max_executions enforced for every type + per-executor ExecutionReceipt PDA (one execution per executor per link)) |
+| VL-4 | Low | The treasury can never be changed, and the zero key is accepted | 10-vilink-protocol.md | C16 | fixed (C16: treasury (validated VCoin account) and fee change through a 24h propose/apply/cancel timelock, evented) |
+| VL-5 | Medium | Tips revert if VCoin has a transfer hook | 10-vilink-protocol.md | C16 | removed (C4/C16: VCoin mint has no transfer hook; validated at init) |
+| VL-6 | Medium | Five action types can be created but never executed, and no action can be closed | 10-vilink-protocol.md | C16 | fixed (C16: only tip/vouch/follow exist; types ≥ 3 rejected; close_action (expired or exhausted) and close_receipt) |
+| VL-7 | Low | The dApp registry is never enforced | 10-vilink-protocol.md | C16 | removed (C16: unenforced dApp registry deleted) |
+| VL-16 | Low | The fee rate is read at execution, not when the link is created (MON-9) | 10-vilink-protocol.md | C16 | fixed (C16: fee_bps stored per link at creation; test shows a link keeping 2.5% after the fee rose to 10%) |
 | SDK-01 | High | Every `build*Transaction` returns an empty transaction | 11-typescript-sdk.md | C17 | open |
 | SDK-02 | High | Published ESM and subpath exports point to files that don't exist | 11-typescript-sdk.md | C17 | open |
 | SDK-03 | High | The ViLinkAction decoder makes every action look expired | 11-typescript-sdk.md | C17 | open |
@@ -150,10 +150,10 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | TOOL-10 | High | The published `@viwoapp/sdk@2.0.1` has broken ESM and subpath exports | 12-tests-ci-tooling.md | C17 | open |
 | TOOL-11 | Medium | Clippy deny-level error: an always-true scope check | 12-tests-ci-tooling.md | C1 | fixed (C1: `scope & !VALID_SCOPE_MASK == 0`) |
 | TOOL-12 | Low | Smaller tooling problems | 12-tests-ci-tooling.md | C1 | partial (C1: fmt + clippy clean; SDK eslint in C17) |
-| X-1 | High | Every program's `initialize` can be front-run | 13-cross-cutting-security.md | C2+per-program | partial (C2: `require_upgrade_authority` + Accounts pattern; applied in each program commit) |
-| X-2 | Medium | 7 of 11 programs have no authority-transfer timelock, contrary to the "all 11" claim | 13-cross-cutting-security.md | C2+per-program | partial (C2: `AdminState` 24h two-step transfer; applied in each program commit) |
-| X-3 | Medium | Admin powers that take effect instantly, with no timelock | 13-cross-cutting-security.md | C2+per-program | partial (C7: staking parameters change only through the Realms governance PDA = vote + hold-up; remaining programs in their commits) |
-| X-4 | Low | Instructions anyone can call that change other people's state | 13-cross-cutting-security.md | C2+per-program | partial (C13: five-a evaluate_vouch is oracle-only, expiry/cleanup paths only after deadlines; remaining programs in their commits) |
-| X-5 | Low | Raw cross-program reads depend on layout (no spoofing is possible, since only the owning program can allocate the PDA; this is a maintenance risk) | 13-cross-cutting-security.md | C2+per-program | partial (C7: staking's Realms realm/TokenOwnerRecord reads check owner, PDA address and type tag; 5A score read typed via the five-a crate with a pinned program id; remaining programs in their commits) |
-| X-6 | Medium | Almost no account in the system can be closed | 13-cross-cutting-security.md | C2+per-program | open |
-| X-7 | Medium | Global write locks on hot paths | 13-cross-cutting-security.md | C2+per-program | open |
+| X-1 | High | Every program's `initialize` can be front-run | 13-cross-cutting-security.md | C2+per-program | fixed (C2–C16: every program's init checks the upgrade authority via ProgramData; each suite has an init-gate test) |
+| X-2 | Medium | 7 of 11 programs have no authority-transfer timelock, contrary to the "all 11" claim | 13-cross-cutting-security.md | C2+per-program | fixed (C2–C16: every program uses vcoin-common AdminState: 24h two-step propose/accept/cancel, evented) |
+| X-3 | Medium | Admin powers that take effect instantly, with no timelock | 13-cross-cutting-security.md | C2+per-program | fixed (C7–C16: fee/treasury/oracle/payment changes are 24h-timelocked; remaining admin powers (pause, kill switches, params, slashing) are exercised by the Realms governance PDA after handover, i.e. a vote + hold-up; see runbook C18) |
+| X-4 | Low | Instructions anyone can call that change other people's state | 13-cross-cutting-security.md | C2+per-program | fixed (C7–C16: permissionless instructions only crank deterministic transitions after deadlines (start_epoch, activate_root, clawback, expire_*, close_*) or act for the signer; evaluations are oracle-only) |
+| X-5 | Low | Raw cross-program reads depend on layout (no spoofing is possible, since only the owning program can allocate the PDA; this is a maintenance risk) | 13-cross-cutting-security.md | C2+per-program | fixed (C7–C16: cross-program reads use typed accounts with seeds::program (staking Voter/Registrar, gasless SessionToken, five-a UserScore) or owner+PDA+type checks (Realms realm and TokenOwnerRecord)) |
+| X-6 | Medium | Almost no account in the system can be closed | 13-cross-cutting-security.md | C2+per-program | fixed (C8–C16: close paths for slash requests, ballots, polls, claim statuses, score rounds, vouches, identities, usernames, attestations, content records, actions, receipts, sessions; persistent singletons and UserEnergy by design) |
+| X-7 | Medium | Global write locks on hot paths | 13-cross-cutting-security.md | C2+per-program | fixed (C12–C16: global counters removed; configs read-only on user hot paths) |

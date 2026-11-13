@@ -1765,6 +1765,7 @@ dependencies = [
  "vcoin-common",
  "vcoin-token",
  "vevcoin-token",
+ "vilink-protocol",
  "zk-voting-sdk",
 ]
 
@@ -6058,7 +6059,10 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
- "solana-program",
+ "gasless-protocol",
+ "solana-sha256-hasher",
+ "vcoin-common",
+ "vcoin-token",
 ]
 
 [[package]]

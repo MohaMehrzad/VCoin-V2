@@ -2,67 +2,40 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ViLinkError {
-    #[msg("Unauthorized: Only the authority can perform this action")]
-    Unauthorized,
-    #[msg("ViLink Protocol is paused")]
-    ProtocolPaused,
-    #[msg("Action has expired")]
-    ActionExpired,
-    #[msg("Action already executed")]
-    ActionAlreadyExecuted,
-    #[msg("Invalid action type")]
-    InvalidActionType,
-    #[msg("Invalid action amount")]
+    #[msg("ViLink is paused")]
+    Paused,
+    #[msg("Program data account does not belong to this program")]
+    InvalidProgramData,
+    #[msg("VCoin mint must be the vcoin-token program's mint PDA")]
+    InvalidVCoinMint,
+    #[msg("Fee must be between 0.1% and 10%")]
+    InvalidFee,
+    #[msg("Action type is unknown or disabled")]
+    ActionDisabled,
+    #[msg("Wrong action type for this instruction")]
+    WrongActionType,
+    #[msg("Tip amount must be between 0.1 and 10,000 VCoin; other actions carry no amount")]
     InvalidAmount,
-    #[msg("Action creator cannot execute own action")]
-    SelfExecutionNotAllowed,
-    #[msg("dApp not registered")]
-    DAppNotRegistered,
-    #[msg("Batch size exceeds maximum")]
-    BatchTooLarge,
-    #[msg("Action not found")]
-    ActionNotFound,
-    #[msg("Insufficient balance")]
-    InsufficientBalance,
-    #[msg("Action type disabled")]
-    ActionTypeDisabled,
-    #[msg("Target user not valid")]
+    #[msg("Invalid target")]
     InvalidTarget,
+    #[msg("Expiry must be between 1 hour and 7 days")]
+    InvalidExpiry,
+    #[msg("max_executions must be between 1 and 10,000")]
+    InvalidMaxExecutions,
+    #[msg("Nonce must equal the creator's actions_created")]
+    InvalidNonce,
+    #[msg("Action expired or fully executed")]
+    ActionClosed,
+    #[msg("Action is still open")]
+    ActionStillOpen,
+    #[msg("The creator or target cannot execute this action")]
+    InvalidExecutor,
+    #[msg("Signer is neither the executor nor a valid session for the executor")]
+    Unauthorized,
+    #[msg("No config change pending")]
+    NoPendingChange,
+    #[msg("Config change timelock still active")]
+    TimelockActive,
     #[msg("Arithmetic overflow")]
     Overflow,
-    #[msg("Invalid token account owner")]
-    InvalidTokenAccount,
-    #[msg("Invalid token mint")]
-    InvalidMint,
-    #[msg("Invalid treasury account")]
-    InvalidTreasury,
-
-    // H-02: Two-step authority transfer errors
-    #[msg("Not the pending authority")]
-    NotPendingAuthority,
-
-    #[msg("No pending authority transfer")]
-    NoPendingTransfer,
-
-    #[msg("Cannot propose self as new authority")]
-    CannotProposeSelf,
-
-    #[msg("Invalid authority address (zero)")]
-    InvalidAuthority,
-
-    // M-02: Platform fee bounds validation
-    #[msg("Platform fee must be between 0.1% and 10%")]
-    InvalidFeeRange,
-
-    // M-04: Nonce validation for deterministic PDA derivation
-    #[msg("Invalid nonce: must match expected action_nonce from user stats")]
-    InvalidNonce,
-
-    // H-05: Token delegation attack prevention
-    #[msg("Token account has active delegation - revoke before executing")]
-    TokenAccountDelegated,
-
-    // L-04: Invalid expiry validation
-    #[msg("Invalid expiry: must be > 0 and <= max action expiry")]
-    InvalidExpiry,
 }
