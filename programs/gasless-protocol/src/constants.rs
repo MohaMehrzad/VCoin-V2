@@ -1,51 +1,35 @@
-/// Seeds
+//! Gasless (session-key registry + VCoin fee) constants.
+
+use anchor_lang::prelude::*;
+
+#[constant]
 pub const GASLESS_CONFIG_SEED: &[u8] = b"gasless-config";
-pub const SESSION_KEY_SEED: &[u8] = b"session-key";
-pub const USER_GASLESS_SEED: &[u8] = b"user-gasless";
+/// Session PDA: `["session", target_program, session_signer, authority]`.
+#[constant]
+pub const SESSION_SEED: &[u8] = b"session";
+#[constant]
 pub const FEE_VAULT_SEED: &[u8] = b"fee-vault";
-pub const DAILY_BUDGET_SEED: &[u8] = b"daily-budget";
 
-/// Session configuration
-pub const SESSION_DURATION: i64 = 24 * 60 * 60; // 24 hours
-pub const MAX_SESSION_ACTIONS: u32 = 1000; // Max actions per session
-pub const MAX_SESSION_SPEND: u64 = 100_000_000_000_000; // 100,000 VCoin max per session
+/// Longest allowed session (24 h), following MagicBlock gpl-session practice.
+#[constant]
+pub const MAX_SESSION_DURATION: i64 = 24 * 60 * 60;
 
-/// Fee configuration
-pub const DEFAULT_SOL_FEE: u64 = 5_000; // 0.000005 SOL per tx
-pub const VCOIN_FEE_MULTIPLIER: u64 = 100; // 100x VCoin equivalent
-pub const SSCRE_DEDUCTION_BPS: u16 = 100; // 1% from SSCRE claims
-
-/// Daily budget
-pub const DAILY_SUBSIDY_BUDGET_SOL: u64 = 10_000_000_000; // 10 SOL per day
-pub const MAX_SUBSIDIZED_TX_PER_USER: u32 = 50; // Max 50 free tx per user per day
-
-/// L-03: Slippage protection for fee calculations
-/// Maximum fee slippage allowed in basis points (5% = 500 bps)
-pub const MAX_FEE_SLIPPAGE_BPS: u16 = 500;
-pub const DEFAULT_MAX_SLIPPAGE_BPS: u16 = 500;
-
-/// H-AUDIT-12: Per-user session count limit
-pub const MAX_SESSIONS_PER_USER: u8 = 5;
-
-/// C-AUDIT-15: Maximum day delta allowed for daily budget reset (clock skew protection)
-pub const MAX_DAY_DELTA: u32 = 2;
-
-/// Action scope bits
-pub const SCOPE_TIP: u16 = 1 << 0;
+/// Session scopes. Sessions may only authorize low-risk, non-value-moving social actions:
+/// never transfers, tips, withdrawals, claims, staking or votes (those always need the
+/// main wallet). Bit positions are kept from v2 for client compatibility.
+#[constant]
 pub const SCOPE_VOUCH: u16 = 1 << 1;
+#[constant]
 pub const SCOPE_CONTENT: u16 = 1 << 2;
-pub const SCOPE_GOVERNANCE: u16 = 1 << 3;
-pub const SCOPE_TRANSFER: u16 = 1 << 4;
-pub const SCOPE_STAKE: u16 = 1 << 5;
-pub const SCOPE_CLAIM: u16 = 1 << 6;
+#[constant]
 pub const SCOPE_FOLLOW: u16 = 1 << 7;
-pub const SCOPE_ALL: u16 = 0xFFFF;
-/// Union of every defined scope bit; any other bit is invalid.
-pub const VALID_SCOPE_MASK: u16 = SCOPE_TIP
-    | SCOPE_VOUCH
-    | SCOPE_CONTENT
-    | SCOPE_GOVERNANCE
-    | SCOPE_TRANSFER
-    | SCOPE_STAKE
-    | SCOPE_CLAIM
-    | SCOPE_FOLLOW;
+/// Union of every allowed scope bit; any other bit is rejected.
+#[constant]
+pub const VALID_SCOPE_MASK: u16 = SCOPE_VOUCH | SCOPE_CONTENT | SCOPE_FOLLOW;
+
+/// Upper bound on the per-transaction VCoin fee the admin may schedule (100 VCoin).
+#[constant]
+pub const MAX_VCOIN_FEE_PER_TX: u64 = 100_000_000_000u64;
+/// Delay before a fee or treasury change takes effect.
+#[constant]
+pub const PARAM_CHANGE_DELAY: i64 = 24 * 60 * 60;

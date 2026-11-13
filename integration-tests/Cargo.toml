@@ -12,6 +12,7 @@ vcoin-common = { workspace = true }
 vcoin-token = { path = "../programs/vcoin-token", features = ["no-entrypoint"] }
 vevcoin-token = { path = "../programs/vevcoin-token", features = ["no-entrypoint"] }
 staking-protocol = { path = "../programs/staking-protocol", features = ["no-entrypoint"] }
+gasless-protocol = { path = "../programs/gasless-protocol", features = ["no-entrypoint"] }
 litesvm = { workspace = true }
 solana-sdk = { workspace = true }
 bincode = "1.3"

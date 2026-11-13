@@ -1340,6 +1340,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "vcoin-common",
 ]
 
 [[package]]
@@ -1754,6 +1755,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bincode",
+ "gasless-protocol",
  "litesvm",
  "solana-loader-v3-interface 5.0.0",
  "solana-sdk",

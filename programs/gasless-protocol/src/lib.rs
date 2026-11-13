@@ -1,27 +1,17 @@
+//! Gasless: session-key registry + VCoin fee collection.
+//!
+//! * **Session keys** (MagicBlock gpl-session model): a scoped, ≤24h ephemeral signer for
+//!   one target program. Consuming programs (content-registry, vilink) load the
+//!   [`state::SessionToken`] with `seeds::program = gasless_protocol::ID` and call
+//!   `SessionToken::verify`. Sessions only cover low-risk social actions; transfers, tips,
+//!   claims, staking and votes always need the main wallet.
+//! * **Fees**: `pay_vcoin_fee(max_fee)`; the user always caps the fee. Collected fees go
+//!   to a treasury that can only change behind a 24h delay.
+//! * **SOL sponsorship** happens off-chain: a relayer (Kora is recommended) pays
+//!   transaction fees and rent. The v2 on-chain "subsidy budget" moved no SOL and could
+//!   brick itself after 3 idle days (audit GAS-01/02); it is removed.
+
 use anchor_lang::prelude::*;
-
-declare_id!("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3");
-
-// Gasless Layer - Paymaster + Session Keys for Zero-Friction UX
-//
-// Enables gasless transactions for ViWoApp users.
-//
-// Key Features:
-// - Paymaster: Platform subsidizes transaction fees
-// - Session Keys: Temporary 24h signing keys with limited scope
-// - VCoin Deduction: Automatic fee deduction from VCoin balance
-// - SSCRE Integration: 1% deduction from reward claims
-//
-// Fee Deduction Methods:
-// 1. Platform Subsidized (onboarding, governance)
-// 2. VCoin Deduction (tips, transfers)
-// 3. Reward Deduction (1% from SSCRE claims)
-//
-// Session Key Scopes:
-// - Tip actions
-// - Vouch actions
-// - Content interactions
-// - Governance voting
 
 pub mod constants;
 pub mod contexts;
@@ -34,127 +24,68 @@ pub mod state;
 mod tests;
 
 use contexts::*;
-use instructions::*;
+
+declare_id!("FcXJAjzJs8eVY2WTRFXynQBpC7WZUqKZppyp9xS6PaB3");
 
 #[program]
 pub mod gasless_protocol {
     use super::*;
 
-    /// Initialize gasless configuration
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        fee_payer: Pubkey,
-        daily_budget: u64,
-    ) -> Result<()> {
-        admin::initialize::handler(ctx, fee_payer, daily_budget)
+    /// Upgrade authority only.
+    pub fn initialize(ctx: Context<Initialize>, vcoin_fee_per_tx: u64) -> Result<()> {
+        instructions::admin::initialize(ctx, vcoin_fee_per_tx)
     }
 
-    /// Create a session key for gasless transactions
-    pub fn create_session_key(
-        ctx: Context<CreateSessionKey>,
-        session_pubkey: Pubkey,
+    pub fn create_session(
+        ctx: Context<CreateSession>,
+        target_program: Pubkey,
         scope: u16,
-        duration_seconds: i64,
-        max_actions: u32,
-        max_spend: u64,
-        fee_method: u8,
+        valid_until: i64,
     ) -> Result<()> {
-        session::create::handler(
-            ctx,
-            session_pubkey,
-            scope,
-            duration_seconds,
-            max_actions,
-            max_spend,
-            fee_method,
-        )
+        instructions::session::create_session(ctx, target_program, scope, valid_until)
     }
 
-    /// Execute an action using session key
-    pub fn execute_session_action(
-        ctx: Context<ExecuteSessionAction>,
-        action_type: u16,
-        spend_amount: u64,
-    ) -> Result<()> {
-        session::execute_action::handler(ctx, action_type, spend_amount)
+    pub fn revoke_session(ctx: Context<RevokeSession>) -> Result<()> {
+        instructions::session::revoke_session(ctx)
     }
 
-    /// Deduct VCoin fee for gasless transaction
-    pub fn deduct_vcoin_fee(ctx: Context<DeductVCoinFee>, amount: u64) -> Result<()> {
-        fee::deduct_vcoin::handler(ctx, amount)
+    pub fn pay_vcoin_fee(ctx: Context<PayVCoinFee>, max_fee: u64) -> Result<()> {
+        instructions::fee::pay_vcoin_fee(ctx, max_fee)
     }
 
-    /// Revoke a session key
-    pub fn revoke_session_key(ctx: Context<RevokeSessionKey>) -> Result<()> {
-        session::revoke::handler(ctx)
+    pub fn withdraw_fees(ctx: Context<WithdrawFees>, amount: u64) -> Result<()> {
+        instructions::fee::withdraw_fees(ctx, amount)
     }
 
-    /// Update fee configuration
-    pub fn update_fee_config(
-        ctx: Context<UpdateConfig>,
-        sol_fee_per_tx: u64,
-        vcoin_fee_multiplier: u64,
-        sscre_deduction_bps: u16,
-    ) -> Result<()> {
-        admin::update_fee_config::handler(
-            ctx,
-            sol_fee_per_tx,
-            vcoin_fee_multiplier,
-            sscre_deduction_bps,
-        )
+    pub fn schedule_fee(ctx: Context<UpdateConfig>, new_fee: u64) -> Result<()> {
+        instructions::admin::schedule_fee(ctx, new_fee)
     }
 
-    /// Update daily budget
-    pub fn update_daily_budget(
-        ctx: Context<UpdateConfig>,
-        daily_budget: u64,
-        max_per_user: u32,
-    ) -> Result<()> {
-        admin::update_daily_budget::handler(ctx, daily_budget, max_per_user)
+    pub fn apply_fee(ctx: Context<ApplyFee>) -> Result<()> {
+        instructions::admin::apply_fee(ctx)
     }
 
-    /// Set fee payer (paymaster wallet)
-    pub fn set_fee_payer(ctx: Context<UpdateConfig>, new_fee_payer: Pubkey) -> Result<()> {
-        admin::set_fee_payer::handler(ctx, new_fee_payer)
+    pub fn schedule_treasury(ctx: Context<UpdateConfig>, new_treasury: Pubkey) -> Result<()> {
+        instructions::admin::schedule_treasury(ctx, new_treasury)
     }
 
-    /// Set SSCRE program reference
-    pub fn set_sscre_program(ctx: Context<UpdateConfig>, sscre_program: Pubkey) -> Result<()> {
-        admin::set_sscre_program::handler(ctx, sscre_program)
+    pub fn apply_treasury(ctx: Context<ApplyTreasury>) -> Result<()> {
+        instructions::admin::apply_treasury(ctx)
     }
 
-    /// Pause/unpause protocol
     pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
-        admin::set_paused::handler(ctx, paused)
+        instructions::admin::set_paused(ctx, paused)
     }
 
-    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
-    pub fn propose_authority(ctx: Context<UpdateAuthority>, new_authority: Pubkey) -> Result<()> {
-        admin::update_authority::handler(ctx, new_authority)
+    pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
+        instructions::admin::propose_authority(ctx, new_authority)
     }
 
-    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
+    pub fn cancel_authority_transfer(ctx: Context<UpdateConfig>) -> Result<()> {
+        instructions::admin::cancel_authority_transfer(ctx)
+    }
+
     pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
-        admin::accept_authority::handler(ctx)
-    }
-
-    /// Cancel a pending authority transfer (H-02 security fix)
-    pub fn cancel_authority_transfer(ctx: Context<UpdateAuthority>) -> Result<()> {
-        admin::cancel_authority_transfer::handler(ctx)
-    }
-
-    /// Get session key info
-    pub fn get_session_info(ctx: Context<GetSessionInfo>) -> Result<()> {
-        query::get_session_info::handler(ctx)
-    }
-
-    /// Get user gasless stats
-    pub fn get_user_gasless_stats(ctx: Context<GetUserStats>) -> Result<()> {
-        query::get_user_stats::handler(ctx)
-    }
-
-    /// Get config stats
-    pub fn get_config_stats(ctx: Context<GetConfigStats>) -> Result<()> {
-        query::get_config_stats::handler(ctx)
+        instructions::admin::accept_authority(ctx)
     }
 }

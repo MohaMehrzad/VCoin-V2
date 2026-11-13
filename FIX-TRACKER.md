@@ -101,18 +101,18 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | TH-09 | Medium | Front-runnable `initialize`, and one key can freeze every VCoin transfer | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
 | TH-10 | Low | Activity is recorded under token-account addresses, not wallets | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
 | TH-11 | Medium | No test exercises `execute` or a Token-2022 transfer | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
-| GAS-02 | High | Subsidized actions stop working permanently after 3 days without one | 09-gasless-protocol.md | C11 | open |
-| GAS-03 | High | Collected VCoin fees are locked forever | 09-gasless-protocol.md | C11 | open |
-| GAS-01 | High | Session keys authorize nothing, and "sponsoring" moves no SOL | 09-gasless-protocol.md | C11 | open |
-| GAS-16 | Medium | The default fee path charges whatever the admin sets, with no cap (SEC-2) | 09-gasless-protocol.md | C11 | open |
-| GAS-04 | Low | Scope checks can be bypassed (sessions authorize nothing today, so only the event field is wrong; GAS-01) | 09-gasless-protocol.md | C11 | open |
-| GAS-05 | Low | Expired sessions count toward the 5-session cap, and rent is never returned | 09-gasless-protocol.md | C11 | open |
-| GAS-06 | Low | Invalid session parameters are silently replaced with the maximums | 09-gasless-protocol.md | C11 | open |
-| GAS-07 | Medium | Front-runnable `initialize` with an unvalidated mint | 09-gasless-protocol.md | C11 | open |
-| GAS-08 | Medium | Fee deduction reverts if VCoin has a transfer hook (latent; no hook is configured anywhere) | 09-gasless-protocol.md | C11 | open |
-| GAS-09 | Medium | Every action write-locks one global account | 09-gasless-protocol.md | C11 | open |
-| GAS-10 | Low | Sybil wallets can exhaust the global subsidy budget | 09-gasless-protocol.md | C11 | open |
-| GAS-15 | Medium | No test covers the rollover, expiry, scope or budget paths | 09-gasless-protocol.md | C11 | open |
+| GAS-02 | High | Subsidized actions stop working permanently after 3 days without one | 09-gasless-protocol.md | C11 | fixed (C11: day/budget logic removed; test fee_is_capped… pays after 5 idle days) |
+| GAS-03 | High | Collected VCoin fees are locked forever | 09-gasless-protocol.md | C11 | fixed (C11: permissionless withdraw_fees to the timelocked treasury; test fee_is_capped…_withdrawable_to_the_treasury) |
+| GAS-01 | High | Session keys authorize nothing, and "sponsoring" moves no SOL | 09-gasless-protocol.md | C11 | fixed (C11: session registry with SessionToken.verify for consumers (wired in C15/C16); relayer may pay rent; SOL sponsorship off-chain (Kora); test relayer_pays_for_a_session_of_a_wallet_with_zero_sol) |
+| GAS-16 | Medium | The default fee path charges whatever the admin sets, with no cap (SEC-2) | 09-gasless-protocol.md | C11 | fixed (C11: user-signed max_fee; fee bounded + 24h timelocked + evented; test fee_changes_are_bounded_and_wait_24h) |
+| GAS-04 | Low | Scope checks can be bypassed (sessions authorize nothing today, so only the event field is wrong; GAS-01) | 09-gasless-protocol.md | C11 | fixed (C11: verify requires exactly one in-scope bit; unit test verify_requires_exactly_one_in_scope_bit) |
+| GAS-05 | Low | Expired sessions count toward the 5-session cap, and rent is never returned | 09-gasless-protocol.md | C11 | fixed (C11: no per-user cap; revoke/expiry closes the account and refunds the payer; test revoke_closes_the_session…) |
+| GAS-06 | Low | Invalid session parameters are silently replaced with the maximums | 09-gasless-protocol.md | C11 | fixed (C11: invalid scope/validity rejected, never clamped; test invalid_scope_and_validity_are_rejected_not_clamped) |
+| GAS-07 | Medium | Front-runnable `initialize` with an unvalidated mint | 09-gasless-protocol.md | C11 | fixed (C11: gated initialize + validate_vcoin_mint; test initialize_is_gated…) |
+| GAS-08 | Medium | Fee deduction reverts if VCoin has a transfer hook (latent; no hook is configured anywhere) | 09-gasless-protocol.md | C11 | fixed (C11: VCoin mint must pass validate_vcoin_mint — no transfer hook can exist) |
+| GAS-09 | Medium | Every action write-locks one global account | 09-gasless-protocol.md | C11 | fixed (C11: pay_vcoin_fee takes the config read-only) |
+| GAS-10 | Low | Sybil wallets can exhaust the global subsidy budget | 09-gasless-protocol.md | C11 | removed (C11: on-chain subsidy budget removed; relayer rate limits are off-chain) |
+| GAS-15 | Medium | No test covers the rollover, expiry, scope or budget paths | 09-gasless-protocol.md | C11 | fixed (C11: 5 unit + 7 LiteSVM tests incl. expiry, scope, timelock, idle days) |
 | VL-1 | Medium | Front-runnable `initialize`; the treasury and mint are then permanent | 10-vilink-protocol.md | C16 | open |
 | VL-2 | Low | Disabling an action type doesn't stop existing links (the global pause, which all three execute handlers check, still works as an emergency stop) | 10-vilink-protocol.md | C16 | open |
 | VL-3 | Low | Vouch and Follow links ignore `max_executions` (inflates ViLink-only stats that no other program reads) | 10-vilink-protocol.md | C16 | open |
