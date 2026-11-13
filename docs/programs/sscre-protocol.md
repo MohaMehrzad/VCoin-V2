@@ -1,190 +1,53 @@
-# SSCRE Protocol
+# sscre-protocol
 
-Self-Sustaining Circular Reward Economy with Merkle-based claims.
+Program id `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ`. [API](../API.md#sscre-protocol).
+Leaf format: [merkle-leaf-format.md](../offchain/merkle-leaf-format.md).
 
-## Overview
+## Model
 
-The SSCRE Protocol ensures rewards never run out through a 6-layer funding hierarchy. Users claim rewards via gas-efficient Merkle proofs.
+A per-epoch merkle distributor (Jito/Saber pattern).
 
-**Devnet Address:** `6AJNcQSfoiE2UAeUDyJUBumS9SBwhAdSznoAeYpXrxXZ`
+- The reserve vault `["reserve-vault"]` holds undistributed rewards.
+- **`start_epoch`.** A permissionless crank, at most once per `epoch_duration`.
+  - It moves `min(next_epoch_budget, reserve)` into the epoch's own vault `["epoch-vault", i]`,
+    so an epoch can never pay out another epoch's funds (audit SSC-02).
+  - It then multiplies the next budget by `1 − decay_bps`.
+- **`vote_root(root, max_total_claim ≤ budget)`.**
+  - Called by registered oracles (24h activation) after the epoch ends.
+  - One changeable vote per oracle.
+  - `root_quorum` matching votes propose a candidate and start the dispute delay. The DAO can
+    `veto_root`, which clears every vote.
+- **`activate_root`.** Permissionless after the delay, if the candidate kept its quorum. It must
+  happen before `end + claim_window`.
+- **`claim(amount, proof)`.**
+  - The claimant signs; a separate payer funds `ClaimStatus` `["claim", epoch, claimant]`.
+  - Amounts are gross and capped by `max_total_claim`.
+  - The fee is snapshotted at activation, rounded up, and paid to the timelocked fee account.
+- **`clawback`.**
+  - Permissionless after the claim window, or after the root deadline if no root ever
+    activated.
+  - Returns the remainder to the reserve and closes the epoch vault.
+  - `close_claim_status` then refunds rent.
+- **Pause.** Blocks start, vote, activate and claim. Every deadline is extended by the time spent
+  paused (SSC-05).
 
-## Key Features
+## Defaults and bounds
 
-- **Merkle tree claims** for gas efficiency
-- **5A score-weighted** rewards
-- **6-layer funding** hierarchy
-- **Circuit breaker** for emergency stops
-- **90-day claim window** per epoch
+| Parameter | Default | Bounds |
+|---|---|---|
+| First epoch budget | 10M VCoin | the DAO can only lower it |
+| Decay per epoch | 2% | ≤ 50% |
+| Epoch duration | 30 days | 1–90 days |
+| Claim window | 90 days | 7–365 days |
+| Dispute delay | 24h | 1h–7 days |
+| Root quorum | 2 | 2..=registered oracles (max 7) |
+| Fee | 1% | ≤ 1%, change timelocked 24h |
 
-## Sustainability Model
+## Admin
 
-| Phase | Years | Mechanism |
-|-------|-------|-----------|
-| Emission | 1-5 | 350M reward pool (~5.83M/month) |
-| Reserve | 6-10 | ~84M saved reserves |
-| Perpetual | 11+ | 250M minting every 5 years |
-
-## 6-Layer Funding Hierarchy
-
-| Layer | Source | Priority |
-|-------|--------|----------|
-| L0 | Unused Allocation | First |
-| L1 | Reserve Fund | |
-| L2 | Scheduled Minting | |
-| L3 | Buyback Recycling | |
-| L4 | Profit Buybacks | |
-| L5 | Fee Recycling | Last |
-
-## Instructions
-
-### initialize_pool
-
-Creates the rewards pool with initial allocation.
-
-**Authority:** Admin only
-
-### start_epoch
-
-Begins a new monthly epoch.
-
-**Authority:** Protocol authority
-
-**Parameters:**
-- `epoch: u32` - Epoch number
-- `total_allocation: u64` - Total rewards for epoch
-
-### update_merkle_root
-
-Oracle pushes the finalized distribution.
-
-**Authority:** Registered oracle
-
-**Parameters:**
-- `epoch: u32` - Epoch number
-- `merkle_root: [u8; 32]` - Root of claims tree
-
-### claim_rewards
-
-User claims rewards with Merkle proof.
-
-**Authority:** User
-
-**Parameters:**
-- `epoch: u32` - Epoch to claim
-- `amount: u64` - Claim amount
-- `merkle_proof: Vec<[u8; 32]>` - Proof (max 32 levels)
-
-**Fee:** 1% deducted for gasless UX
-
-### trigger_circuit_breaker
-
-Emergency stop for the protocol.
-
-**Authority:** Protocol authority
-
-### reset_circuit_breaker
-
-Resume operations after 6-hour cooldown.
-
-**Authority:** Protocol authority
-
-## Account Structure
-
-```rust
-pub struct RewardsPoolConfig {
-    pub authority: Pubkey,
-    pub vcoin_mint: Pubkey,
-    pub pool_vault: Pubkey,
-    pub five_a_program: Pubkey,
-    pub oracles: [Pubkey; 5],
-    pub oracle_count: u8,
-    pub current_epoch: u32,
-    pub total_distributed: u64,
-    pub remaining_reserves: u64,
-    pub paused: bool,
-    pub circuit_breaker_active: bool,
-    pub circuit_breaker_triggered_at: i64,
-    pub bump: u8,
-}
-
-pub struct EpochDistribution {
-    pub epoch: u32,
-    pub merkle_root: [u8; 32],
-    pub total_allocation: u64,
-    pub claims_count: u32,
-    pub claimed_amount: u64,
-    pub start_timestamp: i64,
-    pub end_timestamp: i64,
-    pub finalized: bool,
-    pub bump: u8,
-}
-
-pub struct UserClaim {
-    pub user: Pubkey,
-    pub total_claimed: u64,
-    pub last_claim_epoch: u32,
-    pub claimed_epochs_bitmap: [u64; 4],      // Epochs 0-255
-    pub claimed_epochs_bitmap_ext: [u64; 4],  // Epochs 256-511
-    pub high_epochs_bitmap: [u64; 8],         // Epochs 512-1023
-    pub bump: u8,
-}
-```
-
-## Security Features
-
-- **Merkle proof size limit** - Maximum 32 levels (DoS prevention)
-- **Domain separation** - `SSCRE_CLAIM_V1` prefix for leaf hashes
-- **Double-claim prevention** - Bitmap tracking for 1024 epochs (85+ years)
-- **Circuit breaker** - 6-hour cooldown before reset
-- **90-day claim window** - Unclaimed funds return to pool
-
-## Integration
-
-```typescript
-import { ViWoClient } from "@viwoapp/sdk";
-
-// Get pool stats
-const stats = await client.rewards.getStats();
-console.log("Current Epoch:", stats.currentEpoch);
-console.log("Total Distributed:", stats.totalDistributed);
-
-// Get user claim history
-const claim = await client.rewards.getUserClaim(wallet);
-console.log("Total Claimed:", claim.totalClaimed);
-
-// Get unclaimed epochs
-const unclaimed = await client.rewards.getUnclaimedEpochs(wallet);
-
-// Claim rewards (1% fee deducted)
-const claimTx = await client.rewards.buildClaimTransaction({
-  epoch,
-  amount,
-  merkleProof,
-});
-```
-
-## Merkle Proof Generation (Off-chain)
-
-```typescript
-import { MerkleTree } from "merkletreejs";
-import { keccak256 } from "@ethersproject/keccak256";
-
-// Build tree from user allocations
-const leaves = allocations.map(a => 
-  keccak256(Buffer.concat([
-    Buffer.from("SSCRE_CLAIM_V1"),
-    a.user.toBuffer(),
-    Buffer.from(a.amount.toString(16).padStart(16, "0"), "hex")
-  ]))
-);
-
-const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-const root = tree.getRoot();
-const proof = tree.getProof(leaves[0]);
-```
-
-## Source Code
-
-- [`programs/sscre-protocol/src/`](../../programs/sscre-protocol/src/)
-- [`programs/sscre-protocol/src/state/`](../../programs/sscre-protocol/src/state/)
-
+- `initialize_pool`: upgrade authority only; VCoin mint pinned.
+- Oracles: `register_oracle` / `remove_oracle`; `set_root_quorum`.
+- `set_params`, `set_next_epoch_budget`.
+- Fee: `propose_fee` / `apply_fee` / `cancel_fee`.
+- `set_paused`.
+- Two-step authority.

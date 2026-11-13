@@ -82,8 +82,10 @@ jobs:
         with:
           name: anchor-build
           path: target
-      - name: Committed IDLs match the programs
-        run: node scripts/sync-idl.mjs && git diff --exit-code packages/viwoapp-sdk/src/idl
+      - name: Committed IDLs and API reference match the programs
+        run: |
+          node scripts/sync-idl.mjs && git diff --exit-code packages/viwoapp-sdk/src/idl
+          node scripts/gen-api-docs.mjs && git diff --exit-code docs/API.md
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

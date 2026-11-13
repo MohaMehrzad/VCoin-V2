@@ -1,166 +1,57 @@
-# Identity Protocol
+# identity-protocol
 
-Portable decentralized identity with SAS integration.
+Program id `3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG`. [API](../API.md#identity-protocol).
 
-## Overview
+## Identity
 
-The Identity Protocol provides a portable DID (Decentralized Identifier) anchored on Solana. It integrates with the Solana Attestation Service (SAS) for verified credentials and supports subscription tiers for platform features.
+- **`create_identity(did_hash, username)`.**
+  - Creates `Identity` `["identity", owner]` and reserves the username `["username", name]`.
+  - Usernames match `[a-z0-9_]{3,32}` and are unique.
+- **`update_did_hash`.** Works at any level.
+- **`close_identity`.** Frees the username.
 
-**Devnet Address:** `3egAds3pFR5oog6iQCN42KPvgih8HQz2FGybNjiVWixG`
+## Verification
 
-## Key Features
+Levels are **attester-signed**: a trusted attester co-signs. The program does not read Solana
+Attestation Service accounts.
 
-- **Portable DID** anchored on Solana
-- **SAS integration** for attestations
-- **Verification levels** (0-4)
-- **Subscription tiers** for premium features
-- **Profile metadata** linking
+**`link_attestation(attestation_id, claims, expires_at)`.**
 
-## Verification Levels
+- The owner and the attester sign; the attester can never be the owner.
+- The identity takes the attestation's level, whether that is higher or lower than before
+  (audit ID-01).
+- `AttestationLink` `["attestation", id]` binds an attestation id to one wallet (ID-03).
+- Expiry is at most 2 years.
+- Levels by claim:
 
-| Level | Name | Requirements | Benefits |
-|-------|------|--------------|----------|
-| 0 | None | Wallet only | Basic access |
-| 1 | Basic | Email + phone | Full features |
-| 2 | KYC | Identity documents | Higher limits |
-| 3 | Full | KYC + biometric | Max limits |
-| 4 | Enhanced | Full + UniqueHuman | Creator status |
+  | Level | Claims required |
+  |---|---|
+  | Basic | email + phone |
+  | KYC | the KYC claim (ID-04) |
+  | Full | KYC + biometric |
+  | Enhanced | Full + unique human |
 
-## Subscription Tiers
+**`Identity::effective_level(now, config)`** returns 0 once the attestation expired or its
+attester was removed. Consumers should use it, not the raw level (ID-02).
 
-| Tier | Features |
-|------|----------|
-| Free | Standard access |
-| Creator | Monetization features |
-| Premium | Priority support, analytics |
-| Business | API access, custom integration |
+- **`revoke_attestation`.** The issuing attester or the authority clears the level and closes
+  the link.
+- **`admin_lower_level`.** Can only lower a level.
 
-## Instructions
+## Subscriptions
 
-### initialize
+`subscribe(tier 1..=3, max_payment)` charges USDC (6 decimals, legacy SPL Token or Token-2022) to
+the treasury account, for 30 days.
 
-Initializes the identity protocol.
+- **Same tier:** extends from the current expiry, so no paid time is lost.
+- **Upgrade:** credits the unused time of the current tier.
+- **Downgrade:** refused while the higher tier is active (ID-05).
+- **Default prices:** $4 / $12 / $59.
 
-**Authority:** Admin only
+## Admin
 
-### create_identity
-
-Creates a DID anchor for a user.
-
-**Authority:** User
-
-**Parameters:**
-- `metadata_uri: String` - Profile metadata location (IPFS)
-
-### update_verification
-
-Updates user verification level.
-
-**Authority:** Protocol authority (off-chain verification)
-
-**Parameters:**
-- `user: Pubkey` - Target user
-- `level: u8` - New verification level (0-4)
-
-### link_sas_attestation
-
-Links a SAS attestation to identity.
-
-**Authority:** User
-
-**Parameters:**
-- `attestation_id: Pubkey` - SAS attestation account
-
-### subscribe
-
-Subscribe to a tier.
-
-**Authority:** User
-
-**Parameters:**
-- `tier: u8` - Subscription tier
-- `duration_months: u8` - Subscription duration
-
-### update_profile
-
-Update profile metadata URI.
-
-**Authority:** User
-
-## Account Structure
-
-```rust
-pub struct IdentityConfig {
-    pub authority: Pubkey,
-    pub sas_program: Pubkey,
-    pub vcoin_mint: Pubkey,
-    pub subscription_vault: Pubkey,
-    pub total_identities: u64,
-    pub paused: bool,
-    pub bump: u8,
-}
-
-pub struct UserIdentity {
-    pub owner: Pubkey,
-    pub did_uri: [u8; 128],
-    pub verification_level: u8,
-    pub verified_at: i64,
-    pub created_at: i64,
-    pub sas_attestations: Vec<Pubkey>,
-    pub subscription_tier: u8,
-    pub subscription_expires_at: i64,
-    pub metadata_uri: [u8; 128],
-    pub bump: u8,
-}
-```
-
-## Security Features
-
-- **SAS attestation verification** - Checks attestation validity
-- **Level progression** - Cannot skip verification levels
-- **Subscription validation** - Tier features gated properly
-- **Two-step authority transfer**
-
-## Integration
-
-```typescript
-import { ViWoClient, VerificationLevel } from "@viwoapp/sdk";
-
-// Get user identity
-const identity = await client.identity.getIdentity(wallet);
-console.log("Level:", identity.verificationLevel);
-
-// Check verification level
-const levelName = client.identity.getVerificationLevelName(identity.verificationLevel);
-
-// Get subscription status
-const isCreator = identity.subscriptionTier >= 1;
-const isExpired = identity.subscriptionExpiresAt < Date.now() / 1000;
-
-// Create identity
-const createTx = await client.identity.buildCreateIdentityTransaction({
-  metadataUri: "ipfs://...",
-});
-
-// Subscribe to tier
-const subscribeTx = await client.identity.buildSubscribeTransaction({
-  tier: 2,
-  durationMonths: 12,
-});
-```
-
-## SAS Integration
-
-The protocol integrates with Solana Attestation Service for:
-
-- **Email verification** - Email ownership proof
-- **Phone verification** - Phone number ownership
-- **Identity documents** - Government ID verification
-- **Biometric verification** - Liveness check
-- **UniqueHuman attestation** - Sybil resistance proof
-
-## Source Code
-
-- [`programs/identity-protocol/src/`](../../programs/identity-protocol/src/)
-- [`programs/identity-protocol/src/state/`](../../programs/identity-protocol/src/state/)
-
+- `initialize`: upgrade authority only; USDC mint and treasury validated.
+- Attesters: `add_attester` / `remove_attester`.
+- Payment changes: `propose_payment` / `apply_payment` / `cancel_payment` (24h).
+- `set_paused`.
+- Two-step authority.

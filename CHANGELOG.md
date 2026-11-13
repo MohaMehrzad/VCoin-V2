@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - unreleased (branch `audit-remediation`)
+
+v3 remediates the 148 findings of the 2026-11 internal review (`docs/audit/2026-11/`); every
+finding is mapped in `FIX-TRACKER.md`. **Not externally audited** — see `AUDIT_STATUS.md`. The
+v2 entries below claimed audit completion and production readiness; those claims did not hold.
+
+### Breaking
+- Governance moves to **Realms (SPL Governance)**; staking-protocol is its voter-weight plugin.
+  `governance-protocol` is replaced in place by **private-poll** (secret-ballot polls that Realms
+  proposals can require through `assert_poll_passed`).
+- VCoin is a **metadata-only** Token-2022 mint created by vcoin-token (no hook, delegate or freeze);
+  `transfer-hook` is retired. Slashing applies to staked deposits only, by DAO vote.
+- New account layouts and seeds in every program; v2 devnet state is abandoned.
+- `@viwoapp/sdk` 3.0.0 is a rewrite generated from the IDLs.
+
+### Programs
+- All: upgrade-authority-gated init, 24h two-step authority (`crates/vcoin-common`), timelocked
+  fee/treasury/oracle changes, pause never blocks withdrawals, close paths, no global counters,
+  boxed contexts (no SBF stack overruns).
+- staking-protocol: 8-slot lockups (1 week–4 years) with linear, decaying weight; 1:1 veVCoin
+  receipts; Realms plugin with withdrawal lock while votes are unrelinquished; DAO slashing with a
+  48h appeal window.
+- private-poll: CDS-proof ballots verified on-chain (shared `crates/zk-poll-core`), Feldman-checked
+  DKG committee, DLEQ shares, verified one-shot tally.
+- sscre-protocol: per-epoch merkle distributor with escrowed budgets, declining emission, oracle
+  quorum + dispute delay + veto, clawback; leaf format documented and frozen.
+- five-a-protocol: M-of-N oracle consensus with competing tallies; reputation-only vouching.
+- identity-protocol: attester-signed levels with expiry/revocation, unique usernames, fair
+  subscription renewal and upgrades.
+- content-registry: stake-derived energy tiers, per-author ids, session-key posting, bounded refunds.
+- vilink-protocol: tip/vouch/follow only, per-executor receipts, fee fixed at creation.
+- gasless-protocol: scoped session keys (≤ 24h) and user-capped VCoin fees; relayer off-chain (Kora).
+
+### Tooling
+- LiteSVM integration tests for every program (Realms against the mainnet binary); ZK SDK
+  round-trip tests; SDK end-to-end tests on the binaries; CI runs fmt, clippy -D warnings, SBF stack
+  guard, tests, wasm build, IDL/API-doc drift checks, cargo audit, SDK lint/test/build/smoke.
+- `packages/zk-voting-sdk` 0.2.0: Pedersen DKG, ballot prover, decryption, tally, wasm bindings.
+- Docs rewritten from code; `docs/API.md` generated from the IDLs; deploy runbook.
+
+
 ## [2.8.4] - 2025-12-26
 
 ### Fixed

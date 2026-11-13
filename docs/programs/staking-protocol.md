@@ -1,160 +1,83 @@
-# Staking Protocol
+# staking-protocol
 
-Stake VCoin to receive veVCoin governance power.
+Program id `6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu`. [API](../API.md#staking-protocol).
 
-## Overview
+## Accounts
 
-The Staking Protocol allows users to lock VCoin for a period of time to receive veVCoin (vote-escrowed VCoin). Longer locks and higher stakes provide more voting power and platform benefits.
+- **`Registrar`** `["registrar"]`:
+  - the admin;
+  - the Realms wiring (program, realm, community mint);
+  - mints and vault;
+  - `slash_destination`;
+  - `WeightParams`;
+  - 5A gates;
+  - `total_locked`;
+  - the slash nonce.
+- **Vault** `["vault"]`: VCoin held for all deposits.
+- **`Voter`** `["voter", owner]`: up to 8 deposits `{amount, lock_start, lock_end}` and
+  `pending_slashes`.
+- **Realms records:**
+  - `VoterWeightRecord` `["voter-weight-record", owner]`;
+  - `MaxVoterWeightRecord` `["max-voter-weight-record"]`.
 
-**Devnet Address:** `6EFcistyr2E81adLUcuBJRr8W2xzpt3D3dFYEcMewpWu`
+  Their layouts and discriminators match `spl-governance-addin-api`.
+- **`SlashRequest`** `["slash", voter, nonce]`.
 
-## Key Features
+## Weight
 
-- **Tier-based staking** (Bronze → Platinum)
-- **Time-weighted veVCoin** minting
-- **Lock periods** from 1 week to 4 years
-- **Fee discounts** based on tier
-- **CPI integration** with veVCoin program
-
-## Staking Tiers
-
-| Tier | Min Stake | Fee Discount | veVCoin Boost |
-|------|-----------|--------------|---------------|
-| None | 0 | 0% | 1.0x |
-| Bronze | 1,000 VCoin | 10% | 1.1x |
-| Silver | 5,000 VCoin | 20% | 1.2x |
-| Gold | 20,000 VCoin | 30% | 1.3x |
-| Platinum | 100,000 VCoin | 50% | 1.4x |
-
-## veVCoin Formula
+At time `t`, each deposit is worth:
 
 ```
-veVCoin = staked_amount × (lock_duration / 4_years) × tier_boost
-
-Example (1 year lock, Gold tier):
-veVCoin = 20,000 × (1/4) × 1.3 = 6,500 veVCoin
+amount·baseline + amount·max_extra·min(lock_end − t, saturation)/saturation   (factors / 1e9)
 ```
 
-## Instructions
+It is worth 0 if `lock_end − t < min_lock_remaining_to_vote`.
 
-### initialize_pool
+| Parameter | Default |
+|---|---|
+| `baseline_factor` | 1.0× |
+| `max_extra_factor` | +1.0× |
+| `saturation` | 4 years |
+| `min_lock_remaining_to_vote` | 4 days |
 
-Creates the staking pool.
+Weight is linear, so splitting tokens across wallets gains nothing (audit GOV-02). The max record
+is `total_locked × (baseline + max_extra)`, an upper bound. Set Realms percentage thresholds with
+that in mind.
 
-**Authority:** Admin only
+## Flows
 
-### stake
+- **Deposit.**
+  - `deposit(index, amount, lock_secs)`: lock for 1 week to 4 years.
+  - It credits exactly what the vault received and mints the receipt into the owner's veVCoin
+    associated token account.
+  - Adding to a live slot keeps the later lock end.
+- **`extend_lock`.** Moves a lock end later only.
+- **`withdraw`.**
+  - Only after `lock_end`.
+  - Never paused.
+  - Refused while the owner's Realms TokenOwnerRecord has unrelinquished votes or open
+    proposals (GOV-03), or while a slash is pending.
+  - Burns `min(amount, balance)` of the receipt.
+- **Realms plugin.**
+  - `create_voter_weight_record`.
+  - `update_voter_weight_record(action, target)`: valid for the current slot only. The 5A gate
+    applies here.
+  - `update_max_voter_weight_record`.
+- **Slashing.**
+  - The authority (the DAO) calls `propose_slash(amount, reason_hash)`; withdrawals freeze.
+  - After 48h anyone calls `execute_slash`, which moves `min(amount, deposits)` from the vault
+    to `slash_destination` and burns receipts.
+  - The authority can `cancel_slash` at any time.
+  - After a further 7 days anyone can `expire_slash`.
 
-Stakes VCoin with a lock duration.
+## Admin (Realms governance PDA after launch)
 
-**Authority:** User
+- `configure_governance`: one-shot; validates the realm.
+- `set_weight_params`: bounded.
+- `set_gate_params`: scores of at most 10000.
+- `set_slash_destination`.
+- `set_paused`: deposits and extensions only.
+- Two-step authority.
 
-**Parameters:**
-- `amount: u64` - VCoin amount to stake
-- `lock_duration: i64` - Lock duration in seconds (min: 604,800 = 1 week)
-
-**Effects:**
-- Transfers VCoin to pool vault
-- Mints veVCoin via CPI
-- Updates user tier
-
-### extend_lock
-
-Extends lock duration to receive more veVCoin.
-
-**Authority:** User (existing staker)
-
-**Parameters:**
-- `new_lock_duration: i64` - New lock duration (must be longer)
-
-### unstake
-
-Withdraws staked VCoin after lock expires.
-
-**Authority:** User
-
-**Effects:**
-- Returns VCoin from pool vault
-- Burns veVCoin via CPI
-- Resets user stake
-
-### update_tier
-
-Recalculates user tier based on current stake.
-
-**Authority:** Anyone
-
-### get_stake_info
-
-Query stake details.
-
-**Authority:** Anyone
-
-## Account Structure
-
-```rust
-pub struct StakingPool {
-    pub authority: Pubkey,
-    pub vcoin_mint: Pubkey,
-    pub vevcoin_mint: Pubkey,
-    pub vevcoin_program: Pubkey,
-    pub pool_vault: Pubkey,
-    pub total_staked: u64,
-    pub total_stakers: u64,
-    pub paused: bool,
-    pub reentrancy_guard: ReentrancyGuard,
-    pub bump: u8,
-    pub vault_bump: u8,
-}
-
-pub struct UserStake {
-    pub owner: Pubkey,
-    pub staked_amount: u64,
-    pub lock_duration: i64,
-    pub lock_end: i64,
-    pub stake_start: i64,
-    pub tier: u8,
-    pub ve_vcoin_amount: u64,
-    pub bump: u8,
-}
-```
-
-## Security Features
-
-- **Reentrancy guards** for CPI calls
-- **Lock duration validation** (min 1 week, max 4 years)
-- **Pausable** for emergencies
-- **Two-step authority transfer**
-
-## Integration
-
-```typescript
-import { ViWoClient, parseVCoin, LOCK_DURATIONS, STAKING_TIERS } from "@viwoapp/sdk";
-
-// Get staking pool info
-const pool = await client.staking.getPool();
-console.log("Total Staked:", pool.totalStaked);
-
-// Get user stake
-const stake = await client.staking.getUserStake(wallet);
-console.log("Your Tier:", client.staking.getTierName(stake.tier));
-
-// Calculate tier for amount
-const tier = client.staking.calculateTier(50000); // Gold
-
-// Stake VCoin
-const stakeTx = await client.staking.buildStakeTransaction({
-  amount: parseVCoin("10000"),
-  lockDuration: LOCK_DURATIONS.oneYear,
-});
-
-// Check unstake eligibility
-const { canUnstake, reason } = await client.staking.canUnstake(wallet);
-```
-
-## Source Code
-
-- [`programs/staking-protocol/src/`](../../programs/staking-protocol/src/)
-- [`programs/staking-protocol/src/state/`](../../programs/staking-protocol/src/state/)
-- [`programs/staking-protocol/src/instructions/`](../../programs/staking-protocol/src/instructions/)
-
+Initialization (`create_registrar`) is restricted to the upgrade authority and checks that the
+VCoin mint is hook/fee/freeze-free.

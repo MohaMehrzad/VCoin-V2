@@ -16,6 +16,7 @@
     "fmt:check": "cargo fmt --all -- --check",
     "clippy": "cargo clippy --workspace --all-targets -- -D warnings",
     "lint": "cd packages/viwoapp-sdk && npm run lint",
-    "audit": "cargo audit"
+    "audit": "cargo audit",
+    "docs:api": "node scripts/gen-api-docs.mjs"
   }
 }
