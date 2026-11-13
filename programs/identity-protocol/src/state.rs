@@ -1,0 +1,181 @@
+use anchor_lang::prelude::*;
+use vcoin_common::AdminState;
+
+use crate::constants::*;
+
+/// Singleton, PDA `["identity-config"]`.
+#[account]
+#[derive(InitSpace)]
+pub struct IdentityConfig {
+    pub admin: AdminState,
+    /// Trusted attesters (`Pubkey::default()` = empty slot). Removing one immediately voids
+    /// the levels it granted (see [`Identity::effective_level`]).
+    pub attesters: [Pubkey; MAX_ATTESTERS],
+    /// USDC mint (6 decimals), fixed at initialization.
+    pub usdc_mint: Pubkey,
+    /// Token account (USDC) that receives subscription payments.
+    pub treasury_token: Pubkey,
+    /// Price per 30 days for tiers 1..=3.
+    pub prices: [u64; NUM_TIERS],
+    /// Timelocked payment change (`pending_eta == 0` = none).
+    pub pending_prices: [u64; NUM_TIERS],
+    pub pending_treasury_token: Pubkey,
+    pub pending_eta: i64,
+    pub paused: bool,
+    pub bump: u8,
+}
+
+impl IdentityConfig {
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
+
+    pub fn is_attester(&self, key: &Pubkey) -> bool {
+        *key != Pubkey::default() && self.attesters.contains(key)
+    }
+}
+
+/// One per wallet, PDA `["identity", owner]`.
+#[account]
+#[derive(InitSpace)]
+pub struct Identity {
+    pub owner: Pubkey,
+    pub did_hash: [u8; 32],
+    pub username: [u8; MAX_USERNAME_LEN],
+    pub username_len: u8,
+    /// Level from the current attestation (see `effective_level`).
+    pub level: u8,
+    pub claims: u16,
+    pub attester: Pubkey,
+    pub attestation_id: [u8; 32],
+    pub level_expires_at: i64,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub bump: u8,
+}
+
+impl Identity {
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
+
+    /// The level consumers should trust: zero once the attestation expired or its attester
+    /// is no longer trusted (audit ID-02).
+    pub fn effective_level(&self, now: i64, config: &IdentityConfig) -> u8 {
+        if now < self.level_expires_at && config.is_attester(&self.attester) {
+            self.level
+        } else {
+            LEVEL_NONE
+        }
+    }
+
+    pub fn username(&self) -> &[u8] {
+        &self.username[..self.username_len as usize]
+    }
+}
+
+/// Reserves a username, PDA `["username", name]`.
+#[account]
+#[derive(InitSpace)]
+pub struct UsernameRecord {
+    pub owner: Pubkey,
+    pub bump: u8,
+}
+
+impl UsernameRecord {
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
+}
+
+/// Binds an attestation id to exactly one wallet, PDA `["attestation", attestation_id]`
+/// (audit ID-03: one proof cannot verify many wallets).
+#[account]
+#[derive(InitSpace)]
+pub struct AttestationLink {
+    pub attestation_id: [u8; 32],
+    pub owner: Pubkey,
+    pub attester: Pubkey,
+    pub claims: u16,
+    pub level: u8,
+    pub expires_at: i64,
+    pub linked_at: i64,
+    pub rent_payer: Pubkey,
+    pub bump: u8,
+}
+
+impl AttestationLink {
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
+}
+
+/// PDA `["subscription", user]`.
+#[account]
+#[derive(InitSpace)]
+pub struct Subscription {
+    pub user: Pubkey,
+    /// 1..=3 (0 = never subscribed).
+    pub tier: u8,
+    pub started_at: i64,
+    pub expires_at: i64,
+    pub total_paid: u64,
+    pub bump: u8,
+}
+
+impl Subscription {
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
+
+    pub fn active_tier(&self, now: i64) -> u8 {
+        if now < self.expires_at {
+            self.tier
+        } else {
+            0
+        }
+    }
+}
+
+/// Level for a claims bitmap. KYC (level 2+) requires the KYC claim itself (audit ID-04).
+pub fn level_for_claims(claims: u16) -> u8 {
+    let has = |bit: u16| claims & bit != 0;
+    if has(CLAIM_KYC) && has(CLAIM_BIOMETRIC) && has(CLAIM_UNIQUE_HUMAN) {
+        LEVEL_ENHANCED
+    } else if has(CLAIM_KYC) && has(CLAIM_BIOMETRIC) {
+        LEVEL_FULL
+    } else if has(CLAIM_KYC) {
+        LEVEL_KYC
+    } else if has(CLAIM_EMAIL) && has(CLAIM_PHONE) {
+        LEVEL_BASIC
+    } else {
+        LEVEL_NONE
+    }
+}
+
+/// `[a-z0-9_]{3,32}`.
+pub fn is_valid_username(name: &str) -> bool {
+    (MIN_USERNAME_LEN..=MAX_USERNAME_LEN).contains(&name.len())
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+}
+
+/// Cost of buying `tier` for 30 days given the current subscription: same tier extends from
+/// max(now, expiry); an upgrade credits the unused time of the current tier; a downgrade
+/// while active is refused (`None`) (audit ID-05).
+pub fn subscription_quote(
+    current: &Subscription,
+    tier: u8,
+    prices: &[u64; NUM_TIERS],
+    now: i64,
+) -> Option<(u64, i64)> {
+    let price = prices[tier as usize - 1];
+    let active = current.active_tier(now);
+    if active == 0 {
+        return Some((price, now.checked_add(SUBSCRIPTION_DURATION)?));
+    }
+    if tier == active {
+        return Some((
+            price,
+            current.expires_at.checked_add(SUBSCRIPTION_DURATION)?,
+        ));
+    }
+    if tier < active {
+        return None;
+    }
+    let remaining = (current.expires_at - now) as u128;
+    let credit = remaining * prices[active as usize - 1] as u128 / SUBSCRIPTION_DURATION as u128;
+    let cost = (price as u128).saturating_sub(credit) as u64;
+    Some((cost, now.checked_add(SUBSCRIPTION_DURATION)?))
+}

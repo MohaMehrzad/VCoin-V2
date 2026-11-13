@@ -1695,6 +1695,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "vcoin-common",
 ]
 
 [[package]]
@@ -1747,6 +1748,7 @@ dependencies = [
  "borsh 1.6.0",
  "five-a-protocol",
  "gasless-protocol",
+ "identity-protocol",
  "litesvm",
  "private-poll",
  "rand 0.8.5",

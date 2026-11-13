@@ -1,9 +1,0 @@
-pub mod accept_authority;
-pub mod add_trusted_attester;
-pub mod cancel_authority_transfer;
-/// Admin instructions
-pub mod initialize;
-pub mod remove_trusted_attester;
-pub mod set_paused;
-pub mod update_authority;
-pub mod update_verification;
