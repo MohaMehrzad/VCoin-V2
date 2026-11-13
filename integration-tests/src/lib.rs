@@ -180,3 +180,71 @@ pub fn assert_anchor_error(result: TransactionResult, code: u32) {
         },
     }
 }
+
+/// Token-2022 helpers shared by the program suites.
+pub mod token {
+    use super::send;
+    use anchor_spl::token_2022::spl_token_2022::{
+        self,
+        extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions},
+        state::{Account as TokenAccountState, Mint as MintState},
+    };
+    use litesvm::LiteSVM;
+    use solana_sdk::{
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+    };
+
+    /// Creates a Token-2022 account for `mint` owned by `owner`, sized for every account
+    /// extension the mint requires (e.g. NonTransferableAccount for soulbound mints).
+    pub fn create_token_account(
+        svm: &mut LiteSVM,
+        payer: &Keypair,
+        mint: &Pubkey,
+        owner: &Pubkey,
+    ) -> Pubkey {
+        let mint_data = svm.get_account(mint).expect("mint exists").data;
+        let mint_state = StateWithExtensions::<MintState>::unpack(&mint_data).expect("unpack mint");
+        let mint_extensions = mint_state.get_extension_types().expect("mint extensions");
+        let required = ExtensionType::get_required_init_account_extensions(&mint_extensions);
+        let space = ExtensionType::try_calculate_account_len::<TokenAccountState>(&required)
+            .expect("account len");
+
+        let account = Keypair::new();
+        let lamports = svm.minimum_balance_for_rent_exemption(space);
+        let create = solana_system_interface::instruction::create_account(
+            &payer.pubkey(),
+            &account.pubkey(),
+            lamports,
+            space as u64,
+            &spl_token_2022::ID,
+        );
+        let init = spl_token_2022::instruction::initialize_account3(
+            &spl_token_2022::ID,
+            &account.pubkey(),
+            mint,
+            owner,
+        )
+        .expect("initialize_account3 ix");
+        send(svm, &[create, init], payer, &[&account]).expect("create token account");
+        account.pubkey()
+    }
+
+    /// Token amount held by a Token-2022 account.
+    pub fn balance(svm: &LiteSVM, account: &Pubkey) -> u64 {
+        let data = svm.get_account(account).expect("token account exists").data;
+        StateWithExtensions::<TokenAccountState>::unpack(&data)
+            .expect("unpack token account")
+            .base
+            .amount
+    }
+
+    /// Current supply of a Token-2022 mint.
+    pub fn supply(svm: &LiteSVM, mint: &Pubkey) -> u64 {
+        let data = svm.get_account(mint).expect("mint exists").data;
+        StateWithExtensions::<MintState>::unpack(&data)
+            .expect("unpack mint")
+            .base
+            .supply
+    }
+}

@@ -7,11 +7,15 @@ publish = false
 
 [dependencies]
 anchor-lang = { workspace = true }
+anchor-spl = { workspace = true, features = ["token_2022", "token_2022_extensions"] }
+vcoin-common = { workspace = true }
+vcoin-token = { path = "../programs/vcoin-token", features = ["no-entrypoint"] }
 litesvm = { workspace = true }
 solana-sdk = { workspace = true }
 bincode = "1.3"
 solana-loader-v3-interface = { version = "5.0", features = ["serde"] }
 solana-sdk-ids = "2.2"
+solana-system-interface = { version = "1.0", features = ["bincode"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

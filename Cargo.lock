@@ -1752,11 +1752,15 @@ name = "integration-tests"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "anchor-spl",
  "bincode",
  "litesvm",
  "solana-loader-v3-interface 5.0.0",
  "solana-sdk",
  "solana-sdk-ids",
+ "solana-system-interface",
+ "vcoin-common",
+ "vcoin-token",
 ]
 
 [[package]]
@@ -5731,6 +5735,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "vcoin-common",
 ]
 
 [[package]]

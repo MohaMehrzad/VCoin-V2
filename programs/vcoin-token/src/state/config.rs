@@ -1,39 +1,30 @@
 use anchor_lang::prelude::*;
+use vcoin_common::AdminState;
 
-/// VCoin Configuration Account (Singleton PDA)
-/// Stores global configuration for the VCoin token
+/// Singleton configuration, PDA `["vcoin-config-v2"]`. Also the VCoin mint authority
+/// and the metadata update authority.
 #[account]
-#[derive(Default)]
+#[derive(Default, InitSpace)]
 pub struct VCoinConfig {
-    /// The authority that can mint tokens and update config
-    pub authority: Pubkey,
-    /// Pending authority for two-step transfer (H-02 security fix)
-    pub pending_authority: Pubkey,
-    /// H-NEW-01: Timestamp when pending authority was proposed (for timelock)
-    pub pending_authority_activated_at: i64,
-    /// The VCoin mint address
+    /// Authority with a 24h two-step transfer (audit X-2).
+    pub admin: AdminState,
+    /// The VCoin mint, PDA `["vcoin-mint"]`, created by `initialize`.
     pub mint: Pubkey,
-    /// The treasury token account that receives initial minted tokens
-    pub treasury: Pubkey,
-    /// The permanent delegate for slashing (governance multisig)
-    pub permanent_delegate: Pubkey,
-    /// Total tokens minted so far
-    pub total_minted: u64,
-    /// Whether token operations are paused
+    /// Pauses `mint_tokens`. Transfers are never pausable (the mint has no
+    /// pausable/freeze capability by design).
     pub paused: bool,
-    /// Bump seed for PDA
     pub bump: u8,
+    pub mint_bump: u8,
 }
 
 impl VCoinConfig {
-    pub const LEN: usize = 8 + // discriminator
-        32 + // authority
-        32 + // pending_authority (H-02)
-        8 +  // pending_authority_activated_at (H-NEW-01)
-        32 + // mint
-        32 + // treasury
-        32 + // permanent_delegate
-        8 +  // total_minted
-        1 +  // paused
-        1; // bump
+    pub const LEN: usize = 8 + Self::INIT_SPACE;
+}
+
+/// Metadata fields the authority may update.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MetadataField {
+    Name,
+    Symbol,
+    Uri,
 }

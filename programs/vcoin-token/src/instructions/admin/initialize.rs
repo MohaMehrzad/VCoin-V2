@@ -1,45 +1,83 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{
+    spl_pod::optional_keys::OptionalNonZeroPubkey,
+    spl_token_metadata_interface::state::TokenMetadata, token_metadata_initialize,
+    TokenMetadataInitialize,
+};
+use vcoin_common::{require_upgrade_authority, AdminState};
 
-use crate::contexts::InitializeMint;
+use super::fund_rent;
+use crate::constants::*;
+use crate::contexts::Initialize;
+use crate::errors::VCoinError;
 use crate::events::VCoinInitialized;
 
-/// Initialize the VCoin mint with Token-2022 extensions
-/// This creates the mint with:
-/// - Metadata extension
-/// - Permanent delegate extension (for slashing)
-///
-/// M-14: The mint account is passed as UncheckedAccount (created externally by Token-2022).
-/// Since this instruction uses `init` for the config PDA, it can only ever be called once.
-/// The total_minted counter starts at 0, providing a clean baseline regardless of mint state.
-///
-/// L-05: Authority transfers (propose/accept/cancel) are intentionally NOT blocked by the
-/// paused state. This allows emergency authority rotation even when operations are paused,
-/// which is critical for incident response scenarios.
-pub fn handler(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Result<()> {
-    let config = &mut ctx.accounts.config;
+pub fn handler(ctx: Context<Initialize>, name: String, symbol: String, uri: String) -> Result<()> {
+    require_upgrade_authority(&ctx.accounts.program_data, &ctx.accounts.authority.key())?;
+    require!(
+        name.len() <= MAX_NAME_LEN && symbol.len() <= MAX_SYMBOL_LEN && uri.len() <= MAX_URI_LEN,
+        VCoinError::MetadataTooLong
+    );
 
-    config.authority = ctx.accounts.authority.key();
-    config.mint = ctx.accounts.mint.key();
-    config.treasury = ctx.accounts.treasury.key();
-    config.permanent_delegate = permanent_delegate;
-    config.total_minted = 0;
-    config.paused = false;
-    config.bump = ctx.bumps.config;
+    let config_key = ctx.accounts.config.key();
+    let mint_key = ctx.accounts.mint.key();
+    {
+        let config = &mut ctx.accounts.config;
+        config.admin = AdminState::new(ctx.accounts.authority.key());
+        config.mint = mint_key;
+        config.paused = false;
+        config.bump = ctx.bumps.config;
+        config.mint_bump = ctx.bumps.mint;
+    }
 
-    let clock = Clock::get()?;
+    // Fund the TokenMetadata TLV entry before Token-2022 appends it to the mint.
+    let metadata = TokenMetadata {
+        update_authority: OptionalNonZeroPubkey::try_from(Some(config_key))?,
+        mint: mint_key,
+        name: name.clone(),
+        symbol: symbol.clone(),
+        uri: uri.clone(),
+        additional_metadata: vec![],
+    };
+    let mint_info = ctx.accounts.mint.to_account_info();
+    let target_len = mint_info
+        .data_len()
+        .checked_add(metadata.tlv_size_of()?)
+        .ok_or(VCoinError::Overflow)?;
+    fund_rent(
+        &mint_info,
+        &ctx.accounts.authority.to_account_info(),
+        &ctx.accounts.system_program.to_account_info(),
+        target_len,
+    )?;
 
-    // L-01: Emit initialization event
+    let config_info = ctx.accounts.config.to_account_info();
+    let bump = [ctx.bumps.config];
+    let signer_seeds: &[&[u8]] = &[VCOIN_CONFIG_SEED, &bump];
+    token_metadata_initialize(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            TokenMetadataInitialize {
+                program_id: ctx.accounts.token_program.to_account_info(),
+                metadata: mint_info.clone(),
+                update_authority: config_info.clone(),
+                mint_authority: config_info,
+                mint: mint_info,
+            },
+            &[signer_seeds],
+        ),
+        name.clone(),
+        symbol.clone(),
+        uri.clone(),
+    )?;
+
     emit!(VCoinInitialized {
-        authority: config.authority,
-        mint: config.mint,
-        permanent_delegate,
-        timestamp: clock.unix_timestamp,
+        config: config_key,
+        mint: mint_key,
+        authority: ctx.accounts.authority.key(),
+        name,
+        symbol,
+        uri,
     });
-
-    msg!("VCoin mint initialized");
-    msg!("Mint: {}", config.mint);
-    msg!("Authority: {}", config.authority);
-    msg!("Permanent Delegate: {}", permanent_delegate);
-
     Ok(())
 }

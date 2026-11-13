@@ -1,3 +1,16 @@
+//! VCoin: the ViWo utility token (Token-2022).
+//!
+//! The program creates and controls the VCoin mint:
+//! * mint PDA `["vcoin-mint"]`, 9 decimals, **metadata only**: no transfer hook, no
+//!   permanent delegate, no freeze authority (audit TOK-01, TH-*). Nobody can seize,
+//!   freeze or hook-block holder balances.
+//! * supply hard-capped at 1,000,000,000 VCoin, checked against the real mint supply;
+//! * `initialize` callable only by the program's upgrade authority (audit X-1, TOK-04);
+//! * 24h two-step authority transfer (audit X-2).
+//!
+//! Slashing was removed from the token: slashing applies to staked deposits in
+//! `staking-protocol`, behind a DAO decision and a timelock (audit TOK-02/03).
+
 use anchor_lang::prelude::*;
 
 pub mod constants;
@@ -11,88 +24,55 @@ pub mod state;
 mod tests;
 
 use contexts::*;
+use state::MetadataField;
 
 declare_id!("Gg1dtrjAfGYi6NLC31WaJjZNBoucvD98rK2h1u9qrUjn");
-
-/// VCoin Token-2022 with Extensions
-/// - Metadata: On-chain token metadata (Name: VCoin, Symbol: VIWO)
-/// - Permanent Delegate: Slashing authority for governance multisig
-/// - Transfer Hook: Auto-update 5A scores (prepared, hook program separate)
-///
-/// Total Supply: 1,000,000,000 (1B)
-/// Decimals: 9
 
 #[program]
 pub mod vcoin_token {
     use super::*;
 
-    /// Initialize the VCoin mint with Token-2022 extensions
-    pub fn initialize_mint(ctx: Context<InitializeMint>, permanent_delegate: Pubkey) -> Result<()> {
-        instructions::admin::initialize::handler(ctx, permanent_delegate)
+    /// Creates the config and the metadata-only VCoin mint. Upgrade authority only.
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
+        instructions::admin::initialize::handler(ctx, name, symbol, uri)
     }
 
-    /// Mint VCoin tokens to a specified account
+    /// Mints VCoin to `destination`; authority only, capped at the 1B supply.
     pub fn mint_tokens(ctx: Context<MintTokens>, amount: u64) -> Result<()> {
         instructions::token::mint::handler(ctx, amount)
     }
 
-    /// Slash tokens from an account using permanent delegate authority
-    /// DEPRECATED: Use propose_slash -> approve_slash -> execute_slash flow instead
-    /// This legacy function is kept for backwards compatibility
-    pub fn slash_tokens(ctx: Context<SlashTokens>, amount: u64) -> Result<()> {
-        instructions::token::slash::handler(ctx, amount)
-    }
-
-    /// Propose a slash request (H-01 Security Fix - Step 1)
-    /// Only permanent delegate can propose; requires governance approval
-    /// request_id should be unique (e.g., current timestamp) to derive unique PDA
-    pub fn propose_slash(
-        ctx: Context<ProposeSlash>,
-        target: Pubkey,
-        request_id: u64,
-        amount: u64,
-        reason_hash: [u8; 32],
+    /// Updates a token-metadata field (name, symbol or URI).
+    pub fn update_metadata(
+        ctx: Context<UpdateMetadata>,
+        field: MetadataField,
+        value: String,
     ) -> Result<()> {
-        instructions::token::propose_slash::handler(ctx, target, request_id, amount, reason_hash)
+        instructions::admin::update_metadata::handler(ctx, field, value)
     }
 
-    /// Approve a slash request (H-01 Security Fix - Step 2)
-    /// Only governance authority can approve; starts 48h timelock
-    pub fn approve_slash(ctx: Context<ApproveSlash>, proposal_id: u64) -> Result<()> {
-        instructions::token::approve_slash::handler(ctx, proposal_id)
-    }
-
-    /// Execute an approved slash (H-01 Security Fix - Step 3)
-    /// Requires 48h timelock to have expired after governance approval
-    pub fn execute_slash(ctx: Context<ExecuteSlash>) -> Result<()> {
-        instructions::token::execute_slash::handler(ctx)
-    }
-
-    /// Pause/unpause token operations
+    /// Pauses or resumes `mint_tokens`.
     pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
         instructions::admin::set_paused::handler(ctx, paused)
     }
 
-    /// Propose a new authority (step 1 of two-step transfer - H-02 security fix)
+    /// Starts a 24h two-step authority transfer.
     pub fn propose_authority(ctx: Context<UpdateConfig>, new_authority: Pubkey) -> Result<()> {
-        instructions::admin::update_authority::handler(ctx, new_authority)
+        instructions::admin::authority::propose(ctx, new_authority)
     }
 
-    /// Accept authority transfer (step 2 of two-step transfer - H-02 security fix)
-    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
-        instructions::admin::accept_authority::handler(ctx)
-    }
-
-    /// Cancel a pending authority transfer (H-02 security fix)
+    /// Cancels a pending authority transfer.
     pub fn cancel_authority_transfer(ctx: Context<UpdateConfig>) -> Result<()> {
-        instructions::admin::cancel_authority_transfer::handler(ctx)
+        instructions::admin::authority::cancel(ctx)
     }
 
-    /// Update the permanent delegate (for slashing)
-    pub fn update_permanent_delegate(
-        ctx: Context<UpdateConfig>,
-        new_delegate: Pubkey,
-    ) -> Result<()> {
-        instructions::admin::update_delegate::handler(ctx, new_delegate)
+    /// Completes a pending authority transfer after the 24h delay.
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::authority::accept(ctx)
     }
 }

@@ -1,67 +1,48 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022;
+use anchor_spl::token_interface::{mint_to, MintTo};
 
-use crate::constants::{TOTAL_SUPPLY, VCOIN_CONFIG_SEED};
+use crate::constants::*;
 use crate::contexts::MintTokens;
 use crate::errors::VCoinError;
 use crate::events::TokensMinted;
 
-/// Mint VCoin tokens to a specified account
-/// Only the authority can mint tokens
 pub fn handler(ctx: Context<MintTokens>, amount: u64) -> Result<()> {
-    // Get config values for validation first
-    let authority = ctx.accounts.config.authority;
-    let paused = ctx.accounts.config.paused;
-    let total_minted = ctx.accounts.config.total_minted;
-    let bump = ctx.accounts.config.bump;
+    let config = &ctx.accounts.config;
+    config
+        .admin
+        .require_authority(&ctx.accounts.authority.key())?;
+    require!(!config.paused, VCoinError::TokenPaused);
+    require!(amount > 0, VCoinError::ZeroAmount);
 
-    // Check authorization
-    require!(
-        ctx.accounts.authority.key() == authority,
-        VCoinError::Unauthorized
-    );
+    // Cap checked against the mint's real supply (audit MON-8): supply minted by any
+    // path counts, and slashed/burned tokens can't be silently re-minted past the cap.
+    let new_supply = ctx
+        .accounts
+        .mint
+        .supply
+        .checked_add(amount)
+        .ok_or(VCoinError::ExceedsMaxSupply)?;
+    require!(new_supply <= TOTAL_SUPPLY, VCoinError::ExceedsMaxSupply);
 
-    // Check not paused
-    require!(!paused, VCoinError::TokenPaused);
-
-    // Check supply limit
-    require!(
-        total_minted.checked_add(amount).unwrap() <= TOTAL_SUPPLY,
-        VCoinError::ExceedsMaxSupply
-    );
-
-    // Mint tokens using Token-2022
-    let seeds = &[VCOIN_CONFIG_SEED, &[bump]];
-    let signer_seeds = &[&seeds[..]];
-
-    token_2022::mint_to(
+    let bump = [config.bump];
+    let signer_seeds: &[&[u8]] = &[VCOIN_CONFIG_SEED, &bump];
+    mint_to(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
-            token_2022::MintTo {
+            MintTo {
                 mint: ctx.accounts.mint.to_account_info(),
                 to: ctx.accounts.destination.to_account_info(),
                 authority: ctx.accounts.config.to_account_info(),
             },
-            signer_seeds,
+            &[signer_seeds],
         ),
         amount,
     )?;
 
-    // Update total minted
-    ctx.accounts.config.total_minted = total_minted.checked_add(amount).unwrap();
-
-    let clock = Clock::get()?;
-
-    // L-01: Emit tokens minted event
     emit!(TokensMinted {
-        recipient: ctx.accounts.destination.key(),
+        destination: ctx.accounts.destination.key(),
         amount,
-        total_minted: ctx.accounts.config.total_minted,
-        timestamp: clock.unix_timestamp,
+        new_supply,
     });
-
-    msg!("Minted {} VCoin tokens", amount);
-    msg!("Total minted: {}", ctx.accounts.config.total_minted);
-
     Ok(())
 }

@@ -7,18 +7,18 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | ID | Severity | Finding | Section | Planned | Status |
 |---|---|---|---|---|---|
 | VEV-01 | High | Every unstake reverts unless the veVCoin mint's permanent delegate is the vevcoin config PDA, and a user who burns their own veVCoin is locked out forever | 01-tokens-and-staking.md | C5 | open |
-| TOK-01 | Medium | The "permanent delegate" means two different things, which breaks slashing or hands one key unlimited burn power | 01-tokens-and-staking.md | C4 | open |
-| TOK-02 | High | "Governance-approved" slashing is controlled by a single admin key | 01-tokens-and-staking.md | C4 | open |
-| TOK-03 | Medium | Slashes are easy to dodge and can't be cancelled; approvals never expire; staked VCoin can't be slashed fairly | 01-tokens-and-staking.md | C4 | open |
-| TOK-04 | High | `initialize_mint` is front-runnable and never validates the mint; supply-cap claims don't hold | 01-tokens-and-staking.md | C4 | open |
+| TOK-01 | Medium | The "permanent delegate" means two different things, which breaks slashing or hands one key unlimited burn power | 01-tokens-and-staking.md | C4 | fixed (C4: VCoin mint has no PermanentDelegate; test initialize_creates_a_metadata_only_mint…) |
+| TOK-02 | High | "Governance-approved" slashing is controlled by a single admin key | 01-tokens-and-staking.md | C4 | removed (C4: slash code deleted from vcoin-token; DAO-timelocked deposit slashing in staking, C8) |
+| TOK-03 | Medium | Slashes are easy to dodge and can't be cancelled; approvals never expire; staked VCoin can't be slashed fairly | 01-tokens-and-staking.md | C4 | removed (C4: slash code deleted; replacement with cancel/expiry/no-vault-targets in staking, C8) |
+| TOK-04 | High | `initialize_mint` is front-runnable and never validates the mint; supply-cap claims don't hold | 01-tokens-and-staking.md | C4 | fixed (C4: upgrade-authority-gated initialize creates the mint PDA in-program; tests initialize_rejects_anyone…, initialize_creates…) |
 | VEV-02 | High | The veVCoin admin can freeze every unstake instantly, or brick chosen users | 01-tokens-and-staking.md | C5 | open |
 | STK-01 | Medium | If VCoin ships the advertised transfer hook, stake and unstake revert; a transfer fee would make the vault insolvent | 01-tokens-and-staking.md | C6 | open |
 | STK-02 | High | veVCoin never decays, so expired locks keep full voting power | 01-tokens-and-staking.md | C6 | open |
 | STK-03 | Medium | Top-ups and extends can lower recorded ve without burning, leaving orphaned veVCoin that can be minted repeatedly | 01-tokens-and-staking.md | C6 | open |
 | STK-04 | Medium | Partial unstake keeps the old tier's boost permanently | 01-tokens-and-staking.md | C6 | open |
 | STK-05 | Low | `update_tier` can never succeed | 01-tokens-and-staking.md | C6 | open |
-| TOK-05 | Low | `propose_slash` requires `request_id` to equal the exact on-chain second (admin-only and retryable, so a usability issue) | 01-tokens-and-staking.md | C4 | open |
-| TOK-06 | Medium | Pause covers almost nothing | 01-tokens-and-staking.md | C4 | open |
+| TOK-05 | Low | `propose_slash` requires `request_id` to equal the exact on-chain second (admin-only and retryable, so a usability issue) | 01-tokens-and-staking.md | C4 | removed (C4: exact-timestamp request_id code deleted) |
+| TOK-06 | Medium | Pause covers almost nothing | 01-tokens-and-staking.md | C4 | fixed (C4: pause covers the only user-impacting instruction (mint); transfers are unpausable by design — no freeze/pausable extension; test pause_blocks_minting…) |
 | VEV-03 | Low | Docs say "authorized staking program"; the code needs the staking-pool PDA (fails on the first stake and the admin can fix it) | 01-tokens-and-staking.md | C5 | open |
 | STK-06 | Low | The tier fee discounts don't exist anywhere | 01-tokens-and-staking.md | C6 | open |
 | STK-07 / VEV-04 | Medium | Staking and veVCoin initializers are front-runnable | 01-tokens-and-staking.md | C5/C6 | open |
