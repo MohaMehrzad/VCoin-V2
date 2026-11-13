@@ -3,7 +3,6 @@ members = [
     "programs/vcoin-token",
     "programs/vevcoin-token",
     "programs/staking-protocol",
-    "programs/transfer-hook",
     "programs/identity-protocol",
     "programs/five-a-protocol",
     "programs/content-registry",

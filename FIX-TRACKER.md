@@ -90,17 +90,17 @@ Status: `open` → `fixed (<commit>, <test>)` or `removed (<reason>)`.
 | ID-08 | Low | Pause covers only `create_identity` | 07-identity-protocol.md | C14 | open |
 | ID-09 | Medium | No executed test of verification, attestation, or subscription renewal/downgrade (only one paid `subscribe(1)` runs, in `tests/identity-protocol.ts:229-241`) | 07-identity-protocol.md | C14 | open |
 | ID-10 | Low | Docs describe a different API | 07-identity-protocol.md | C14 | open |
-| TH-01 | High | Wrong instruction discriminator and account order, so Token-2022 can never invoke it | 08-transfer-hook.md | C3 | open |
-| TH-02 | High | The ExtraAccountMetaList can never be created, and its entries are wrong | 08-transfer-hook.md | C3 | open |
-| TH-03 | Medium | Anyone can call `execute` directly to forge activity, poison pair stats and block real transfers | 08-transfer-hook.md | C3 | open |
-| TH-04 | High | There is no 5A update, no tip recording, and no circular wash detection | 08-transfer-hook.md | C3 | open |
-| TH-05 | Medium | The wash-trading heuristic blocks normal payments | 08-transfer-hook.md | C3 | open |
-| TH-06 | Low | The query instructions always fail because `bump` is never stored (log-only views; the data can still be read over RPC) | 08-transfer-hook.md | C3 | open |
-| TH-07 | Low | The "daily" activity cap is lifetime, and dust earns full credit (nothing consumes the score) | 08-transfer-hook.md | C3 | open |
-| TH-08 | Medium | Self-transfers between your own token accounts fail or lose data | 08-transfer-hook.md | C3 | open |
-| TH-09 | Medium | Front-runnable `initialize`, and one key can freeze every VCoin transfer | 08-transfer-hook.md | C3 | open |
-| TH-10 | Low | Activity is recorded under token-account addresses, not wallets | 08-transfer-hook.md | C3 | open |
-| TH-11 | Medium | No test exercises `execute` or a Token-2022 transfer | 08-transfer-hook.md | C3 | open |
+| TH-01 | High | Wrong instruction discriminator and account order, so Token-2022 can never invoke it | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-02 | High | The ExtraAccountMetaList can never be created, and its entries are wrong | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-03 | Medium | Anyone can call `execute` directly to forge activity, poison pair stats and block real transfers | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-04 | High | There is no 5A update, no tip recording, and no circular wash detection | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-05 | Medium | The wash-trading heuristic blocks normal payments | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-06 | Low | The query instructions always fail because `bump` is never stored (log-only views; the data can still be read over RPC) | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-07 | Low | The "daily" activity cap is lifetime, and dust earns full credit (nothing consumes the score) | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-08 | Medium | Self-transfers between your own token accounts fail or lose data | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-09 | Medium | Front-runnable `initialize`, and one key can freeze every VCoin transfer | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-10 | Low | Activity is recorded under token-account addresses, not wallets | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
+| TH-11 | Medium | No test exercises `execute` or a Token-2022 transfer | 08-transfer-hook.md | C3 | removed (C3: transfer-hook program retired; VCoin mint is metadata-only; activity scoring off-chain → 5A oracle, docs/offchain/activity-indexer.md) |
 | GAS-02 | High | Subsidized actions stop working permanently after 3 days without one | 09-gasless-protocol.md | C11 | open |
 | GAS-03 | High | Collected VCoin fees are locked forever | 09-gasless-protocol.md | C11 | open |
 | GAS-01 | High | Session keys authorize nothing, and "sponsoring" moves no SOL | 09-gasless-protocol.md | C11 | open |
