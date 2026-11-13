@@ -500,24 +500,34 @@ fn a_rogue_key_dealing_is_rejected() {
     assert!(renumbered.verify_proof(&SESSION, 3, 3).is_err());
 }
 
-/// A complaint is settled in public: the revealed share either fits the dealer's
-/// commitments (the complaint was false) or it does not (the dealer cheated).
+/// A complaint is settled in public. A valid revealed share clears nobody and blames
+/// nobody (the complainant just uses it); an invalid one convicts the dealer.
 #[test]
 fn a_revealed_share_settles_a_complaint() {
     let dealer = Dealer::new(2, 3, 3, &SESSION, &mut OsRng).unwrap();
     let dealing = dealer.public_dealing();
-    let sent = dealer.share_for(1).unwrap();
-    check_revealed_share(&dealing, &sent).expect("honest dealer is cleared");
 
+    // The dealer answers member 1's complaint with the valid share: the run continues.
+    let sent = dealer.share_for(1).unwrap();
+    check_revealed_share(&dealing, 1, 3, &sent).expect("valid share: nobody is excluded");
+
+    // A share that does not fit the commitments convicts the dealer.
     let bogus = ShareMessage::from_bytes(2, 1, &Scalar::random(&mut OsRng).to_bytes()).unwrap();
     assert_eq!(
-        check_revealed_share(&dealing, &bogus).unwrap_err(),
+        check_revealed_share(&dealing, 1, 3, &bogus).unwrap_err(),
         SdkError::BadDealing { dealer: 2 }
     );
-    // A share addressed to someone else does not answer the complaint.
+    // Neither a relabelled share nor a correctly labelled share for someone else answers
+    // member 1's complaint.
     let other = dealer.share_for(3).unwrap();
     let relabelled = ShareMessage::from_bytes(2, 1, &other.to_bytes()).unwrap();
-    assert!(check_revealed_share(&dealing, &relabelled).is_err());
+    assert!(check_revealed_share(&dealing, 1, 3, &relabelled).is_err());
+    assert!(check_revealed_share(&dealing, 1, 3, &other).is_err());
+    // The complainant must be a member of this committee.
+    assert_eq!(
+        check_revealed_share(&dealing, 4, 3, &sent).unwrap_err(),
+        SdkError::InvalidIndex(4)
+    );
 }
 
 /// Re-review C9/C10: malformed public input returns an error instead of panicking.

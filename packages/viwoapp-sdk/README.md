@@ -106,7 +106,7 @@ expired deposit from counting toward the max voter weight.
 - `createContentIx` / `editContentIx` accept an optional session `signer`. The energy tier
   comes from your staked VCoin; the builders always pass the staking account for you.
 - `deleteContentIx(programs, author, trackingId, rentPayer)` returns the record's rent to
-  whoever paid it (pass the relayer if it sponsored the post).
+  whoever paid it. `rentPayer` is required: read it from `ContentRecord.rentPayer`.
 - `createActionIx`, `executeTipIx` (wallet only) and `executeSocialIx` (wallet or session) cover
   ViLink.
 - `createIdentityIx`, `linkAttestationIx` (co-signed by a trusted attester) and `subscribeIx`

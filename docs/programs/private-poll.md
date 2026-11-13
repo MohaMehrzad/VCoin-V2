@@ -20,8 +20,11 @@ All of it lives in `crates/zk-poll-core`, shared with `packages/zk-voting-sdk`.
     the dealer's index). This rules out a rogue-key attack, where the last dealer picks its
     term so that it alone knows the election key. The proofs are checked off-chain by every
     member (`finish`) and by anyone (`aggregate_dealings`); the program sees only the result.
-    Publish the dealings with the proposal that registers the committee, so voters can check
-    that the registered key is their sum.
+    Publish the dealings with the proposal that registers the committee. The proofs bind a
+    dealer index, not a person, so the check that matters is each member comparing the
+    registered committee with its own `KeyShare.group` before any poll opens.
+  - A complaint about a share is settled in public with `check_revealed_share`: an invalid
+    answer excludes the dealer; a valid one excludes nobody.
   - Registered by the DAO with `set_committee`.
   - Checked by `verify_committee`: 3 ≤ t ≤ n ≤ 5, non-identity key, distinct members and
     authorities, and a Feldman check for every member key (ZK-03).
@@ -65,9 +68,13 @@ All of it lives in `crates/zk-poll-core`, shared with `packages/zk-voting-sdk`.
   | voting window | 1–60 days |
   | reveal window | 1–30 days |
 
-- `set_paused`: stops creating polls, voting, revealing, settling and expiring. A pause cannot
-  cost a poll its result: reveal deadlines move by the downtime. The voting window does **not**
-  move, because weights are fixed at `end`; a poll whose voting window was hit by a pause
-  should be run again.
+- `set_paused`: stops creating polls, voting, revealing, settling and expiring.
+  - A pause after voting ended cannot cost a poll its result: reveal deadlines move by the
+    downtime.
+  - A pause **during** a poll's voting window voids it: `cast_vote` stops and `finalize_poll`
+    settles it as `Voided`, which can never pass. The voting window cannot simply be
+    extended, because weights are fixed at `end`. So a pause (by the authority or the
+    guardian) can delay a decision but never decide it on a partial turnout. Run the poll
+    again.
 - `set_guardian`: an emergency key that may pause but never unpause.
 - Two-step authority.

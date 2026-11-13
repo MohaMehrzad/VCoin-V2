@@ -23,6 +23,8 @@ pub fn initialize_config(ctx: Context<InitializeConfig>, params: PollParams) -> 
     config.paused = false;
     config.paused_since = 0;
     config.pause_accum = 0;
+    config.pause_seq = 0;
+    config.pause_history = Default::default();
     config.bump = ctx.bumps.config;
     emit!(ConfigInitialized {
         authority,
@@ -100,7 +102,8 @@ pub fn set_poll_params(ctx: Context<UpdateConfig>, params: PollParams) -> Result
 }
 
 /// Pausing stops creating polls, voting, revealing and settling. Reveal deadlines are
-/// extended by the time spent paused and polls cannot expire while paused.
+/// extended by the time spent paused and polls cannot expire while paused. A poll whose
+/// voting window overlaps a pause is voided: a pause can delay a decision, never tilt it.
 pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config
@@ -109,11 +112,13 @@ pub fn set_paused(ctx: Context<UpdateConfig>, paused: bool) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     if paused && !config.paused {
         config.paused_since = now;
+        config.record_pause(now).ok_or(PollError::Overflow)?;
     } else if !paused && config.paused {
         config.pause_accum = config
             .pause_accum
             .checked_add(now.saturating_sub(config.paused_since))
             .ok_or(PollError::Overflow)?;
+        config.record_unpause(now);
     }
     config.paused = paused;
     emit!(PauseChanged { paused });

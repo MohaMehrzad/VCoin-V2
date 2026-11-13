@@ -1266,6 +1266,14 @@ export type SscreProtocol = {
           "signer": true
         },
         {
+          "name": "authority",
+          "docs": [
+            "Only needed to start an epoch the reserve cannot fund in full: the pool authority."
+          ],
+          "signer": true,
+          "optional": true
+        },
+        {
           "name": "tokenProgram",
           "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         },

@@ -17,8 +17,9 @@ fn now() -> Result<i64> {
 
 /// Funds epoch `epoch_count` with the scheduled budget and decays the schedule. Epochs
 /// start at most once per `epoch_duration`. Anyone may crank this when the reserve covers
-/// the whole budget; only the authority may start a smaller (final) epoch, so a stranger
-/// cannot burn a schedule step on a part-funded reserve.
+/// the whole budget; a smaller (final) epoch needs the authority's signature (`authority`,
+/// separate from the rent `payer`), so a stranger cannot burn a schedule step on a
+/// part-funded reserve.
 pub fn start_epoch(ctx: Context<StartEpoch>) -> Result<()> {
     let config = &mut ctx.accounts.config;
     require!(!config.paused, SscreError::Paused);
@@ -37,8 +38,15 @@ pub fn start_epoch(ctx: Context<StartEpoch>) -> Result<()> {
     let reserve = ctx.accounts.reserve_vault.amount;
     let budget = config.next_epoch_budget.min(reserve);
     require!(budget > 0, SscreError::ReserveEmpty);
+    // The authority signs separately from the rent payer: after launch it is a governance
+    // PDA, which can sign through a proposal but cannot pay rent.
+    let by_authority = ctx
+        .accounts
+        .authority
+        .as_ref()
+        .is_some_and(|a| a.key() == config.admin.authority);
     require!(
-        reserve >= config.next_epoch_budget || ctx.accounts.payer.key() == config.admin.authority,
+        reserve >= config.next_epoch_budget || by_authority,
         SscreError::ReserveBelowBudget
     );
 

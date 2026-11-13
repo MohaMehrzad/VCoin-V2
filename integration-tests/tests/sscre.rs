@@ -175,6 +175,11 @@ fn pool_without_oracles(reserve_amount: u64) -> Pool {
 }
 
 fn start_ix(p: &Pool, index: u64, payer: Pubkey) -> Instruction {
+    start_ix_as(p, index, payer, None)
+}
+
+/// `authority` signs only when starting an epoch the reserve cannot fund in full.
+fn start_ix_as(p: &Pool, index: u64, payer: Pubkey, authority: Option<Pubkey>) -> Instruction {
     ix(
         sscre_protocol::ID,
         sscre_protocol::accounts::StartEpoch {
@@ -184,6 +189,7 @@ fn start_ix(p: &Pool, index: u64, payer: Pubkey) -> Instruction {
             epoch: epoch_pda(index),
             epoch_vault: epoch_vault(index),
             payer,
+            authority,
             token_program: spl_token_2022::ID,
             system_program: system_program::ID,
         },
@@ -682,7 +688,22 @@ fn epochs_are_rate_limited_decay_and_stop_at_an_empty_reserve() {
         send(&mut p.s.svm, &[partial], &stranger, &[]),
         err(SscreError::ReserveBelowBudget),
     );
-    start(&mut p, 1);
+    // Being the payer is not enough, and a stranger signing as "authority" is refused.
+    let as_payer_only = start_ix(&p, 1, admin.pubkey());
+    assert_anchor_error(
+        send(&mut p.s.svm, &[as_payer_only], &admin, &[]),
+        err(SscreError::ReserveBelowBudget),
+    );
+    let fake = start_ix_as(&p, 1, stranger.pubkey(), Some(stranger.pubkey()));
+    assert_anchor_error(
+        send(&mut p.s.svm, &[fake], &stranger, &[]),
+        err(SscreError::ReserveBelowBudget),
+    );
+    // The authority signs; someone else pays the rent (after launch the authority is a
+    // governance PDA, which can sign through a proposal but cannot pay).
+    let sponsored = start_ix_as(&p, 1, stranger.pubkey(), Some(admin.pubkey()));
+    send(&mut p.s.svm, &[sponsored], &stranger, &[&admin])
+        .expect("authority-approved partial epoch");
     assert_eq!(
         read_account::<Epoch>(&p.s.svm, &epoch_pda(1)).budget,
         BUDGET / 2,
@@ -696,7 +717,7 @@ fn epochs_are_rate_limited_decay_and_stop_at_an_empty_reserve() {
     );
 
     // An epoch that never gets a root returns its whole budget after the root deadline.
-    let cb = clawback_ix(&p, 1, admin.pubkey());
+    let cb = clawback_ix(&p, 1, stranger.pubkey()); // epoch 1's rent was paid by `stranger`
     assert_anchor_error(
         send(&mut p.s.svm, std::slice::from_ref(&cb), &admin, &[]),
         err(SscreError::ClaimWindowOpen),

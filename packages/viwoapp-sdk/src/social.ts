@@ -129,13 +129,14 @@ export function editContentIx(
 
 /**
  * Deletes a post (main wallet only). `rentPayer` must be the account that paid for the
- * record (`ContentRecord.rentPayer`): the author, or the relayer that sponsored the post.
+ * record: read it from `ContentRecord.rentPayer`. It is the author, a session key or the
+ * relayer that sponsored the post, so there is no safe default.
  */
 export function deleteContentIx(
   p: Programs,
   author: PublicKey,
   trackingId: Uint8Array,
-  rentPayer: PublicKey = author,
+  rentPayer: PublicKey,
 ): Promise<TransactionInstruction> {
   return p.content.methods
     .deleteContent()

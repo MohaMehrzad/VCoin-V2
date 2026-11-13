@@ -112,6 +112,10 @@ pub struct Subscription {
     pub started_at: i64,
     pub expires_at: i64,
     pub total_paid: u64,
+    /// What the remaining time cost per 30-day period (a time-weighted average across
+    /// renewals). Upgrade credit uses this, not the current price list, so a price change
+    /// can never be turned into free time.
+    pub unit_price: u64,
     pub bump: u8,
 }
 
@@ -151,45 +155,71 @@ pub fn is_valid_username(name: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
 }
 
+/// Result of [`subscription_quote`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SubscriptionQuote {
+    /// USDC to charge now.
+    pub cost: u64,
+    pub expires_at: i64,
+    /// New `Subscription::unit_price`.
+    pub unit_price: u64,
+}
+
 /// Cost of buying `tier` given the current subscription, and the new expiry: same tier
 /// extends from max(now, expiry) by 30 days; an upgrade credits the unused time of the
 /// current tier; a downgrade while active is refused (`None`) (audit ID-05).
 ///
-/// An upgrade normally costs `price − credit` for 30 days. If the prepaid time is worth a
-/// full period of the new tier or more, the upgrade is free and the time carries over at
-/// the price ratio, so no paid value is ever dropped.
+/// The credit is what the remaining time actually cost (`unit_price`), never the current
+/// list price. An upgrade normally costs `price − credit` for 30 days. If the prepaid time
+/// is worth a full period of the new tier or more, the upgrade is free and the time carries
+/// over at that value, so no paid value is dropped and none is created.
 pub fn subscription_quote(
     current: &Subscription,
     tier: u8,
     prices: &[u64; NUM_TIERS],
     now: i64,
-) -> Option<(u64, i64)> {
+) -> Option<SubscriptionQuote> {
     let price = prices[tier as usize - 1];
+    let period = SUBSCRIPTION_DURATION as u128;
     let active = current.active_tier(now);
     if active == 0 {
-        return Some((price, now.checked_add(SUBSCRIPTION_DURATION)?));
+        return Some(SubscriptionQuote {
+            cost: price,
+            expires_at: now.checked_add(SUBSCRIPTION_DURATION)?,
+            unit_price: price,
+        });
     }
+    let remaining = (current.expires_at - now) as u128; // active, so > 0
+    let paid = current.unit_price as u128;
     if tier == active {
-        return Some((
-            price,
-            current.expires_at.checked_add(SUBSCRIPTION_DURATION)?,
-        ));
+        // The remaining time keeps its cost; the new period costs today's price.
+        let unit_price = (remaining * paid + period * price as u128) / (remaining + period);
+        return Some(SubscriptionQuote {
+            cost: price,
+            expires_at: current.expires_at.checked_add(SUBSCRIPTION_DURATION)?,
+            unit_price: u64::try_from(unit_price).ok()?,
+        });
     }
     if tier < active {
         return None;
     }
-    let remaining = (current.expires_at - now) as u128; // active, so > 0
-    let active_price = prices[active as usize - 1] as u128;
-    let credit = remaining * active_price / SUBSCRIPTION_DURATION as u128;
+    let credit = remaining * paid / period;
     if credit < price as u128 {
-        let cost = (price as u128 - credit) as u64;
-        return Some((cost, now.checked_add(SUBSCRIPTION_DURATION)?));
+        return Some(SubscriptionQuote {
+            cost: (price as u128 - credit) as u64,
+            expires_at: now.checked_add(SUBSCRIPTION_DURATION)?,
+            unit_price: price,
+        });
     }
     let carried = if price == 0 {
         remaining
     } else {
-        remaining * active_price / price as u128
+        remaining * paid / price as u128
     };
     let carried = i64::try_from(carried).ok()?.max(SUBSCRIPTION_DURATION);
-    Some((0, now.checked_add(carried)?))
+    Some(SubscriptionQuote {
+        cost: 0,
+        expires_at: now.checked_add(carried)?,
+        unit_price: price,
+    })
 }

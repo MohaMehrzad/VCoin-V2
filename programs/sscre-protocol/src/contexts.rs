@@ -74,7 +74,8 @@ pub struct ApplyFee<'info> {
     pub config: Box<Account<'info, PoolConfig>>,
 }
 
-/// Permissionless crank: funds the next epoch from the reserve on schedule.
+/// Crank: funds the next epoch from the reserve on schedule. Permissionless when the reserve
+/// covers the budget.
 #[derive(Accounts)]
 pub struct StartEpoch<'info> {
     #[account(mut, seeds = [POOL_CONFIG_SEED], bump = config.bump, has_one = reserve_vault, has_one = vcoin_mint)]
@@ -102,6 +103,8 @@ pub struct StartEpoch<'info> {
     pub epoch_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    /// Only needed to start an epoch the reserve cannot fund in full: the pool authority.
+    pub authority: Option<Signer<'info>>,
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }

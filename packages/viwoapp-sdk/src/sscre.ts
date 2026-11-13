@@ -148,9 +148,15 @@ export function withdrawFeesIx(p: Programs, feeDestination: PublicKey): Promise<
 
 /**
  * Funds epoch `index` from the reserve. Anyone may call it when the reserve covers the
- * scheduled budget; only the pool authority may start a smaller one.
+ * scheduled budget. A smaller epoch needs the pool authority to sign as `authority` (it can be
+ * a governance PDA; `payer` only funds the rent).
  */
-export function startEpochIx(p: Programs, index: bigint, payer: PublicKey): Promise<TransactionInstruction> {
+export function startEpochIx(
+  p: Programs,
+  index: bigint,
+  payer: PublicKey,
+  authority: PublicKey | null = null,
+): Promise<TransactionInstruction> {
   return p.sscre.methods
     .startEpoch()
     .accountsStrict({
@@ -160,6 +166,7 @@ export function startEpochIx(p: Programs, index: bigint, payer: PublicKey): Prom
       epoch: pda.epoch(index),
       epochVault: pda.epochVault(index),
       payer,
+      authority,
       tokenProgram: TOKEN_2022_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })

@@ -671,20 +671,21 @@ Committee member `member_index` (1-based) posts its partial decryption.
 | 6015 | `VotingNotEnded` | Voting has not ended |
 | 6016 | `RevealClosed` | Reveal window is closed |
 | 6017 | `RevealStillOpen` | Reveal window is still open |
-| 6018 | `NotCommitteeMember` | Signer is not this committee member |
-| 6019 | `ShareAlreadySubmitted` | This member already submitted a decryption share |
-| 6020 | `InvalidDleqProof` | Decryption share proof rejected |
-| 6021 | `NotEnoughShares` | Fewer decryption shares than the threshold |
-| 6022 | `InvalidLagrange` | One Lagrange coefficient per submitted share is required |
-| 6023 | `TallyMismatch` | Claimed tally does not match the encrypted ballots |
-| 6024 | `PollAlreadyFinal` | Poll already finalized or expired |
-| 6025 | `PollNotFinal` | Poll is not final yet |
-| 6026 | `PollNotPassed` | Poll did not pass |
-| 6027 | `AlreadyConsumed` | Poll outcome was already consumed |
-| 6028 | `WrongConsumer` | Signer is not the poll's consumer |
-| 6029 | `CloseTooEarly` | A passed, unconsumed poll can only be closed after the grace period |
-| 6030 | `FinalizeInstead` | Enough shares were submitted; finalize the poll instead |
-| 6031 | `Overflow` | Arithmetic overflow |
+| 6018 | `VotingWasPaused` | Voting was paused during this poll, so it is void; run it again |
+| 6019 | `NotCommitteeMember` | Signer is not this committee member |
+| 6020 | `ShareAlreadySubmitted` | This member already submitted a decryption share |
+| 6021 | `InvalidDleqProof` | Decryption share proof rejected |
+| 6022 | `NotEnoughShares` | Fewer decryption shares than the threshold |
+| 6023 | `InvalidLagrange` | One Lagrange coefficient per submitted share is required |
+| 6024 | `TallyMismatch` | Claimed tally does not match the encrypted ballots |
+| 6025 | `PollAlreadyFinal` | Poll already finalized or expired |
+| 6026 | `PollNotFinal` | Poll is not final yet |
+| 6027 | `PollNotPassed` | Poll did not pass |
+| 6028 | `AlreadyConsumed` | Poll outcome was already consumed |
+| 6029 | `WrongConsumer` | Signer is not the poll's consumer |
+| 6030 | `CloseTooEarly` | A passed, unconsumed poll can only be closed after the grace period |
+| 6031 | `FinalizeInstead` | Enough shares were submitted; finalize the poll instead |
+| 6032 | `Overflow` | Arithmetic overflow |
 
 ## sscre-protocol
 
@@ -859,6 +860,7 @@ Funds the next epoch from the reserve (permissionless, rate-limited).
 | `epoch` | writable, PDA |  |
 | `epoch_vault` | writable, PDA |  |
 | `payer` | signer, writable |  |
+| `authority` | signer, optional | Only needed to start an epoch the reserve cannot fund in full: the pool authority. |
 | `token_program` | = `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` |  |
 | `system_program` | = `11111111111111111111111111111111` |  |
 
@@ -1276,7 +1278,8 @@ An active oracle submits (or changes) its values for `user`.
 | 6020 | `VouchExpired` | The vouch expired; use expire_vouch |
 | 6021 | `VouchNotExpired` | The vouch has not expired |
 | 6022 | `NotVouchee` | Signer is not the vouchee of this vouch |
-| 6023 | `Overflow` | Arithmetic overflow |
+| 6023 | `DeclineWindowClosed` | A vouch can only be declined before its evaluation period starts |
+| 6024 | `Overflow` | Arithmetic overflow |
 
 ## identity-protocol
 

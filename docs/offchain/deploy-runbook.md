@@ -65,7 +65,7 @@ accounts.
 
 | Program | Initialize | Then |
 |---|---|---|
-| private-poll | `initialize_config(params)` | DKG ceremony among 3–5 committee members using `zk-voting-sdk::dkg` over authenticated channels (agree on a fresh session id; every member runs `finish`, which checks each dealer's proof of knowledge), publish the dealings, then `set_committee` |
+| private-poll | `initialize_config(params)` | DKG ceremony among 3–5 committee members using `zk-voting-sdk::dkg` over authenticated channels (agree on a fresh session id; every member runs `finish`, which checks each dealer's proof of knowledge), publish the dealings, then `set_committee`; every member then confirms the registered committee equals its own `KeyShare.group` |
 | five-a | `initialize` | `register_oracle` × ≥ 2 (active after 24h); `set_required_consensus` (a majority of active oracles is always required too) |
 | sscre | `initialize_pool(params, first_epoch_budget, fee_bps ≤ 100)` | fund the reserve vault; `register_oracle` × ≥ 2 (epochs cannot start with fewer than the quorum); quorum ≥ 2; `set_guardian` |
 | gasless | `initialize(vcoin_fee_per_tx)` | point the Kora relayer at it (see `relayer-kora.md`) |

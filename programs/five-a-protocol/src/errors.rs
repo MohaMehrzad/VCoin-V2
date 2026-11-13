@@ -48,6 +48,8 @@ pub enum FiveAError {
     VouchNotExpired,
     #[msg("Signer is not the vouchee of this vouch")]
     NotVouchee,
+    #[msg("A vouch can only be declined before its evaluation period starts")]
+    DeclineWindowClosed,
     #[msg("Arithmetic overflow")]
     Overflow,
 }

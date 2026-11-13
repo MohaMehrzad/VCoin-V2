@@ -1715,71 +1715,76 @@ export type PrivatePoll = {
     },
     {
       "code": 6018,
+      "name": "votingWasPaused",
+      "msg": "Voting was paused during this poll, so it is void; run it again"
+    },
+    {
+      "code": 6019,
       "name": "notCommitteeMember",
       "msg": "Signer is not this committee member"
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "shareAlreadySubmitted",
       "msg": "This member already submitted a decryption share"
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "invalidDleqProof",
       "msg": "Decryption share proof rejected"
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "notEnoughShares",
       "msg": "Fewer decryption shares than the threshold"
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "invalidLagrange",
       "msg": "One Lagrange coefficient per submitted share is required"
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "tallyMismatch",
       "msg": "Claimed tally does not match the encrypted ballots"
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "pollAlreadyFinal",
       "msg": "Poll already finalized or expired"
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "pollNotFinal",
       "msg": "Poll is not final yet"
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "pollNotPassed",
       "msg": "Poll did not pass"
     },
     {
-      "code": 6027,
+      "code": 6028,
       "name": "alreadyConsumed",
       "msg": "Poll outcome was already consumed"
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "wrongConsumer",
       "msg": "Signer is not the poll's consumer"
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "closeTooEarly",
       "msg": "A passed, unconsumed poll can only be closed after the grace period"
     },
     {
-      "code": 6030,
+      "code": 6031,
       "name": "finalizeInstead",
       "msg": "Enough shares were submitted; finalize the poll instead"
     },
     {
-      "code": 6031,
+      "code": 6032,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     }
@@ -2151,6 +2156,25 @@ export type PrivatePoll = {
       }
     },
     {
+      "name": "pauseInterval",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "start",
+            "type": "i64"
+          },
+          {
+            "name": "end",
+            "docs": [
+              "0 while the pause is still in progress."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "poll",
       "docs": [
         "One poll, PDA `[\"poll\", id]`."
@@ -2319,6 +2343,13 @@ export type PrivatePoll = {
             "type": "i64"
           },
           {
+            "name": "pauseSeqAtCreation",
+            "docs": [
+              "`PollConfig::pause_seq` when the poll was created."
+            ],
+            "type": "u32"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -2327,9 +2358,6 @@ export type PrivatePoll = {
     },
     {
       "name": "pollConfig",
-      "docs": [
-        "Singleton, PDA `[\"poll-config\"]`."
-      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -2385,6 +2413,26 @@ export type PrivatePoll = {
               "Total seconds spent paused, so reveal deadlines can be extended by downtime."
             ],
             "type": "i64"
+          },
+          {
+            "name": "pauseSeq",
+            "docs": [
+              "Number of pauses so far; `pause_history[(pause_seq - 1) % PAUSE_HISTORY]` is the latest."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "pauseHistory",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "pauseInterval"
+                  }
+                },
+                4
+              ]
+            }
           },
           {
             "name": "bump",
@@ -2515,6 +2563,9 @@ export type PrivatePoll = {
           },
           {
             "name": "expired"
+          },
+          {
+            "name": "voided"
           }
         ]
       }

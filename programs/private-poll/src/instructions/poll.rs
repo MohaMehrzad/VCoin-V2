@@ -68,6 +68,7 @@ pub fn create_poll(
         .checked_add(params.reveal_window_secs)
         .ok_or(PollError::Overflow)?;
     poll.pause_accum_at_creation = config.pause_accum;
+    poll.pause_seq_at_creation = config.pause_seq;
     poll.weight_params = registrar.weight;
     poll.quorum_weight = quorum_weight;
     poll.pass_bps = params.pass_bps;
@@ -112,6 +113,11 @@ pub fn cast_vote(
     require!(
         poll.outcome == PollOutcome::Open && now >= poll.start_time && now < poll.end_time,
         PollError::PollNotOpen
+    );
+    // A paused voting window voids the poll, so there is no point in collecting more ballots.
+    require!(
+        !poll.voting_was_paused(&ctx.accounts.config),
+        PollError::VotingWasPaused
     );
 
     let staking_weight = voter_weight(&ctx.accounts.stake, &poll.weight_params, poll.end_time)
@@ -234,6 +240,20 @@ pub fn finalize_poll(
         PollError::PollAlreadyFinal
     );
     require!(now >= poll.end_time, PollError::VotingNotEnded);
+
+    if poll.voting_was_paused(&ctx.accounts.config) {
+        // Some voters were locked out: whatever was cast is not the electorate's answer.
+        poll.outcome = PollOutcome::Voided;
+        poll.finalized_at = now;
+        emit!(PollFinalized {
+            poll: poll_key,
+            outcome: PollOutcome::Voided,
+            tally: [0; NUM_CHOICES],
+            total_weight: poll.total_weight,
+            quorum_weight: poll.quorum_weight,
+        });
+        return Ok(());
+    }
 
     if poll.voter_count == 0 {
         require!(

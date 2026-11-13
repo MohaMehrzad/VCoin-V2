@@ -10,6 +10,8 @@ pub enum SdkError {
     InvalidIndex(u8),
     #[error("dealer {dealer} sent an invalid share, commitments or proof of knowledge; exclude it and rerun the DKG")]
     BadDealing { dealer: u8 },
+    #[error("members {members:?} arranged for an identity or shared key; exclude them and rerun the DKG")]
+    DegenerateMemberKeys { members: Vec<u8> },
     #[error("expected exactly one dealing and one share from each of the {expected} members")]
     IncompleteDealings { expected: u8 },
     #[error("committee index {0} appears more than once")]

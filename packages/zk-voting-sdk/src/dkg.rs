@@ -23,9 +23,21 @@
 //! and decrypt every ballot alone (a rogue-key attack). A dealer that must prove it knows
 //! the discrete log of its own term cannot do that.
 //!
-//! Complaints: if member `i` says dealer `j` sent a bad share, `j` publishes that share
-//! and anyone runs [`check_revealed_share`]. It tells who lied; exclude that member and
-//! rerun with a new session.
+//! Complaints: if member `i` says dealer `j` sent a bad share, `j` must publish the share
+//! for `i`, and anyone runs [`check_revealed_share`].
+//! - It fails, or `j` does not answer: `j` cheated. Exclude `j` and rerun with a new session.
+//! - It passes: nobody is excluded. Member `i` uses the published share and the run
+//!   continues. A passing check does **not** show that `i` lied: a dealer can send a bad
+//!   share in private and publish the good one afterwards, and nobody else can tell.
+//!
+//! A run can also fail because a member arranged for its own aggregated key to be the
+//! identity, or two members for theirs to be equal. [`aggregate_dealings`] names them in
+//! [`SdkError::DegenerateMemberKeys`]; exclude them and rerun.
+//!
+//! The proofs bind a dealer *index*, not a person. Before any poll opens, every member must
+//! compare the committee registered on-chain with its own [`KeyShare::group`]: that
+//! comparison, not the published dealings alone, is what tells a member the registered key
+//! is the one it helped create.
 //!
 //! The joint secret `Σ_j f_j(0)` is never computed by any function here.
 
@@ -43,6 +55,8 @@ use crate::points::{bytes, challenge, decompress, G};
 
 /// Domain tag of the dealer's proof of knowledge.
 pub const DOMAIN_DKG_POK: &[u8] = b"VCoin-PrivatePoll-DKG-PoK-v1";
+/// Domain tag of the proof's nonce derivation.
+const DOMAIN_DKG_POK_NONCE: &[u8] = b"VCoin-PrivatePoll-DKG-PoK-Nonce-v1";
 /// `R ‖ z` of the Schnorr proof.
 pub const DKG_POK_LEN: usize = 64;
 
@@ -258,9 +272,38 @@ impl Dealer {
         check_committee_shape(threshold, size)?;
         check_index(index, size)?;
         let coefficients: Vec<Scalar> = (0..threshold).map(|_| Scalar::random(rng)).collect();
+        Ok(Self::from_coefficients(
+            index,
+            threshold,
+            size,
+            session,
+            coefficients,
+            rng,
+        ))
+    }
 
+    fn from_coefficients<R: RngCore + CryptoRng>(
+        index: u8,
+        threshold: u8,
+        size: u8,
+        session: &[u8; 32],
+        coefficients: Vec<Scalar>,
+        rng: &mut R,
+    ) -> Self {
         // Schnorr proof of knowledge of the constant term: R = k·G, z = k + c·a_0.
-        let nonce = Zeroizing::new(Scalar::random(rng));
+        //
+        // The nonce is hedged: a hash of the secret, the statement and fresh randomness.
+        // If a caller's RNG ever repeats (a reused seed across two runs), the session id
+        // still changes the nonce, so two proofs never share one and cannot leak `a_0`.
+        let mut fresh = Zeroizing::new([0u8; 32]);
+        rng.fill_bytes(fresh.as_mut());
+        let nonce = Zeroizing::new(challenge(hs(&[
+            DOMAIN_DKG_POK_NONCE,
+            coefficients[0].as_bytes(),
+            session,
+            &[index, threshold, size],
+            fresh.as_ref(),
+        ])));
         let nonce_point = bytes(&(*nonce * G));
         let constant_term = bytes(&(coefficients[0] * G));
         let c = pok_challenge(
@@ -276,12 +319,12 @@ impl Dealer {
         proof[..32].copy_from_slice(&nonce_point);
         proof[32..].copy_from_slice(z.as_bytes());
 
-        Ok(Self {
+        Self {
             index,
             size,
             coefficients,
             proof,
-        })
+        }
     }
 
     pub fn public_dealing(&self) -> PublicDealing {
@@ -308,23 +351,38 @@ impl Dealer {
     }
 }
 
-/// Settles a complaint in public: the accused dealer reveals the share it sent to the
-/// complaining recipient, and anyone checks it against the dealer's published
-/// commitments. `Ok` means the share was valid (the complaint was unfounded);
-/// `BadDealing` means the dealer cheated.
-pub fn check_revealed_share(dealing: &PublicDealing, share: &ShareMessage) -> SdkResult<()> {
+/// Settles a complaint in public. Member `complainant` (of a committee of `size`) said the
+/// dealer of `dealing` sent it a bad share; the dealer answers by publishing `share`, and
+/// anyone checks it against the dealer's published commitments.
+///
+/// - `Err(BadDealing)`: the published share is not the complainant's valid share. The
+///   dealer cheated (treat no answer the same way): exclude it and rerun.
+/// - `Ok`: the published share is valid. **Nobody is excluded**: the complainant uses this
+///   share and the run continues. This does not show the complaint was false, because a
+///   dealer can send a bad share in private and publish the good one afterwards.
+pub fn check_revealed_share(
+    dealing: &PublicDealing,
+    complainant: u8,
+    size: u8,
+    share: &ShareMessage,
+) -> SdkResult<()> {
+    check_index(complainant, size)?;
     let bad = SdkError::BadDealing {
         dealer: dealing.dealer,
     };
-    if share.dealer != dealing.dealer {
+    if share.dealer != dealing.dealer || share.recipient != complainant {
         return Err(bad);
     }
     let share_pk = bytes(&(share.value * G));
-    verify_feldman(&dealing.commitments, share.recipient, &share_pk).map_err(|_| bad)
+    verify_feldman(&dealing.commitments, complainant, &share_pk).map_err(|_| bad)
 }
 
 /// Sums all dealings into the public group key (anyone can run this). Every dealing's
 /// proof of knowledge is checked first, which is what rules out a rogue election key.
+///
+/// A member can make its own aggregated key the identity, and two members can make theirs
+/// equal, with dealings that are otherwise valid. Those members are named in
+/// `DegenerateMemberKeys` (only the owners of the affected indices can cause it).
 pub fn aggregate_dealings(
     threshold: u8,
     session: &[u8; 32],
@@ -348,7 +406,7 @@ pub fn aggregate_dealings(
             *sum += decompress(c).map_err(|_| SdkError::BadDealing { dealer: d.dealer })?;
         }
     }
-    let member_pks = (1..=size)
+    let member_pks: Vec<[u8; 32]> = (1..=size)
         .map(|i| {
             let x = Scalar::from(i as u64);
             bytes(
@@ -359,6 +417,17 @@ pub fn aggregate_dealings(
             )
         })
         .collect();
+    let degenerate: Vec<u8> = (1..=size)
+        .filter(|&i| {
+            let pk = &member_pks[i as usize - 1];
+            *pk == IDENTITY || member_pks.iter().filter(|other| *other == pk).count() > 1
+        })
+        .collect();
+    if !degenerate.is_empty() {
+        return Err(SdkError::DegenerateMemberKeys {
+            members: degenerate,
+        });
+    }
     let group = GroupKey {
         threshold,
         commitments: sums.iter().map(bytes).collect(),
@@ -415,4 +484,55 @@ pub fn finish(
         public,
         group,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::rngs::OsRng;
+
+    const SESSION: [u8; 32] = [7u8; 32];
+
+    fn share_value(dealer: &Dealer, recipient: u8) -> Scalar {
+        dealer.share_for(recipient).unwrap().value
+    }
+
+    /// Confirmation review: member 3 publishes last and picks a polynomial (which it fully
+    /// knows, so its proof and shares are valid) that makes its own aggregated key the
+    /// identity. The run must fail naming member 3, not with an anonymous error.
+    #[test]
+    fn a_member_that_zeroes_its_own_key_is_named() {
+        let honest: Vec<Dealer> = (1..=2)
+            .map(|i| Dealer::new(i, 3, 3, &SESSION, &mut OsRng).unwrap())
+            .collect();
+        let received: Scalar = honest.iter().map(|d| share_value(d, 3)).sum();
+        let (a1, a2) = (Scalar::random(&mut OsRng), Scalar::random(&mut OsRng));
+        // f_3(3) = a0 + 3·a1 + 9·a2 = −(f_1(3) + f_2(3))
+        let a0 = -received - Scalar::from(3u64) * a1 - Scalar::from(9u64) * a2;
+        let rogue = Dealer::from_coefficients(3, 3, 3, &SESSION, vec![a0, a1, a2], &mut OsRng);
+        let mut dealings: Vec<PublicDealing> = honest.iter().map(Dealer::public_dealing).collect();
+        dealings.push(rogue.public_dealing());
+        assert!(dealings[2].verify_proof(&SESSION, 3, 3).is_ok());
+        assert_eq!(
+            aggregate_dealings(3, &SESSION, &dealings).unwrap_err(),
+            SdkError::DegenerateMemberKeys { members: vec![3] }
+        );
+    }
+
+    /// Confirmation review: the proof nonce is hedged. The same RNG stream in two sessions
+    /// must not produce the same nonce (two proofs sharing a nonce would reveal `a_0`).
+    #[test]
+    fn a_repeated_rng_stream_does_not_repeat_the_proof_nonce() {
+        use rand::{rngs::StdRng, SeedableRng};
+        let a = Dealer::new(1, 3, 3, &[1u8; 32], &mut StdRng::seed_from_u64(42)).unwrap();
+        let b = Dealer::new(1, 3, 3, &[2u8; 32], &mut StdRng::seed_from_u64(42)).unwrap();
+        // Same polynomial (same seed), different sessions.
+        assert_eq!(
+            a.public_dealing().commitments,
+            b.public_dealing().commitments
+        );
+        assert_ne!(a.proof[..32], b.proof[..32], "nonce point R must differ");
+        assert!(a.public_dealing().verify_proof(&[1u8; 32], 3, 3).is_ok());
+        assert!(b.public_dealing().verify_proof(&[2u8; 32], 3, 3).is_ok());
+    }
 }

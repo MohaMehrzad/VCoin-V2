@@ -22,8 +22,12 @@ done.**
   by three independent passes. They found 22 new issues in the rewritten code: no Critical,
   2 High (a rewards-root veto that could never land in time, and a rogue-key attack on the
   committee's key generation), 6 Medium and 14 Low. All are fixed and tested; they are listed
-  at the end of `FIX-TRACKER.md`. A rewrite that needed a second pass to catch two High issues
-  is exactly why the external audit below is not optional.
+  at the end of `FIX-TRACKER.md`.
+- **Confirmation review (2026-11-13):** the commit that fixed those 22 issues was itself
+  reviewed by two more independent passes. They found 10 further issues in the new code
+  (1 High in a new key-generation helper, 2 Medium, 7 Low), also fixed and tested. Each round
+  of review has found less, but none has found nothing. That is exactly why the external
+  audit below is not optional.
 
 ## What v3 verifies
 

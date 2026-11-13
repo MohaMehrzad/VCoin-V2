@@ -25,8 +25,9 @@ pub fn subscribe(ctx: Context<Subscribe>, tier: u8, max_payment: u64) -> Result<
         sub.user = user;
         sub.bump = ctx.bumps.subscription;
     }
-    let (cost, expires_at) = subscription_quote(sub, tier, &config.prices, now)
+    let quote = subscription_quote(sub, tier, &config.prices, now)
         .ok_or(IdentityError::CannotDowngradeActive)?;
+    let (cost, expires_at) = (quote.cost, quote.expires_at);
     require!(cost <= max_payment, IdentityError::PriceAboveMax);
 
     if cost > 0 {
@@ -49,6 +50,7 @@ pub fn subscribe(ctx: Context<Subscribe>, tier: u8, max_payment: u64) -> Result<
     }
     sub.tier = tier;
     sub.expires_at = expires_at;
+    sub.unit_price = quote.unit_price;
     sub.total_paid = sub
         .total_paid
         .checked_add(cost)

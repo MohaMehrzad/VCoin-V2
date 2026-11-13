@@ -1700,6 +1700,11 @@
     },
     {
       "code": 6023,
+      "name": "DeclineWindowClosed",
+      "msg": "A vouch can only be declined before its evaluation period starts"
+    },
+    {
+      "code": 6024,
       "name": "Overflow",
       "msg": "Arithmetic overflow"
     }

@@ -2337,6 +2337,15 @@ export type IdentityProtocol = {
             "type": "u64"
           },
           {
+            "name": "unitPrice",
+            "docs": [
+              "What the remaining time cost per 30-day period (a time-weighted average across",
+              "renewals). Upgrade credit uses this, not the current price list, so a price change",
+              "can never be turned into free time."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }

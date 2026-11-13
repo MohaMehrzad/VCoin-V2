@@ -40,6 +40,10 @@ impl PoolParams {
         (MIN_EPOCH_DURATION..=MAX_EPOCH_DURATION).contains(&self.epoch_duration)
             && (MIN_CLAIM_WINDOW..=MAX_CLAIM_WINDOW).contains(&self.claim_window)
             && (MIN_DISPUTE_DELAY..=MAX_DISPUTE_DELAY).contains(&self.dispute_delay)
+            // A root must be proposed, survive the dispute delay (possibly twice, after a
+            // veto or an oracle change) and activate within the claim window after the
+            // epoch ends, so the window must leave room for that.
+            && self.claim_window >= 2 * self.dispute_delay
             && self.decay_bps <= MAX_DECAY_BPS
     }
 }

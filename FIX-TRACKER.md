@@ -189,3 +189,22 @@ being fixed. This is a second internal review, not an external audit.
 | RR-20 | Low | zk-voting-sdk: key-share material in finish was not zeroized on error paths | zk-voting-sdk | fixed (C20: the running sum is held in Zeroizing) |
 | RR-21 | Low | zk-voting-sdk: GroupKey::verify panicked on empty commitments; size() truncated | zk-voting-sdk | fixed (C20: returns InvalidCommittee; test malformed_group_keys_and_commitment_lists_are_errors_not_panics) |
 | RR-22 | Low | zk-poll-core: verify_feldman could overflow and panic when called directly with a very long commitment list | zk-poll-core | fixed (C20: lists longer than MAX_COMMITTEE are rejected; same test) |
+
+## Confirmation review of the re-review fixes (2026-11-13)
+
+Two more independent passes reviewed commit C20 itself. No Critical; one High in the new DKG
+complaint helper (found before anything used it), two Medium, seven Low. All fixed in C21.
+
+| ID | Severity | Finding | Where | Status |
+|---|---|---|---|---|
+| CR2-01 | High | zk-voting-sdk: `check_revealed_share` returned `Ok` for a dealer that sent a bad share in private and published the good one, and the docs then blamed the honest complainant | zk-voting-sdk | fixed (C21: a valid revealed share excludes nobody and the complainant uses it; an invalid one excludes the dealer; the check is bound to the complainant index and committee size; test a_revealed_share_settles_a_complaint) |
+| CR2-02 | Medium | sscre: the "authority may start a part-funded epoch" branch required the authority to be the rent payer, which a governance PDA cannot be | sscre-protocol | fixed (C21: optional `authority` signer separate from `payer`; test epochs_are_rate_limited_decay_and_stop_at_an_empty_reserve) |
+| CR2-03 | Medium | private-poll: a pause during a poll's voting window cut the electorate and the poll could still pass on the partial tally (reachable by the guardian since C20) | private-poll | fixed (C21: pause history in PollConfig; a poll whose voting window overlapped a pause stops taking ballots and settles as `Voided`; test a_pause_during_voting_voids_the_poll) |
+| CR2-04 | Low | sscre: `dispute_delay >= claim_window` was accepted, under which no root could ever activate | sscre-protocol | fixed (C21: `claim_window >= 2 × dispute_delay`; unit test params_bounds_and_sizes) |
+| CR2-05 | Low | five-a: `decline_vouch` had no time bound, so a failing vouch could be turned into "declined" | five-a-protocol | fixed (C21: decline only before the evaluation period; test a_vouchee_can_decline_and_closed_vouches_free_its_slots) |
+| CR2-06 | Low | identity: upgrade credit used today's list price, so prepaid time bought before a price rise gained value | identity-protocol | fixed (C21: `Subscription.unit_price` records what the remaining time cost; unit test a_price_rise_cannot_be_turned_into_free_time) |
+| CR2-07 | Low | zk-voting-sdk: a member could make its own aggregated key the identity (or two members equal keys) with valid dealings, aborting the run with no one named | zk-voting-sdk | fixed (C21: `DegenerateMemberKeys` names them; unit test a_member_that_zeroes_its_own_key_is_named) |
+| CR2-08 | Low | zk-voting-sdk: the proof nonce came straight from the caller's RNG, so a repeated RNG state across two sessions would reveal the dealer's secret term | zk-voting-sdk | fixed (C21: hedged nonce derived from the secret, the statement and fresh randomness; unit test a_repeated_rng_stream_does_not_repeat_the_proof_nonce) |
+| CR2-09 | Low | TypeScript SDK: `deleteContentIx` defaulted the rent payer to the author, which fails for sponsored posts | viwoapp-sdk | fixed (C21: `rentPayer` is required) |
+| CR2-10 | Low | Docs overstated the DKG guarantee ("cannot bias the key"; "anyone can check the published dealings") | docs | fixed (C21: SECURITY.md, private-poll.md and the runbook now say what the proof does and that each member must compare the registered committee with its own key share) |
+

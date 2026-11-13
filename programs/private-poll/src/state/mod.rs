@@ -63,6 +63,19 @@ impl PollParams {
 }
 
 /// Singleton, PDA `["poll-config"]`.
+/// How many recent pauses are remembered. A poll that lived through more is voided, since
+/// it can no longer be shown that none of them hit its voting window.
+pub const PAUSE_HISTORY: usize = 4;
+
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq, Eq, InitSpace,
+)]
+pub struct PauseInterval {
+    pub start: i64,
+    /// 0 while the pause is still in progress.
+    pub end: i64,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct PollConfig {
@@ -77,11 +90,40 @@ pub struct PollConfig {
     pub paused_since: i64,
     /// Total seconds spent paused, so reveal deadlines can be extended by downtime.
     pub pause_accum: i64,
+    /// Number of pauses so far; `pause_history[(pause_seq - 1) % PAUSE_HISTORY]` is the latest.
+    pub pause_seq: u32,
+    pub pause_history: [PauseInterval; PAUSE_HISTORY],
     pub bump: u8,
 }
 
 impl PollConfig {
     pub const LEN: usize = 8 + Self::INIT_SPACE;
+
+    pub fn record_pause(&mut self, now: i64) -> Option<()> {
+        self.pause_seq = self.pause_seq.checked_add(1)?;
+        self.pause_history[(self.pause_seq as usize - 1) % PAUSE_HISTORY] =
+            PauseInterval { start: now, end: 0 };
+        Some(())
+    }
+
+    pub fn record_unpause(&mut self, now: i64) {
+        if self.pause_seq > 0 {
+            self.pause_history[(self.pause_seq as usize - 1) % PAUSE_HISTORY].end = now;
+        }
+    }
+
+    /// True if a pause that began after pause number `since_seq` overlapped `[start, end)`,
+    /// or if there were too many pauses since then to tell.
+    pub fn paused_during(&self, since_seq: u32, start: i64, end: i64) -> bool {
+        let pauses = self.pause_seq.saturating_sub(since_seq) as usize;
+        if pauses > PAUSE_HISTORY {
+            return true;
+        }
+        (0..pauses).any(|back| {
+            let p = &self.pause_history[(self.pause_seq as usize - 1 - back) % PAUSE_HISTORY];
+            p.start < end && (p.end == 0 || p.end > start)
+        })
+    }
 
     /// Paused seconds so far, including a pause in progress.
     pub fn paused_total(&self, now: i64) -> i64 {
@@ -102,6 +144,9 @@ pub enum PollOutcome {
     Rejected,
     /// Reveal window closed without enough decryption shares.
     Expired,
+    /// The program was paused during the voting window, so not everyone could vote. The
+    /// poll can never pass and must be run again.
+    Voided,
 }
 
 /// One poll, PDA `["poll", id]`.
@@ -135,6 +180,8 @@ pub struct Poll {
     pub consumed: bool,
     /// `PollConfig::pause_accum` when the poll was created.
     pub pause_accum_at_creation: i64,
+    /// `PollConfig::pause_seq` when the poll was created.
+    pub pause_seq_at_creation: u32,
     pub bump: u8,
 }
 
@@ -144,13 +191,20 @@ impl Poll {
     /// The reveal window closes at `reveal_deadline` plus any time the program was paused
     /// since the poll was created: shares cannot be posted while paused, so a pause must
     /// never let a decryptable poll expire. The voting window is *not* extended, because
-    /// weights are fixed at `end_time`.
+    /// weights are fixed at `end_time`; a poll whose voting window was paused is voided
+    /// instead (`voting_was_paused`).
     pub fn effective_reveal_deadline(&self, config: &PollConfig, now: i64) -> i64 {
         self.reveal_deadline.saturating_add(
             config
                 .paused_total(now)
                 .saturating_sub(self.pause_accum_at_creation),
         )
+    }
+
+    /// A pause overlapped the voting window: some voters were locked out, so a tally would
+    /// not be the electorate's. (Polls are never created while paused.)
+    pub fn voting_was_paused(&self, config: &PollConfig) -> bool {
+        config.paused_during(self.pause_seq_at_creation, self.start_time, self.end_time)
     }
 
     pub fn shares_submitted(&self) -> u32 {

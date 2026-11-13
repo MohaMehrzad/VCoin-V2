@@ -47,8 +47,9 @@ Vouching is reputation-only: no stake and no reward.
 - **`evaluate_vouch`.** Oracle only, between day 90 and day 365. It succeeds if the vouchee
   reached 50%; a missing score counts as failed.
 - **`expire_vouch`.** Anyone, after a year.
-- **`decline_vouch`.** The vouchee, at any time (also while paused). Nobody is vouched for
-  against their will.
+- **`decline_vouch`.** The vouchee, during the first 90 days (also while paused). Nobody is
+  vouched for against their will; once the evaluation period starts the outcome belongs to
+  the oracles, so a failing vouch cannot be declined away.
 
 Every outcome closes the record and frees the voucher's slot and the vouchee's (5A-06).
 

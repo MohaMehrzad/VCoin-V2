@@ -61,6 +61,12 @@ v2 entries below claimed audit completion and production readiness; those claims
 - five-a-protocol: sliding submission window; `decline_vouch`.
 - gasless-protocol: fee mint pinned to the VCoin mint. vevcoin-token: `initialize` survives a
   pre-funded mint address.
+- Confirmation review of the above: sscre `start_epoch` takes an optional `authority` signer
+  and bounds `dispute_delay` by the claim window; private-poll voids a poll whose voting window
+  was paused (`PollOutcome::Voided`); five-a limits `decline_vouch` to the first 90 days;
+  identity credits upgrades at what was paid (`Subscription.unit_price`); zk-voting-sdk
+  `check_revealed_share(dealing, complainant, size, share)` with corrected semantics,
+  `DegenerateMemberKeys`, hedged proof nonce; SDK `deleteContentIx` requires `rentPayer`.
 
 ### Tooling
 - LiteSVM integration tests for every program (Realms against the mainnet binary); ZK SDK

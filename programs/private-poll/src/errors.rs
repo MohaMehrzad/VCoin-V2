@@ -39,6 +39,8 @@ pub enum PollError {
     RevealClosed,
     #[msg("Reveal window is still open")]
     RevealStillOpen,
+    #[msg("Voting was paused during this poll, so it is void; run it again")]
+    VotingWasPaused,
     #[msg("Signer is not this committee member")]
     NotCommitteeMember,
     #[msg("This member already submitted a decryption share")]

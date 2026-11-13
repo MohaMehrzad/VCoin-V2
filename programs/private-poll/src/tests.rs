@@ -23,6 +23,8 @@ fn account_lens_match_borsh_size() {
         paused: false,
         paused_since: 0,
         pause_accum: 0,
+        pause_seq: 0,
+        pause_history: Default::default(),
         bump: 0,
     }
     .serialize(&mut buf)

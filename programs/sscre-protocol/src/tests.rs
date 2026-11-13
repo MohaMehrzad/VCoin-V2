@@ -116,6 +116,12 @@ fn params_bounds_and_sizes() {
             ..Default::default()
         },
         PoolParams {
+            // a 7-day dispute delay inside a 7-day claim window could never activate a root
+            claim_window: MIN_CLAIM_WINDOW,
+            dispute_delay: MAX_DISPUTE_DELAY,
+            ..Default::default()
+        },
+        PoolParams {
             claim_window: MIN_CLAIM_WINDOW - 1,
             ..Default::default()
         },

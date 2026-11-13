@@ -9,9 +9,11 @@ A per-epoch merkle distributor (Jito/Saber pattern).
 
 - The reserve vault `["reserve-vault"]` holds undistributed rewards.
 - **`start_epoch`.** A crank, at most once per `epoch_duration`.
-  - Anyone may call it when the reserve covers the whole scheduled budget. Only the authority
-    may start a smaller epoch from a part-funded reserve, so a stranger cannot spend a
-    schedule step on a tiny budget.
+  - Anyone may call it when the reserve covers the whole scheduled budget. A smaller epoch
+    from a part-funded reserve needs the authority's signature, so a stranger cannot spend a
+    schedule step on a tiny budget. The authority signs as a separate optional account
+    (`authority`), not as the rent payer: a governance PDA can sign through a proposal but
+    cannot pay rent.
   - It needs at least `root_quorum` registered oracles, or the epoch could never get a root.
   - It moves the budget into the epoch's own vault `["epoch-vault", i]`, so an epoch can never
     pay out another epoch's funds (audit SSC-02).
@@ -56,7 +58,7 @@ A per-epoch merkle distributor (Jito/Saber pattern).
 | Decay per epoch | 2% | ≤ 50% |
 | Epoch duration | 30 days | 1–90 days |
 | Claim window | 90 days | 7–365 days |
-| Dispute delay | 24h | 1h–7 days |
+| Dispute delay | 24h | 1h–7 days, and at most half the claim window |
 | Root quorum | 2, and never less than a majority of active oracles | 2..=registered oracles (max 7) |
 | Fee | 1% | ≤ 1%, change timelocked 24h |
 
@@ -87,4 +89,5 @@ the guardian keeps vetoing or pauses until the DAO removes them. Budget that nev
 returns to the reserve after the root deadline.
 
 If no guardian is set, keep `dispute_delay` longer than the DAO's voting period plus hold-up
-(the maximum is 7 days), or accept that roots are effectively final once proposed.
+(the maximum is 7 days, which needs a claim window of at least 14 days), or accept that roots
+are effectively final once proposed.

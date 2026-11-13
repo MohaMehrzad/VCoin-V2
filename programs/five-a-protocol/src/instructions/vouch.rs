@@ -137,7 +137,16 @@ pub fn expire_vouch(ctx: Context<CloseVouch>) -> Result<()> {
 }
 
 /// The vouchee turns a vouch down (nobody can be vouched for against their will, and an
-/// unwanted vouch cannot occupy one of their slots). Works while paused: it only removes.
+/// unwanted vouch cannot occupy one of their slots). Only before the evaluation period
+/// starts: afterwards the outcome belongs to the oracles, so a failing vouch cannot be
+/// turned into a harmless "declined". Works while paused: it only removes.
 pub fn decline_vouch(ctx: Context<DeclineVouch>) -> Result<()> {
+    let age = Clock::get()?
+        .unix_timestamp
+        .saturating_sub(ctx.accounts.close.vouch_record.vouched_at);
+    require!(
+        age < VOUCH_EVALUATION_PERIOD,
+        FiveAError::DeclineWindowClosed
+    );
     settle(&mut ctx.accounts.close, VouchOutcome::Declined, 0)
 }

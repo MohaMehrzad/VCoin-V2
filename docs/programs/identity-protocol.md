@@ -49,8 +49,10 @@ the treasury account, for 30 days.
 
 - **Same tier:** extends from the current expiry, so no paid time is lost.
 - **Upgrade:** credits the unused time of the current tier against the new tier's price, for
-  30 days. If the prepaid time is worth a full period of the new tier or more, the upgrade is
-  free and the time carries over at the price ratio, so no paid value is lost.
+  30 days. The credit is what that time actually cost (`Subscription.unit_price`), not today's
+  list price, so a price change cannot be turned into free time. If the prepaid time is worth
+  a full period of the new tier or more, the upgrade is free and the time carries over at
+  that value: no paid value is lost and none is created.
 - **Downgrade:** refused while the higher tier is active (ID-05).
 - **Default prices:** $4 / $12 / $59.
 

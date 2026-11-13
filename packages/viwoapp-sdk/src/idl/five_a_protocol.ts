@@ -1706,6 +1706,11 @@ export type FiveAProtocol = {
     },
     {
       "code": 6023,
+      "name": "declineWindowClosed",
+      "msg": "A vouch can only be declined before its evaluation period starts"
+    },
+    {
+      "code": 6024,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     }

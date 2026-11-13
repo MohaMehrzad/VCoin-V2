@@ -777,6 +777,85 @@ fn a_pause_during_the_reveal_window_cannot_expire_a_decryptable_poll() {
     );
 }
 
+/// Confirmation review: a pause during the voting window locks voters out, so the partial
+/// tally must not count. The poll is voided, whoever paused (authority or guardian).
+#[test]
+fn a_pause_during_voting_voids_the_poll() {
+    let mut s = setup();
+    let c = install(&mut s);
+    let creator = staker(&mut s, 1_000 * VCOIN);
+    let poll = open_poll(&mut s, &creator, Pubkey::new_unique());
+    let early = staker(&mut s, 900 * VCOIN);
+    vote_in(&mut s, &poll, &early, Choice::For); // enough for quorum on its own
+    let late = staker(&mut s, 900 * VCOIN);
+
+    let admin = s.admin.insecure_clone();
+    let guardian = funded_keypair(&mut s.svm, 1);
+    let config = config_pda();
+    let update =
+        move |authority: Pubkey| private_poll::accounts::UpdateConfig { config, authority };
+    let set_guardian = ix(
+        private_poll::ID,
+        update(admin.pubkey()),
+        private_poll::instruction::SetGuardian {
+            guardian: guardian.pubkey(),
+        },
+    );
+    send(&mut s.svm, &[set_guardian], &admin, &[]).expect("set guardian");
+    let pause = ix(
+        private_poll::ID,
+        update(guardian.pubkey()),
+        private_poll::instruction::SetPaused { paused: true },
+    );
+    send(&mut s.svm, &[pause], &guardian, &[]).expect("guardian pauses mid-vote");
+    warp_by(&mut s.svm, DAY);
+    let unpause = ix(
+        private_poll::ID,
+        update(admin.pubkey()),
+        private_poll::instruction::SetPaused { paused: false },
+    );
+    send(&mut s.svm, &[unpause], &admin, &[]).expect("unpause");
+
+    // Still inside the voting window, but the poll is already void.
+    let weight = weight_of(&s, &late, &poll);
+    let b = encrypt_ballot(
+        &ballot_ctx(&s, &poll, &late.kp.pubkey(), weight),
+        Choice::Against,
+        &mut OsRng,
+    )
+    .unwrap();
+    let cast = cast_ix(s.registrar, poll, &late, b.ballot_bytes(), b.proof);
+    assert_anchor_error(
+        send(&mut s.svm, &[cast], &late.kp, &[]),
+        perr(PollError::VotingWasPaused),
+    );
+
+    warp_by(&mut s.svm, VOTING);
+    submit_shares(&mut s, &c, &poll, &[1, 2, 3]);
+    let (tally, lagrange) = tally_of(&s, &poll);
+    send(
+        &mut s.svm,
+        &[finalize_ix(poll, tally, lagrange)],
+        &admin,
+        &[],
+    )
+    .expect("finalize");
+    let p: Poll = read_account(&s.svm, &poll);
+    assert_eq!(p.outcome, PollOutcome::Voided);
+    assert_eq!(
+        p.tally, [0; 3],
+        "the partial tally is not published as a result"
+    );
+    let consumer = funded_keypair(&mut s.svm, 1);
+    let r = send(
+        &mut s.svm,
+        &[assert_ix(poll, consumer.pubkey())],
+        &consumer,
+        &[],
+    );
+    assert_anchor_error(r, perr(PollError::PollNotPassed));
+}
+
 #[test]
 fn config_and_committee_registration_are_guarded() {
     let mut s = setup();

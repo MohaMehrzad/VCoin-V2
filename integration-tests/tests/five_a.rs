@@ -635,4 +635,20 @@ fn a_vouchee_can_decline_and_closed_vouches_free_its_slots() {
     warp_by(&mut f.svm, 1);
     send(&mut f.svm, &[fourth], &vouchers[3], &[]).expect("slot freed");
     assert_eq!(status(&f).vouches_received, MAX_VOUCHES_RECEIVED);
+
+    // Once the evaluation period starts, the outcome belongs to the oracles: a failing
+    // vouch cannot be turned into a harmless "declined".
+    warp_by(&mut f.svm, VOUCH_EVALUATION_PERIOD);
+    let late = ix(
+        five_a_protocol::ID,
+        five_a_protocol::accounts::DeclineVouch {
+            close: close_vouch_accounts(&vouchers[1].pubkey(), &vouchee.pubkey()),
+            vouchee: vouchee.pubkey(),
+        },
+        five_a_protocol::instruction::DeclineVouch {},
+    );
+    assert_anchor_error(
+        send(&mut f.svm, &[late], &vouchee, &[]),
+        err(FiveAError::DeclineWindowClosed),
+    );
 }
